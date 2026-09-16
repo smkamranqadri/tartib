@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { approveItem, getAttention, getSpaces, rejectItem } from "../api";
+import Card from "../components/Card";
 import ItemEditor from "../components/ItemEditor";
 import { formatCreated, formatDue, formatRemind } from "../format";
 import type { Edit, Item } from "../types";
@@ -29,15 +31,15 @@ export default function Attention({ version, onDecided }: { version: number; onD
   }
 
   return (
-    <section className="screen">
-      <h2>Needs Attention</h2>
+    <div className="screen">
+      <Card label="Needs Attention" aside={data && <span className="muted">{data.items.length} waiting</span>}>
       {error && <p className="error">{error}</p>}
       {loading && !data && <p className="muted">Loading…</p>}
       {data && data.items.length === 0 && <p className="muted">Inbox zero. Everything is filed.</p>}
       <ul className="items">
         {data?.items.map((item) => (
           <li key={item.id} className="item attention">
-            <p className="raw">{item.raw_text}</p>
+            <Link to={`/items/${item.id}`} className="raw link">{item.raw_text}</Link>
             <div className="item-meta">
               <span className="chip muted">{formatCreated(item.created_at)}</span>
             </div>
@@ -78,6 +80,7 @@ export default function Attention({ version, onDecided }: { version: number; onD
           </li>
         ))}
       </ul>
-    </section>
+      </Card>
+    </div>
   );
 }

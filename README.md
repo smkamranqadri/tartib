@@ -4,7 +4,8 @@ A personal capture system. You type anything into one box. It lands in an inbox.
 
 - **Today**: open tasks due today or earlier, starred tasks, and tasks whose reminder time has passed.
 - **Needs Attention**: captures the AI was not sure about. Approve, edit, or reject.
-- **All**: full-text search over everything, filter by space and shape.
+- **All**: full-text search over everything, filter by space, shape, and status. Ask a question and get an answer drawn only from your own items, with links to them.
+- **Item page**: the full text, the AI's proposal, and inline edit.
 
 Your text is never rewritten. Classification only proposes fields around it.
 
@@ -59,6 +60,10 @@ On iOS, an Apple Shortcut with "Get Contents of URL" (POST, JSON body, that head
 
 **Reject** keeps the text as a plain note in the `inbox` space. Nothing is ever deleted by a decision.
 
+## How ask works
+
+`POST /api/ask` runs FTS5 over the question's content words (OR, prefix on longer words) and takes the top 20 matches, or the 20 most recent items in the chosen space when nothing matches. Those items go to Codex with a prompt that allows answering only from them and asks for the ids it relied on. The reply is `{answer, item_ids, items}`. It never writes anything. Expect about 7 to 10 seconds per question.
+
 ## API
 
 ```text
@@ -68,9 +73,10 @@ GET    /api/health                               public
 POST   /api/capture              {text}          -> 201 {id}
 GET    /api/today
 GET    /api/attention
-GET    /api/items?q=&space=&shape=&limit=&before=
+GET    /api/items?q=&space=&shape=&status=&limit=&before=
 GET    /api/items/{id}
 GET    /api/spaces
+POST   /api/ask                  {question, space?} -> {answer, item_ids, items}   read-only
 PATCH  /api/items/{id}           any of shape, space, title, due, remind_at, starred, status
 POST   /api/items/{id}/approve   optional overrides, same fields
 POST   /api/items/{id}/reject
@@ -99,7 +105,7 @@ Backend is FastAPI on stdlib `sqlite3` with FTS5 and numbered SQL migrations, no
 
 ## Not planned
 
-Projects, tags, pomodoro, push notifications, chat with your notes, a second classifier, multi-user. Tartib is deliberately small.
+Projects, tags, pomodoro, push notifications, a second classifier, multi-user. Ask is a single question with a single answer; there is no chat history. Tartib is deliberately small.
 
 ## License
 

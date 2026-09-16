@@ -1,21 +1,18 @@
 # Current
 
-- Branch: `main`, local only, no remote.
-- Task: none. v0.1 complete; classifier switched from HTTP endpoint to Codex CLI (2026-09-17).
+- Branch: `main`, local only.
+- Task: none. Slice 2 (retrieval) complete 2026-09-17. Plan and checklist in `kis/intent/slice-2-retrieval.md`.
 - Command: `cd backend && uv run pytest -q` / `cd frontend && npm run build` / `docker compose up -d`.
 - Blocker: none.
-- Next: user decides. Compose stack is running on http://localhost:8000 (password in `.env`) with seeded sample items for review. Candidates in `kis/intent/ARCHITECTURE.md`.
+- Next: user decides. The compose container on http://localhost:8000 still runs the pre-slice image; `docker compose up -d --build` picks up the new UI and ask endpoint.
 
-## Proof (2026-09-17)
+## Proof (2026-09-17, slice 2)
 
-- `uv run pytest -q`: 41 passed (fake Codex subprocess). `uv run ruff check .`: clean.
-- `npm run typecheck` and `npm run build`: clean.
-- Host, real Codex: 3 captures classified in 33s. Dentist -> task/health/due/reminder at 0.99, filed. "hmm" -> 0.72, Needs Attention. Idea -> note/ideas 0.98, filed.
-- Docker, real Codex via mounted ~/.codex: "book flights to Lahore for the 3rd of October" -> task/travel/due 2026-10-03 at 0.94, filed in 8s.
-- `docker stats`: 41.7MiB of 512MiB. Image 1.13GB (Node + Codex added).
-- Container restart kept data (earlier run). Headless Chrome UI checks (earlier run) unchanged by this switch.
+- `uv run pytest -q`: 52 passed. `uv run ruff check .`: clean. `npm run typecheck` and `npm run build`: clean.
+- Acceptance, host with real Codex: 10 notes across 10 spaces captured and classified in 90s (8 auto-filed, 2 parked at 0.81 and 0.82). Every note found by one distinctive word via `/api/items?q=`. Four "what did I decide about X?" questions answered correctly, each citing exactly the right item id, about 7s each. Space-scoped ask with an empty space returned the fixed empty shape.
+- Headless Chrome: dark theme toggle, search narrows to one row, status filter, ask in the UI renders the answer and a cited link, link opens `/items/2` with full raw text and proposal, inline edit of space saves and updates the header. Phone width 390px checked for All, item page, Today.
 
 ## Known gaps
 
-- Image is 1.13GB. Runtime memory is tiny; size is cosmetic but noted in Intent.
-- Codex classification is serial, about 8 to 12s per item.
+- Retrieval is keyword only. A question that names a concept the note does not literally contain (e.g. "database" for a note that says "SQLite") falls back to the 20 most recent items in the space. Fine at personal scale; noted in Intent.
+- Ask is synchronous; the request waits for Codex.

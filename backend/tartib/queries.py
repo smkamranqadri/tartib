@@ -64,6 +64,7 @@ def list_items(
     q: str = "",
     space: str | None = None,
     shape: Literal["task", "note"] | None = None,
+    status: Literal["open", "done"] | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     before: int | None = None,
     conn: sqlite3.Connection = Depends(get_db),
@@ -77,6 +78,9 @@ def list_items(
     if shape:
         where.append("items.shape = ?")
         params.append(shape)
+    if status:
+        where.append("items.shape = 'task' AND items.status = ?")
+        params.append(status)
     if before is not None:
         where.append("items.id < ?")
         params.append(before)

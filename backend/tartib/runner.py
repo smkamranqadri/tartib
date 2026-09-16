@@ -9,6 +9,7 @@ import sqlite3
 from tartib import db
 from tartib.classify import ClassifyError, Context, Proposal, classify
 from tartib.clock import utcnow, utcnow_iso
+from tartib.codex import CodexConfig
 from tartib.config import Settings
 from tartib.store import file_item, list_spaces
 
@@ -66,9 +67,7 @@ class Runner:
             now=utcnow().astimezone(s.zone),
             zone=s.zone,
             spaces=spaces,
-            command=s.ai_command,
-            model=s.ai_model,
-            timeout=s.ai_timeout,
+            codex=CodexConfig(command=s.ai_command, model=s.ai_model, timeout=s.ai_timeout),
         )
         try:
             proposal = await classify(text, context)

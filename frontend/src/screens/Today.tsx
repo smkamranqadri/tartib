@@ -1,4 +1,5 @@
 import { getSpaces, getToday } from "../api";
+import Card from "../components/Card";
 import ItemRow from "../components/ItemRow";
 import type { Item } from "../types";
 import { useLoad } from "../useLoad";
@@ -17,8 +18,8 @@ export default function Today({ version }: { version: number }) {
   }
 
   return (
-    <section className="screen">
-      <h2>Today</h2>
+    <div className="screen">
+      <Card label="Today" aside={data && <span className="muted">{data.date}</span>}>
       {error && <p className="error">{error}</p>}
       {loading && !data && <p className="muted">Loading…</p>}
       {data && data.items.length === 0 && <p className="muted">Nothing due, starred, or waiting on a reminder.</p>}
@@ -27,6 +28,7 @@ export default function Today({ version }: { version: number }) {
           <ItemRow key={item.id} item={item} spaces={spaces} onChange={update} />
         ))}
       </ul>
-    </section>
+      </Card>
+    </div>
   );
 }

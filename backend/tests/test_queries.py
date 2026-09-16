@@ -78,6 +78,10 @@ def test_all_newest_first_with_filters_and_paging(auth):
     assert ids(auth.get("/api/items", params={"space": "Work"}).json()) == [c, a]
     assert ids(auth.get("/api/items", params={"shape": "task"}).json()) == [a]
     assert ids(auth.get("/api/items", params={"space": "work", "shape": "note"}).json()) == [c]
+    auth.patch(f"/api/items/{a}", json={"status": "done"})
+    assert ids(auth.get("/api/items", params={"status": "done"}).json()) == [a]
+    assert ids(auth.get("/api/items", params={"status": "open"}).json()) == []
+    assert auth.get("/api/items", params={"status": "maybe"}).status_code == 422
 
     page = auth.get("/api/items", params={"limit": 2}).json()
     assert ids(page) == [pending, c] and page["next_before"] == c

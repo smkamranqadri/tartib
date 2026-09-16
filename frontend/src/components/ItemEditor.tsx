@@ -10,9 +10,12 @@ interface Props {
   submitLabel: string;
   onSubmit: (edit: Edit) => Promise<void>;
   onCancel: () => void;
+  hideCancel?: boolean;
+  /** Render without the inset background (used inside a Card). */
+  inline?: boolean;
 }
 
-export default function ItemEditor({ item, fromProposal, spaces, submitLabel, onSubmit, onCancel }: Props) {
+export default function ItemEditor({ item, fromProposal, spaces, submitLabel, onSubmit, onCancel, hideCancel, inline }: Props) {
   const base = fromProposal && item.proposal ? item.proposal : item;
   const [shape, setShape] = useState<Shape>(base.shape);
   const [space, setSpace] = useState(base.space);
@@ -21,11 +24,13 @@ export default function ItemEditor({ item, fromProposal, spaces, submitLabel, on
   const [remind, setRemind] = useState(toLocalInput(base.remind_at));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setSaved(false);
     const edit: Edit = { shape, space: space.trim() || "inbox" };
     if (shape === "task") {
       edit.title = title.trim() || null;
@@ -34,14 +39,16 @@ export default function ItemEditor({ item, fromProposal, spaces, submitLabel, on
     }
     try {
       await onSubmit(edit);
+      setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed");
+    } finally {
       setBusy(false);
     }
   }
 
   return (
-    <form className="editor" onSubmit={submit}>
+    <form className={`editor ${inline ? "inline" : ""}`} onSubmit={submit}>
       <div className="editor-row">
         <label>
           <span>Shape</span>
@@ -80,9 +87,12 @@ export default function ItemEditor({ item, fromProposal, spaces, submitLabel, on
       )}
       <div className="editor-actions">
         {error && <span className="error">{error}</span>}
-        <button type="button" className="ghost" onClick={onCancel} disabled={busy}>
-          Cancel
-        </button>
+        {saved && !error && <span className="muted">Saved</span>}
+        {!hideCancel && (
+          <button type="button" className="ghost" onClick={onCancel} disabled={busy}>
+            Cancel
+          </button>
+        )}
         <button type="submit" disabled={busy}>
           {submitLabel}
         </button>

@@ -51,6 +51,7 @@ export interface ListParams {
   q?: string;
   space?: string;
   shape?: string;
+  status?: string;
   before?: number;
   limit?: number;
 }
@@ -62,6 +63,16 @@ export function listItems(params: ListParams) {
   const suffix = qs.toString();
   return api<{ items: Item[]; next_before: number | null }>(`/api/items${suffix ? `?${suffix}` : ""}`);
 }
+
+export const getItem = (id: number) => api<Item>(`/api/items/${id}`);
+export interface AskResult {
+  answer: string;
+  item_ids: number[];
+  items: Item[];
+  matched?: boolean;
+}
+export const ask = (question: string, space?: string) =>
+  send<AskResult>("POST", "/api/ask", { question, space: space || undefined });
 
 export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/items/${id}`, edit);
 export const approveItem = (id: number, edit?: Edit) =>

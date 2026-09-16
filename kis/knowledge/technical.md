@@ -5,10 +5,10 @@ How Tartib is built. Proven by the Phase 1 to 4 scaffold on 2026-09-17.
 ## Layout
 
 ```text
-backend/tartib/     FastAPI app. config, db, auth, items, queries, store, classify, runner, main
+backend/tartib/     FastAPI app. config, db, auth, items, queries, ask, store, codex, classify, runner, main
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
 backend/tests/      pytest + TestClient; AI endpoint mocked with respx
-frontend/src/       React + Vite + TS. api.ts, screens/, components/, format.ts, useLoad.ts
+frontend/src/       React + Vite + TS. api.ts, screens/ (Today, Attention, All, ItemPage, Login), components/ (Card, ItemRow, ItemEditor), format.ts, useLoad.ts
 frontend/public/    manifest.webmanifest, sw.js, icons
 Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex runs uvicorn
 docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
@@ -36,7 +36,9 @@ All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
 
 ## Classification runtime
 
-`classify(text, context)` in `classify.py` runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. It validates the reply with a Pydantic `Proposal`, drops task fields for notes, and converts naive reminder times from `TARTIB_TZ` to UTC. Timeout kills the process.
+`codex.py` is the one AI transport: `run_json(prompt, schema, cfg)` runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. Timeout kills the process.
+`classify.py` builds the filing prompt, validates the reply as a Pydantic `Proposal`, drops task fields for notes, converts naive reminder times from `TARTIB_TZ` to UTC.
+`ask.py` (POST /api/ask) retrieves up to 20 items by FTS5 OR-query over the question's content words (stopwords dropped, prefix on words of 4+ chars), falls back to the 20 most recent in the space, sends them to Codex with an answer-only-from-these prompt and a `{answer, item_ids}` schema, then filters cited ids to the retrieved set. Read-only; about 7 to 10s per question.
 Tests point `TARTIB_AI_COMMAND` at `tests/fake_codex.py`, driven by `FAKE_CODEX_*` env vars, so the subprocess path is exercised for real.
 `runner.py` owns an `asyncio.Queue`; capture enqueues via `call_soon_threadsafe`; one consumer task processes items; startup enqueues every `stage='inbox'` row. Errors are written to `proposal_error` and never retried automatically.
 `store.py` is the single write path for filing, shared by the runner, approve, reject, and PATCH.
@@ -51,9 +53,14 @@ Tests point `TARTIB_AI_COMMAND` at `tests/fake_codex.py`, driven by `FAKE_CODEX_
 POST   /api/login {password}        POST /api/logout        GET /api/health (public)
 POST   /api/capture {text} -> 201 {id}
 GET    /api/today                    GET /api/attention      GET /api/spaces
-GET    /api/items?q=&space=&shape=&limit=&before=     GET /api/items/{id}
+GET    /api/items?q=&space=&shape=&status=&limit=&before=     GET /api/items/{id}
+POST   /api/ask {question, space?} -> {answer, item_ids, items, matched}
 PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   POST /api/items/{id}/reject
 ```
+
+## Frontend shell
+
+Centered pill nav with three routes, capture box on every screen, section cards with uppercase labels (`Card` component), theme toggle stored in localStorage as `tartib-theme` and applied via `data-theme` on `<html>`. Routes: `/today`, `/attention`, `/all`, `/items/:id`.
 
 ## Verification commands
 
