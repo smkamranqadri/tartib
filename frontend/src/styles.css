@@ -1,0 +1,54 @@
+:root {
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #6b6b6b;
+  --line: #e4e4e4;
+  --accent: #1d5cff;
+  --danger: #c0392b;
+  --card: #f7f7f7;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111111;
+    --fg: #f2f2f2;
+    --muted: #9a9a9a;
+    --line: #2a2a2a;
+    --accent: #6f95ff;
+    --danger: #ff6b5b;
+    --card: #1b1b1b;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); }
+body {
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+button, input, textarea { font: inherit; color: inherit; }
+.app { max-width: 720px; margin: 0 auto; padding: 0 16px 48px; }
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+nav { display: flex; gap: 16px; }
+nav a { color: var(--muted); text-decoration: none; padding: 4px 0; }
+nav a.active { color: var(--fg); border-bottom: 2px solid var(--accent); }
+button.link { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0; }
+.capture { display: flex; flex-direction: column; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.capture textarea {
+  width: 100%; resize: vertical; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--card);
+}
+.capture-row { display: flex; justify-content: space-between; align-items: center; }
+button[type="submit"] {
+  background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; cursor: pointer;
+}
+button[type="submit"]:disabled { opacity: 0.5; cursor: default; }
+.error { color: var(--danger); font-size: 14px; }
+.muted { color: var(--muted); }
+.screen { padding-top: 16px; }
+.screen h2 { font-size: 18px; margin: 0 0 12px; }
+.login { max-width: 320px; margin: 20vh auto 0; padding: 0 16px; text-align: center; }
+.login form { display: flex; flex-direction: column; gap: 12px; }
+.login input { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }

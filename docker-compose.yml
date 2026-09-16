@@ -1,0 +1,13 @@
+services:
+  tartib:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - tartib-data:/data
+    restart: unless-stopped
+    mem_limit: 512m
+
+volumes:
+  tartib-data:
