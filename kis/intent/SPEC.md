@@ -26,7 +26,7 @@ Context is: current datetime in `TARTIB_TZ`, and the list of existing spaces so 
 
 - `confidence >= TARTIB_AUTOFILE_CONFIDENCE` (default 0.85): proposal applied, `stage=filed`.
 - otherwise: proposal attached, `stage=attention`.
-- endpoint unset, unreachable, or invalid output: `stage=attention` with no proposal and `proposal_error` set.
+- classifier off, CLI missing, failing, timing out, or invalid output: `stage=attention` with no proposal and `proposal_error` set.
 - on startup, any item still in `inbox` is re-queued, so a restart mid-classify loses nothing.
 
 ## Needs Attention decisions

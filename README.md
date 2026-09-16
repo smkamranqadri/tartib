@@ -10,13 +10,16 @@ Your text is never rewritten. Classification only proposes fields around it.
 
 ## Run it
 
-Needs Docker. Fits in 512MB.
+Needs Docker and a [Codex CLI](https://github.com/openai/codex) login on the host. Fits in 512MB.
 
 ```sh
-cp .env.example .env        # set TARTIB_PASSWORD, optionally the AI endpoint
+codex login                 # once, on the host; compose mounts ~/.codex into the container
+cp .env.example .env        # set TARTIB_PASSWORD
 docker compose up -d
 open http://localhost:8000
 ```
+
+No Codex? Set `TARTIB_AI_COMMAND=off` and every capture goes to Needs Attention for you to file by hand.
 
 Put it behind HTTPS (Caddy, a tunnel, a reverse proxy) before exposing it beyond your LAN. The session cookie is marked secure only when the request arrives over HTTPS.
 
@@ -27,13 +30,11 @@ Put it behind HTTPS (Caddy, a tunnel, a reverse proxy) before exposing it beyond
 | `TARTIB_PASSWORD` | yes | | The one password. |
 | `TARTIB_SECRET` | no | derived from password | Cookie signing key. Set it to keep sessions across password changes. |
 | `TARTIB_TZ` | no | `UTC` | IANA zone that defines "today" and resolves "tomorrow" in captures. |
-| `TARTIB_AI_BASE_URL` | no | | OpenAI-compatible base URL, e.g. `https://api.openai.com/v1`. Unset disables AI; everything goes to Needs Attention. |
-| `TARTIB_AI_API_KEY` | no | | Bearer key for that endpoint. |
-| `TARTIB_AI_MODEL` | no | | Model name. |
+| `TARTIB_AI_COMMAND` | no | `codex` | Command that runs the Codex CLI. `off` disables classification. |
+| `TARTIB_AI_MODEL` | no | | Passed as `codex --model`. Unset uses Codex's default. |
+| `TARTIB_AI_TIMEOUT` | no | `120` | Seconds allowed per classification. |
 | `TARTIB_AUTOFILE_CONFIDENCE` | no | `0.85` | Proposals at or above this are filed without asking. |
 | `TARTIB_DB_PATH` | no | `/data/tartib.db` | SQLite file. |
-
-Any OpenAI-compatible server works: OpenAI, OpenRouter, Ollama (`http://host.docker.internal:11434/v1`), LM Studio, vLLM.
 
 ## Capture from anywhere
 
@@ -51,9 +52,9 @@ On iOS, an Apple Shortcut with "Get Contents of URL" (POST, JSON body, that head
 ## How filing works
 
 1. `POST /api/capture` stores the text and returns immediately.
-2. A background task calls the AI with the text, the current time in your zone, and your existing spaces.
-3. The AI proposes `{shape, space, title, due, remind_at, confidence}`.
-4. Confidence at or above the threshold: applied and filed. Below: parked in Needs Attention with the proposal attached. Endpoint down or unconfigured: parked with the error.
+2. A background task runs `codex exec` (ephemeral, read-only sandbox, JSON output schema) with the text, the current time in your zone, and your existing spaces.
+3. Codex proposes `{shape, space, title, due, remind_at, confidence}`.
+4. Confidence at or above the threshold: applied and filed. Below: parked in Needs Attention with the proposal attached. CLI missing, failing, or timing out: parked with the error.
 5. Restart mid-classify loses nothing. Anything still in the inbox is re-queued on startup.
 
 **Reject** keeps the text as a plain note in the `inbox` space. Nothing is ever deleted by a decision.
@@ -94,11 +95,11 @@ npm run dev
 npm run typecheck && npm run build
 ```
 
-Backend is FastAPI on stdlib `sqlite3` with FTS5 and numbered SQL migrations, no ORM. Frontend is React + Vite + TypeScript with no UI library. One container serves both.
+Backend is FastAPI on stdlib `sqlite3` with FTS5 and numbered SQL migrations, no ORM. Tests drive a fake Codex script as a real subprocess, so `codex` itself is never needed to run them. Frontend is React + Vite + TypeScript with no UI library. One container serves both.
 
 ## Not planned
 
-Projects, tags, pomodoro, push notifications, chat with your notes, a second AI provider, multi-user. Tartib is deliberately small.
+Projects, tags, pomodoro, push notifications, chat with your notes, a second classifier, multi-user. Tartib is deliberately small.
 
 ## License
 

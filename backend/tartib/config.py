@@ -16,14 +16,14 @@ class Settings:
     tz: str
     db_path: str
     static_dir: str | None
-    ai_base_url: str | None
-    ai_api_key: str | None
+    ai_command: str  # "codex", a path, or "off"
     ai_model: str | None
+    ai_timeout: float
     autofile_confidence: float
 
     @property
     def ai_enabled(self) -> bool:
-        return bool(self.ai_base_url and self.ai_model)
+        return self.ai_command.strip().lower() not in ("", "off", "none", "false", "0")
 
     @property
     def zone(self) -> ZoneInfo:
@@ -44,8 +44,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         tz=tz,
         db_path=env.get("TARTIB_DB_PATH") or "/data/tartib.db",
         static_dir=env.get("TARTIB_STATIC_DIR") or None,
-        ai_base_url=(env.get("TARTIB_AI_BASE_URL") or "").rstrip("/") or None,
-        ai_api_key=env.get("TARTIB_AI_API_KEY") or None,
+        ai_command=env.get("TARTIB_AI_COMMAND", "codex"),
         ai_model=env.get("TARTIB_AI_MODEL") or None,
+        ai_timeout=float(env.get("TARTIB_AI_TIMEOUT") or "120"),
         autofile_confidence=float(env.get("TARTIB_AUTOFILE_CONFIDENCE") or "0.85"),
     )

@@ -12,7 +12,11 @@ PASSWORD = "hunter2"
 
 
 def make_settings(tmp_path, **extra):
-    env = {"TARTIB_PASSWORD": PASSWORD, "TARTIB_DB_PATH": str(tmp_path / "t.db")}
+    env = {
+        "TARTIB_PASSWORD": PASSWORD,
+        "TARTIB_DB_PATH": str(tmp_path / "t.db"),
+        "TARTIB_AI_COMMAND": "off",
+    }
     env.update(extra)
     return load_settings(env)
 

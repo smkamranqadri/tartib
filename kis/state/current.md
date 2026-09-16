@@ -1,21 +1,21 @@
 # Current
 
 - Branch: `main`, local only, no remote.
-- Task: none. v0.1 scaffold complete through Phase 4 (2026-09-17).
+- Task: none. v0.1 complete; classifier switched from HTTP endpoint to Codex CLI (2026-09-17).
 - Command: `cd backend && uv run pytest -q` / `cd frontend && npm run build` / `docker compose up -d`.
 - Blocker: none.
-- Next: user decides. Candidates in `kis/intent/ARCHITECTURE.md`. First real use needs a `.env` with an AI endpoint to exercise auto-filing outside tests.
+- Next: user decides. Compose stack is running on http://localhost:8000 (password in `.env`) with seeded sample items for review. Candidates in `kis/intent/ARCHITECTURE.md`.
 
 ## Proof (2026-09-17)
 
-- `uv run pytest -q`: 38 passed.
-- `uv run ruff check .`: clean.
+- `uv run pytest -q`: 41 passed (fake Codex subprocess). `uv run ruff check .`: clean.
 - `npm run typecheck` and `npm run build`: clean.
-- `docker compose up`: health ok, capture returned 201 in 15ms with AI unset, item parked in Needs Attention with "AI not configured".
-- Container restart kept data. `docker stats`: 36.8MiB of the 512MiB limit.
-- Headless Chrome (playwright-core, channel chrome): login, wrong-password error, Today rules, done toggle, capture from the box, edit-and-approve, reject, search, space/shape filters, inline edit in All, dark mode at 1280px, phone width 390px. Service worker controls the page after reload; manifest valid.
+- Host, real Codex: 3 captures classified in 33s. Dentist -> task/health/due/reminder at 0.99, filed. "hmm" -> 0.72, Needs Attention. Idea -> note/ideas 0.98, filed.
+- Docker, real Codex via mounted ~/.codex: "book flights to Lahore for the 3rd of October" -> task/travel/due 2026-10-03 at 0.94, filed in 8s.
+- `docker stats`: 41.7MiB of 512MiB. Image 1.13GB (Node + Codex added).
+- Container restart kept data (earlier run). Headless Chrome UI checks (earlier run) unchanged by this switch.
 
 ## Known gaps
 
-- Auto-file path is covered by tests with a mocked endpoint only. Not yet run against a real model.
-- Image is 524MB (see intent follow-ups).
+- Image is 1.13GB. Runtime memory is tiny; size is cosmetic but noted in Intent.
+- Codex classification is serial, about 8 to 12s per item.

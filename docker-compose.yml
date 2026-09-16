@@ -6,6 +6,8 @@ services:
     env_file: .env
     volumes:
       - tartib-data:/data
+      # Codex CLI login (ChatGPT). Read-write so token refresh persists.
+      - ${CODEX_HOME:-~/.codex}:/root/.codex
     restart: unless-stopped
     mem_limit: 512m
 

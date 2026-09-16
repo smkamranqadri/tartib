@@ -1,22 +1,25 @@
 """The one AI function: classify(text, context) -> Proposal.
 
-Calls an OpenAI-compatible chat completions endpoint. Never touches storage.
+Runs the Codex CLI non-interactively with a JSON schema for the reply. Never touches storage.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+import shlex
+import tempfile
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 
 class ClassifyError(Exception):
-    """The endpoint is unavailable, unconfigured, or returned something unusable."""
+    """The CLI is missing, failed, timed out, or returned something unusable."""
 
 
 class Proposal(BaseModel):
@@ -42,18 +45,33 @@ class Proposal(BaseModel):
         return s or None
 
 
+# What the CLI is told the reply must look like. Kept strict so the model cannot add fields.
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["shape", "space", "title", "due", "remind_at", "confidence"],
+    "properties": {
+        "shape": {"type": "string", "enum": ["task", "note"]},
+        "space": {"type": "string"},
+        "title": {"type": ["string", "null"]},
+        "due": {"type": ["string", "null"]},
+        "remind_at": {"type": ["string", "null"]},
+        "confidence": {"type": "number"},
+    },
+}
+
+
 @dataclass(frozen=True)
 class Context:
     now: datetime  # timezone-aware, in the user's zone
     zone: ZoneInfo
     spaces: list[str]
-    base_url: str
-    model: str
-    api_key: str | None = None
-    timeout: float = 60.0
+    command: str  # e.g. "codex"; split with shlex
+    model: str | None = None
+    timeout: float = 120.0
 
 
-SYSTEM_PROMPT = """You file short personal captures for one person. Reply with one JSON object only.
+PROMPT = """You file short personal captures for one person. Reply with one JSON object only.
 
 Fields:
 - "shape": "task" if the text is something to do, otherwise "note".
@@ -67,16 +85,46 @@ Fields:
 - "confidence": 0 to 1, how sure you are about every field together. Be honest; below 0.85
   means a human should check.
 
-Never rewrite or summarize the text itself. Only propose the fields."""
+Never rewrite or summarize the text itself. Only propose the fields. Do not run commands or
+read files; everything you need is below.
+
+Current datetime: {now} ({zone})
+Existing spaces: {spaces}
+
+Text:
+{text}"""
 
 
-def _user_prompt(text: str, context: Context) -> str:
+def build_prompt(text: str, context: Context) -> str:
     spaces = ", ".join(context.spaces) if context.spaces else "(none yet)"
-    return (
-        f"Current datetime: {context.now.isoformat()} ({context.zone.key})\n"
-        f"Existing spaces: {spaces}\n\n"
-        f"Text:\n{text}"
+    return PROMPT.format(
+        now=context.now.isoformat(), zone=context.zone.key, spaces=spaces, text=text
     )
+
+
+def build_args(
+    context: Context, workdir: Path, schema: Path, output: Path, prompt: str
+) -> list[str]:
+    args = shlex.split(context.command) + [
+        "exec",
+        "--ephemeral",
+        "--skip-git-repo-check",
+        "--ignore-user-config",
+        "--sandbox",
+        "read-only",
+        "--color",
+        "never",
+        "--cd",
+        str(workdir),
+        "--output-schema",
+        str(schema),
+        "--output-last-message",
+        str(output),
+    ]
+    if context.model:
+        args += ["--model", context.model]
+    args.append(prompt)
+    return args
 
 
 def _normalize(proposal: Proposal, context: Context) -> Proposal:
@@ -93,30 +141,40 @@ def _normalize(proposal: Proposal, context: Context) -> Proposal:
 
 
 async def classify(text: str, context: Context) -> Proposal:
-    payload = {
-        "model": context.model,
-        "temperature": 0,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _user_prompt(text, context)},
-        ],
-    }
-    headers = {"Authorization": f"Bearer {context.api_key}"} if context.api_key else {}
-    try:
-        async with httpx.AsyncClient(timeout=context.timeout) as client:
-            resp = await client.post(
-                f"{context.base_url}/chat/completions", json=payload, headers=headers
+    with tempfile.TemporaryDirectory(prefix="tartib-classify-") as tmp:
+        workdir = Path(tmp)
+        schema = workdir / "schema.json"
+        output = workdir / "reply.json"
+        schema.write_text(json.dumps(OUTPUT_SCHEMA))
+        args = build_args(context, workdir, schema, output, build_prompt(text, context))
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *args,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=workdir,
             )
-        resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
-        data = json.loads(content)
-        proposal = Proposal.model_validate(data)
-    except httpx.HTTPError as e:
-        raise ClassifyError(f"endpoint error: {e}") from e
+        except (FileNotFoundError, PermissionError) as e:
+            raise ClassifyError(f"cannot run {args[0]!r}: {e}") from e
+        try:
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=context.timeout)
+        except TimeoutError as e:
+            proc.kill()
+            await proc.wait()
+            raise ClassifyError(f"timed out after {context.timeout:.0f}s") from e
+        if proc.returncode != 0:
+            tail = stderr.decode(errors="replace").strip().splitlines()[-1:] or ["no output"]
+            raise ClassifyError(f"exit {proc.returncode}: {tail[0][:300]}")
+        try:
+            raw = output.read_text()
+        except FileNotFoundError as e:
+            raise ClassifyError("no reply written") from e
+    try:
+        proposal = Proposal.model_validate(json.loads(raw))
     except ValidationError as e:
         first = e.errors()[0]
         raise ClassifyError(f"invalid proposal: {first['loc']}: {first['msg']}") from e
-    except (KeyError, IndexError, TypeError, ValueError) as e:
+    except (TypeError, ValueError) as e:
         raise ClassifyError(f"unusable reply: {e}") from e
     return _normalize(proposal, context)

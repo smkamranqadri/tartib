@@ -10,8 +10,8 @@ backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schem
 backend/tests/      pytest + TestClient; AI endpoint mocked with respx
 frontend/src/       React + Vite + TS. api.ts, screens/, components/, format.ts, useLoad.ts
 frontend/public/    manifest.webmanifest, sw.js, icons
-Dockerfile          multi-stage: node builds dist, python:3.12-slim runs uvicorn, dist copied to /app/static
-docker-compose.yml  one service, volume tartib-data at /data, mem_limit 512m
+Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex runs uvicorn
+docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
 ```
 
 ## Serving
@@ -36,13 +36,14 @@ All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
 
 ## Classification runtime
 
-`classify(text, context)` in `classify.py` posts a chat completion with `response_format: json_object` and `temperature: 0`, validates with a Pydantic `Proposal`, drops task fields for notes, and converts naive reminder times from `TARTIB_TZ` to UTC.
+`classify(text, context)` in `classify.py` runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. It validates the reply with a Pydantic `Proposal`, drops task fields for notes, and converts naive reminder times from `TARTIB_TZ` to UTC. Timeout kills the process.
+Tests point `TARTIB_AI_COMMAND` at `tests/fake_codex.py`, driven by `FAKE_CODEX_*` env vars, so the subprocess path is exercised for real.
 `runner.py` owns an `asyncio.Queue`; capture enqueues via `call_soon_threadsafe`; one consumer task processes items; startup enqueues every `stage='inbox'` row. Errors are written to `proposal_error` and never retried automatically.
 `store.py` is the single write path for filing, shared by the runner, approve, reject, and PATCH.
 
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_STATIC_DIR`, `TARTIB_AI_BASE_URL`, `TARTIB_AI_API_KEY`, `TARTIB_AI_MODEL`, `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). Unset base URL disables AI.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 

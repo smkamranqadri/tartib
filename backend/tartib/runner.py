@@ -66,9 +66,9 @@ class Runner:
             now=utcnow().astimezone(s.zone),
             zone=s.zone,
             spaces=spaces,
-            base_url=s.ai_base_url or "",
-            model=s.ai_model or "",
-            api_key=s.ai_api_key,
+            command=s.ai_command,
+            model=s.ai_model,
+            timeout=s.ai_timeout,
         )
         try:
             proposal = await classify(text, context)

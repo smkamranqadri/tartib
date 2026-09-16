@@ -8,4 +8,4 @@ Stage: v0.1 built 2026-09-17, unreleased. No git remote yet.
 
 ## Stack
 
-FastAPI + SQLite (FTS5) backend, React + Vite PWA frontend, one Docker container, one password from env, one OpenAI-compatible AI endpoint from env. Details in `technical.md`.
+FastAPI + SQLite (FTS5) backend, React + Vite PWA frontend, one Docker container, one password from env, classification by the Codex CLI (ChatGPT login mounted from the host). Details in `technical.md`.
