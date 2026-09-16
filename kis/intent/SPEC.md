@@ -1,6 +1,8 @@
 # Tartib SPEC
 
-What the product does. How it is built lives in `ARCHITECTURE.md`. Hard rules live in `kis/knowledge/rules.md`.
+What the product does. How it is built lives in `kis/knowledge/technical.md`. Hard rules live in `kis/knowledge/rules.md`.
+
+Status: v0.1 built and verified 2026-09-17. Every section below is implemented.
 
 ## Item
 
