@@ -105,6 +105,19 @@ def test_v1_to_v2(tmp_path):
         assert new["id"] == 6
 
 
+def test_unconfigured_spaces_move_to_attention_on_startup(tmp_path):
+    path = str(tmp_path / "v1.db")
+    build_v1(path)
+    settings = make_settings(tmp_path, TARTIB_DB_PATH=path, TARTIB_SPACES="work,ideas")
+    with TestClient(create_app(settings)) as client:
+        client.headers["Authorization"] = f"Bearer {PASSWORD}"
+        five = client.get("/api/items/5").json()  # was filed in 'home', not configured now
+        assert five["space"] is None and five["stage"] == "attention"
+        one = client.get("/api/items/1").json()  # 'work' is configured, untouched
+        assert one["space"] == "work" and one["stage"] == "filed"
+        assert client.get("/api/items", params={"space": "home"}).json()["items"] == []
+
+
 def test_migrate_is_idempotent(tmp_path):
     path = str(tmp_path / "v.db")
     build_v1(path)

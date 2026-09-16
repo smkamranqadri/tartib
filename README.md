@@ -1,8 +1,8 @@
 # Tartib (ترتیب)
 
-A personal capture system. You type anything into one box. It lands in an inbox. A background AI call proposes how to file it. Confident proposals are filed automatically; the rest wait for you in **Needs Attention**. Three screens, nothing else.
+A personal capture system. You type anything into one box. It is stored once, verbatim, as a capture. A background Codex call turns it into one or more items, filed into your own spaces. Confident proposals are filed automatically; the rest wait for you in **Needs Attention**. A capture that is a question is answered from your notes instead of filed. Three screens, nothing else.
 
-- **Today**: open tasks due today or earlier, starred tasks, and tasks whose reminder time has passed.
+- **Today**: open tasks due today or earlier, starred tasks, tasks whose reminder time has passed, and your most recent captures.
 - **Needs Attention**: captures the AI was not sure about. Approve, edit, or reject.
 - **All**: full-text search over everything, filter by space, shape, and status. Ask a question and get an answer drawn only from your own items, with links to them.
 - **Item page**: the full text, the AI's proposal, and inline edit.
@@ -15,7 +15,7 @@ Needs Docker and a [Codex CLI](https://github.com/openai/codex) login on the hos
 
 ```sh
 codex login                 # once, on the host; compose mounts ~/.codex into the container
-cp .env.example .env        # set TARTIB_PASSWORD
+cp .env.example .env        # set TARTIB_PASSWORD and TARTIB_SPACES
 docker compose up -d
 open http://localhost:8000
 ```
@@ -31,6 +31,7 @@ Put it behind HTTPS (Caddy, a tunnel, a reverse proxy) before exposing it beyond
 | `TARTIB_PASSWORD` | yes | | The one password. |
 | `TARTIB_SECRET` | no | derived from password | Cookie signing key. Set it to keep sessions across password changes. |
 | `TARTIB_TZ` | no | `UTC` | IANA zone that defines "today" and resolves "tomorrow" in captures. |
+| `TARTIB_SPACES` | yes | | Comma-separated. The only spaces that exist. |
 | `TARTIB_AI_COMMAND` | no | `codex` | Command that runs the Codex CLI. `off` disables classification. |
 | `TARTIB_AI_MODEL` | no | | Passed as `codex --model`. Unset uses Codex's default. |
 | `TARTIB_AI_TIMEOUT` | no | `120` | Seconds allowed per classification. |
@@ -52,13 +53,15 @@ On iOS, an Apple Shortcut with "Get Contents of URL" (POST, JSON body, that head
 
 ## How filing works
 
-1. `POST /api/capture` stores the text and returns immediately.
-2. A background task runs `codex exec` (ephemeral, read-only sandbox, JSON output schema) with the text, the current time in your zone, and your existing spaces.
-3. Codex proposes `{shape, space, title, due, remind_at, confidence}`.
-4. Confidence at or above the threshold: applied and filed. Below: parked in Needs Attention with the proposal attached. CLI missing, failing, or timing out: parked with the error.
-5. Restart mid-classify loses nothing. Anything still in the inbox is re-queued on startup.
+1. `POST /api/capture` stores the text once as a capture and returns `{id}` immediately.
+2. A background task runs `codex exec` (ephemeral, read-only sandbox, JSON output schema) with the text, the current time in your zone, and your configured spaces.
+3. Codex returns a list of proposals, one per independent item in the text: `{text, shape, space, title, due, remind_at, confidence}`. "A, B, and C" becomes three items, each with its own verbatim excerpt.
+4. Per proposal: `question` is not stored, the runner answers it from your items and keeps the answer on the capture. A space outside your list becomes null. Null space or confidence below the threshold: Needs Attention. Otherwise filed.
+5. CLI missing, failing, or timing out: one plain note in Needs Attention with the error. Restart mid-classify loses nothing; pending captures are re-queued on startup.
 
-**Reject** keeps the text as a plain note in the `inbox` space. Nothing is ever deleted by a decision.
+`GET /api/captures/{id}` returns the capture, its items, and the answer if it was a question. The PWA polls it after every capture.
+
+**Reject** discards the proposal and keeps the item in Needs Attention with no space, for you to file through Edit. **Approve** needs a space. Nothing is ever deleted by a decision; the capture keeps the original text either way.
 
 ## How ask works
 
@@ -70,12 +73,13 @@ On iOS, an Apple Shortcut with "Get Contents of URL" (POST, JSON body, that head
 POST   /api/login                {password}      sets the session cookie
 POST   /api/logout
 GET    /api/health                               public
-POST   /api/capture              {text}          -> 201 {id}
+POST   /api/capture              {text}          -> 201 {id}   (a capture id)
+GET    /api/captures/{id}                        capture, its items, answer if any
 GET    /api/today
 GET    /api/attention
 GET    /api/items?q=&space=&shape=&status=&limit=&before=
 GET    /api/items/{id}
-GET    /api/spaces
+GET    /api/spaces                               TARTIB_SPACES
 POST   /api/ask                  {question, space?} -> {answer, item_ids, items}   read-only
 PATCH  /api/items/{id}           any of shape, space, title, due, remind_at, starred, status
 POST   /api/items/{id}/approve   optional overrides, same fields
@@ -91,7 +95,8 @@ Dates: `due` is `YYYY-MM-DD`. `remind_at` and `created_at` are ISO 8601 in UTC.
 cd backend
 uv sync
 TARTIB_PASSWORD=dev TARTIB_DB_PATH=./dev.db uv run uvicorn --factory tartib.main:create_app --reload
-uv run pytest
+uv run pytest              # fast, offline, fake Codex
+uv run pytest -m eval      # 15 real captures through the real Codex CLI, about 3 minutes
 uv run ruff check .
 
 # frontend (proxies /api to :8000)
@@ -101,7 +106,7 @@ npm run dev
 npm run typecheck && npm run build
 ```
 
-Backend is FastAPI on stdlib `sqlite3` with FTS5 and numbered SQL migrations, no ORM. Tests drive a fake Codex script as a real subprocess, so `codex` itself is never needed to run them. Frontend is React + Vite + TypeScript with no UI library. One container serves both.
+Backend is FastAPI on stdlib `sqlite3` with FTS5 and numbered SQL migrations, no ORM. Tests drive a fake Codex script as a real subprocess, so `codex` itself is never needed for the default suite. Upgrading from a pre-captures database is automatic on startup: every item gets a capture, `inbox` items move to Needs Attention with no space. Frontend is React + Vite + TypeScript with no UI library. One container serves both.
 
 ## Not planned
 

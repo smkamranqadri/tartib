@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -11,8 +12,10 @@ from fastapi.responses import FileResponse
 from tartib import ask, auth, captures, db, items, queries
 from tartib.config import Settings, load_settings
 from tartib.runner import Runner
+from tartib.store import reconcile_spaces
 
 DEFAULT_STATIC = Path(__file__).resolve().parent.parent / "static"
+log = logging.getLogger("tartib")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -23,6 +26,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         conn = db.connect(settings.db_path)
         try:
             db.migrate(conn)
+            moved = reconcile_spaces(conn, settings.spaces)
+            if moved:
+                log.warning("%d items had unconfigured spaces; moved to Needs Attention", moved)
         finally:
             conn.close()
         runner = Runner(settings)

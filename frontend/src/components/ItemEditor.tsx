@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { fromLocalInput, toLocalInput } from "../format";
 import type { Edit, Item, Shape } from "../types";
+import SpaceSelect from "./SpaceSelect";
 
 interface Props {
   item: Item;
@@ -8,30 +9,43 @@ interface Props {
   fromProposal?: boolean;
   spaces: string[];
   submitLabel: string;
+  /** Filing needs a space; the submit button stays disabled until one is picked. */
+  requireSpace?: boolean;
   onSubmit: (edit: Edit) => Promise<void>;
   onCancel: () => void;
   hideCancel?: boolean;
-  /** Render without the inset background (used inside a Card). */
   inline?: boolean;
 }
 
-export default function ItemEditor({ item, fromProposal, spaces, submitLabel, onSubmit, onCancel, hideCancel, inline }: Props) {
-  const base = fromProposal && item.proposal ? item.proposal : item;
-  const [shape, setShape] = useState<Shape>(base.shape);
-  const [space, setSpace] = useState(base.space);
+export default function ItemEditor({
+  item,
+  fromProposal,
+  spaces,
+  submitLabel,
+  requireSpace,
+  onSubmit,
+  onCancel,
+  hideCancel,
+  inline,
+}: Props) {
+  const base = fromProposal && item.proposal && item.proposal.shape !== "question" ? item.proposal : item;
+  const [shape, setShape] = useState<Shape>(base.shape === "question" ? "note" : base.shape);
+  const [space, setSpace] = useState<string | null>(base.space ?? item.space);
   const [title, setTitle] = useState(base.title ?? "");
   const [due, setDue] = useState(base.due ?? "");
   const [remind, setRemind] = useState(toLocalInput(base.remind_at));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const missingSpace = !!requireSpace && !space;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (missingSpace) return;
     setBusy(true);
     setError(null);
     setSaved(false);
-    const edit: Edit = { shape, space: space.trim() || "inbox" };
+    const edit: Edit = { shape, space };
     if (shape === "task") {
       edit.title = title.trim() || null;
       edit.due = due || null;
@@ -59,12 +73,7 @@ export default function ItemEditor({ item, fromProposal, spaces, submitLabel, on
         </label>
         <label>
           <span>Space</span>
-          <input list="spaces" value={space} onChange={(e) => setSpace(e.target.value)} placeholder="inbox" />
-          <datalist id="spaces">
-            {spaces.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
+          <SpaceSelect value={space} spaces={spaces} onChange={setSpace} />
         </label>
       </div>
       {shape === "task" && (
@@ -88,12 +97,13 @@ export default function ItemEditor({ item, fromProposal, spaces, submitLabel, on
       <div className="editor-actions">
         {error && <span className="error">{error}</span>}
         {saved && !error && <span className="muted">Saved</span>}
+        {missingSpace && !error && <span className="muted">Pick a space to file</span>}
         {!hideCancel && (
           <button type="button" className="ghost" onClick={onCancel} disabled={busy}>
             Cancel
           </button>
         )}
-        <button type="submit" disabled={busy}>
+        <button type="submit" disabled={busy || missingSpace}>
           {submitLabel}
         </button>
       </div>

@@ -70,6 +70,21 @@ def _clean(fields: dict, allowed: Sequence[str]) -> dict:
     return values
 
 
+def reconcile_spaces(conn: sqlite3.Connection, allowed: Sequence[str]) -> int:
+    """Items whose space is no longer configured go back to Needs Attention with no space.
+
+    Runs at startup so removing a space from TARTIB_SPACES never leaves filed items the UI
+    cannot select or filter. Returns how many items moved."""
+    placeholders = ", ".join("?" * len(allowed))
+    cur = conn.execute(
+        f"UPDATE items SET space = NULL, stage = 'attention'"
+        f" WHERE space IS NOT NULL AND space NOT IN ({placeholders})",
+        list(allowed),
+    )
+    conn.commit()
+    return cur.rowcount
+
+
 def create_capture(conn: sqlite3.Connection, text: str, source: str) -> int:
     cur = conn.execute(
         "INSERT INTO captures (raw_text, source, created_at) VALUES (?, ?, ?)",

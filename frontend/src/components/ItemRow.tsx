@@ -66,7 +66,7 @@ export default function ItemRow({ item, spaces, onChange, showStage }: Props) {
       </div>
       <div className="item-meta">
         {showStage && item.stage !== "filed" && <span className={`chip stage-${item.stage}`}>{item.stage}</span>}
-        <span className="chip">{item.space}</span>
+        {item.space ? <span className="chip">{item.space}</span> : <span className="chip none">no space</span>}
         {item.due && <span className={`chip ${item.due < todayLocal() ? "overdue" : ""}`}>{formatDue(item.due)}</span>}
         {item.remind_at && <span className="chip">⏰ {formatRemind(item.remind_at)}</span>}
         <span className="chip muted">{formatCreated(item.created_at)}</span>

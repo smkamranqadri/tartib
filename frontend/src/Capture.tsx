@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { capture } from "./api";
 
-export default function Capture({ onCaptured }: { onCaptured?: () => void }) {
+export default function Capture({ onCaptured }: { onCaptured?: (id: number) => void }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,9 +13,9 @@ export default function Capture({ onCaptured }: { onCaptured?: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await capture(value);
+      const { id } = await capture(value);
       setText("");
-      onCaptured?.();
+      onCaptured?.(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "capture failed");
     } finally {

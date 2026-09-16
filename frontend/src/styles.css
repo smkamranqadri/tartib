@@ -169,3 +169,33 @@ button.ghost.danger { color: var(--danger); }
   .editor-row { flex-direction: column; }
   .kv { grid-template-columns: 70px 1fr; }
 }
+
+/* slice 4: capture follow-up, recent, ask bar, space select */
+.filing { margin: -8px 0 12px; font-size: 13px; }
+main > .answer { margin-bottom: 16px; }
+.answer-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.small { font-size: 13px; }
+.chip.none { color: var(--warn); font-style: italic; }
+.chip.link { text-decoration: none; }
+.chip.link:hover { text-decoration: underline; }
+.recent { list-style: none; margin: 0; padding: 0; }
+.recent-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.recent-row:last-child { border-bottom: 0; }
+.recent-main .item-text { display: block; }
+.recent-row .item-meta { margin-left: 0; }
+.recent-answer { margin: 8px 0 0; padding: 8px 12px; background: var(--head); border-radius: 8px; font-size: 14px; }
+
+.screen.has-askbar { padding-bottom: 96px; }
+.askbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--panel); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.08);
+}
+.askbar-inner { max-width: 880px; margin: 0 auto; }
+.askbar .answer { margin: 0 0 10px; max-height: 40vh; overflow: auto; }
+.askbar .ask { margin: 0; }
+@media (max-width: 640px) {
+  .screen.has-askbar { padding-bottom: 150px; }
+  .askbar .ask select { flex: 1; }
+}

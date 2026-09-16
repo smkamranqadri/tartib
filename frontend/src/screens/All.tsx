@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { ask, getSpaces, listItems, type AskResult } from "../api";
+import { ask, getSpaces, listItems } from "../api";
+import AnswerView from "../components/AnswerView";
 import Card from "../components/Card";
 import ItemRow from "../components/ItemRow";
-import type { Item } from "../types";
+import type { Answer, Item } from "../types";
 import { useLoad } from "../useLoad";
 
 export default function All({ version }: { version: number }) {
@@ -51,7 +51,7 @@ export default function All({ version }: { version: number }) {
   const count = data ? `${items.length}${data.next_before ? "+" : ""}` : "";
 
   return (
-    <div className="screen">
+    <div className="screen has-askbar">
       <Card label="Search" aside={count && <span className="muted">{count} items</span>}>
         <div className="filters">
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes and tasks" aria-label="Search" />
@@ -88,17 +88,18 @@ export default function All({ version }: { version: number }) {
           </button>
         )}
       </Card>
-      <Ask spaces={spaces} />
+      <AskBar spaces={spaces} />
     </div>
   );
 }
 
-function Ask({ spaces }: { spaces: string[] }) {
+/** Chat-style bar pinned to the bottom of the viewport. The answer opens above it. */
+function AskBar({ spaces }: { spaces: string[] }) {
   const [question, setQuestion] = useState("");
   const [space, setSpace] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AskResult | null>(null);
+  const [result, setResult] = useState<Answer | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -116,44 +117,30 @@ function Ask({ spaces }: { spaces: string[] }) {
   }
 
   return (
-    <Card label="Ask" aside={<span className="muted">answers only from your items</span>}>
-      <form className="ask" onSubmit={submit}>
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="What did I decide about…"
-          aria-label="Question"
-        />
-        <select value={space} onChange={(e) => setSpace(e.target.value)} aria-label="Ask in space">
-          <option value="">All spaces</option>
-          {spaces.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <button type="submit" disabled={busy || !question.trim()}>
-          {busy ? "Thinking…" : "Ask"}
-        </button>
-      </form>
-      {error && <p className="error">{error}</p>}
-      {result && (
-        <div className="answer">
-          <p>{result.answer}</p>
-          {result.items.length > 0 && (
-            <ul className="cited">
-              {result.items.map((item) => (
-                <li key={item.id}>
-                  <Link to={`/items/${item.id}`}>
-                    <span className="muted">#{item.id}</span> {item.shape === "task" && item.title ? item.title : item.raw_text}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          {result.items.length === 0 && <p className="muted">No items cited.</p>}
-        </div>
-      )}
-    </Card>
+    <div className="askbar">
+      <div className="askbar-inner">
+        {result && <AnswerView result={result} onClose={() => setResult(null)} />}
+        {error && <p className="error">{error}</p>}
+        <form className="ask" onSubmit={submit}>
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Ask your notes: what did I decide about…"
+            aria-label="Question"
+          />
+          <select value={space} onChange={(e) => setSpace(e.target.value)} aria-label="Ask in space">
+            <option value="">All spaces</option>
+            {spaces.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <button type="submit" disabled={busy || !question.trim()}>
+            {busy ? "Thinking…" : "Ask"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

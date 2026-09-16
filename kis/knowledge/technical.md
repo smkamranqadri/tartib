@@ -5,7 +5,7 @@ How Tartib is built. Proven by the Phase 1 to 4 scaffold on 2026-09-17.
 ## Layout
 
 ```text
-backend/tartib/     FastAPI app. config, db, auth, items, queries, ask, store, codex, classify, runner, main
+backend/tartib/     FastAPI app. config, db, auth, captures, items, queries, ask, store, codex, classify, runner, main
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
 backend/tests/      pytest + TestClient; AI endpoint mocked with respx
 frontend/src/       React + Vite + TS. api.ts, screens/ (Today, Attention, All, ItemPage, Login), components/ (Card, ItemRow, ItemEditor), format.ts, useLoad.ts
@@ -23,7 +23,9 @@ In dev, Vite proxies `/api` to port 8000.
 ## Storage
 
 SQLite, WAL, stdlib `sqlite3`, one connection per request opened in a threadpool. No ORM.
-`items` holds everything: shared fields, task fields, `stage`, `proposal_json`, `proposal_error`, `classified_at`.
+`captures(id, raw_text, source, created_at, status, error, answer_json, classified_at)` is the stored input, one row per capture.
+`items` are classifier output: `capture_id`, own `raw_text` excerpt, nullable `space`, task fields, `stage` (attention | filed), `proposal_json`, `proposal_error`, `classified_at`. A CHECK forbids `filed` with a null space.
+Migration 0002 (2026-09-17) created captures, backfilled one per item, rebuilt items, mapped `space='inbox'` to null + attention, dropped stage=inbox placeholders (their captures stay pending).
 `items_fts` is an FTS5 external-content table over `raw_text` and `title`, synced by triggers.
 A BEFORE UPDATE trigger aborts any write to `raw_text`.
 All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
@@ -37,21 +39,22 @@ All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
 ## Classification runtime
 
 `codex.py` is the one AI transport: `run_json(prompt, schema, cfg)` runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. Timeout kills the process.
-`classify.py` builds the filing prompt, validates the reply as a Pydantic `Proposal`, drops task fields for notes, converts naive reminder times from `TARTIB_TZ` to UTC.
-`ask.py` (POST /api/ask) retrieves up to 20 items by FTS5 OR-query over the question's content words (stopwords dropped, prefix on words of 4+ chars), falls back to the 20 most recent in the space, sends them to Codex with an answer-only-from-these prompt and a `{answer, item_ids}` schema, then filters cited ids to the retrieved set. Read-only; about 7 to 10s per question.
+`classify.py` builds the filing prompt (user-authored, verbatim, plus a `text` excerpt bullet), validates `{"proposals": [...]}`, and normalizes: questions carry nothing, unknown spaces become null and cap confidence at 0.6, notes drop task fields, naive reminder times are converted from `TARTIB_TZ` to UTC.
+`runner.py` queues capture ids. Per capture: classify, insert one item per non-question proposal (excerpt as raw_text, filed or attention by space + threshold), answer the first question proposal via `ask.answer_question` and store it on the capture, mark done. Any failure: one null-space note in attention, capture status error.
+`ask.py` (`answer_question`, used by POST /api/ask and the runner) retrieves up to 20 items by FTS5 OR-query over the question's content words (stopwords dropped, prefix on words of 4+ chars), falls back to the 20 most recent in the space, sends them to Codex with the user-authored answer prompt (includes current datetime, task status in headers) and a `{answer, item_ids}` schema, then filters cited ids to the retrieved set. Read-only; about 7 to 10s per question.
 Tests point `TARTIB_AI_COMMAND` at `tests/fake_codex.py`, driven by `FAKE_CODEX_*` env vars, so the subprocess path is exercised for real.
 `runner.py` owns an `asyncio.Queue`; capture enqueues via `call_soon_threadsafe`; one consumer task processes items; startup enqueues every `stage='inbox'` row. Errors are written to `proposal_error` and never retried automatically.
 `store.py` is the single write path for filing, shared by the runner, approve, reject, and PATCH.
 
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (required, comma-separated), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 
 ```text
 POST   /api/login {password}        POST /api/logout        GET /api/health (public)
-POST   /api/capture {text} -> 201 {id}
+POST   /api/capture {text} -> 201 {id}   (capture id)     GET /api/captures/{id}
 GET    /api/today                    GET /api/attention      GET /api/spaces
 GET    /api/items?q=&space=&shape=&status=&limit=&before=     GET /api/items/{id}
 POST   /api/ask {question, space?} -> {answer, item_ids, items, matched}
@@ -60,12 +63,13 @@ PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   
 
 ## Frontend shell
 
-Centered pill nav with three routes, capture box on every screen, section cards with uppercase labels (`Card` component), theme toggle stored in localStorage as `tartib-theme` and applied via `data-theme` on `<html>`. Routes: `/today`, `/attention`, `/all`, `/items/:id`.
+Centered pill nav with three routes, capture box on every screen (polls `/api/captures/{id}` until done, shows "Filing…", then the answer panel for questions), Today has a Recent card of captures, All has a fixed bottom Ask bar with the answer above it, the editor's space field is `SpaceSelect` over `TARTIB_SPACES`, section cards with uppercase labels (`Card` component), theme toggle stored in localStorage as `tartib-theme` and applied via `data-theme` on `<html>`. Routes: `/today`, `/attention`, `/all`, `/items/:id`.
 
 ## Verification commands
 
 ```sh
 cd backend && uv run pytest -q && uv run ruff check .
+cd backend && uv run pytest -m eval        # 15 fixtures through real Codex, ~3 min
 cd frontend && npm run typecheck && npm run build
 docker compose build && docker compose up -d && curl localhost:8000/api/health && docker stats --no-stream
 ```

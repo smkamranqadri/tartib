@@ -31,3 +31,5 @@ ignore = ["B008"]  # Depends() in defaults is the FastAPI idiom
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not eval'"
+markers = ["eval: runs the real Codex CLI; select with `pytest -m eval`"]

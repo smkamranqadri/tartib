@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { editItem, getItem, getSpaces } from "../api";
+import { approveItem, editItem, getItem, getSpaces } from "../api";
 import Card from "../components/Card";
 import ItemEditor from "../components/ItemEditor";
 import { formatCreated, formatDue, formatRemind } from "../format";
@@ -16,10 +16,13 @@ export default function ItemPage({ version }: { version: number }) {
   if (loading || !item) return <p className="muted">Loading…</p>;
 
   const isTask = item.shape === "task";
-  const editable = item.stage === "filed";
+  const waiting = item.stage === "attention";
 
   async function save(edit: Edit) {
     setData(await editItem(itemId, edit));
+  }
+  async function approve(edit: Edit) {
+    setData(await approveItem(itemId, edit));
   }
 
   return (
@@ -31,8 +34,8 @@ export default function ItemPage({ version }: { version: number }) {
         label={isTask ? "Task" : "Note"}
         aside={
           <span className="muted">
-            {item.space} · {formatCreated(item.created_at)}
-            {item.stage !== "filed" && <> · <span className={`chip stage-${item.stage}`}>{item.stage}</span></>}
+            {item.space ?? "no space"} · {formatCreated(item.created_at)}
+            {waiting && <> · <span className="chip stage-attention">needs attention</span></>}
           </span>
         }
       >
@@ -40,7 +43,7 @@ export default function ItemPage({ version }: { version: number }) {
         <p className="raw big">{item.raw_text}</p>
         {isTask && (
           <div className="item-meta">
-            <span className={`chip ${item.status === "done" ? "" : ""}`}>{item.status}</span>
+            <span className="chip">{item.status}</span>
             {item.starred && <span className="chip">★ starred</span>}
             {item.due && <span className="chip">due {formatDue(item.due)}</span>}
             {item.remind_at && <span className="chip">⏰ {formatRemind(item.remind_at)}</span>}
@@ -48,35 +51,35 @@ export default function ItemPage({ version }: { version: number }) {
         )}
       </Card>
 
-      {editable ? (
-        <Card
-          label="Edit"
-          aside={
-            isTask && (
-              <span className="toggles">
-                <button type="button" className="ghost" onClick={() => void save({ starred: !item.starred })}>
-                  {item.starred ? "★ Starred" : "☆ Star"}
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => void save({ status: item.status === "done" ? "open" : "done" })}
-                >
-                  {item.status === "done" ? "Reopen" : "Mark done"}
-                </button>
-              </span>
-            )
-          }
-        >
-          <ItemEditor key={`${item.id}-${item.classified_at}`} item={item} spaces={spaces} submitLabel="Save" onSubmit={save} onCancel={() => {}} hideCancel inline />
-        </Card>
-      ) : (
-        <Card label="Awaiting decision">
-          <p className="muted">
-            This item is in <Link to="/attention">Needs Attention</Link>. Approve, edit, or reject it there first.
-          </p>
-        </Card>
-      )}
+      <Card
+        label={waiting ? "File it" : "Edit"}
+        aside={
+          !waiting &&
+          isTask && (
+            <span className="toggles">
+              <button type="button" className="ghost" onClick={() => void save({ starred: !item.starred })}>
+                {item.starred ? "★ Starred" : "☆ Star"}
+              </button>
+              <button type="button" className="ghost" onClick={() => void save({ status: item.status === "done" ? "open" : "done" })}>
+                {item.status === "done" ? "Reopen" : "Mark done"}
+              </button>
+            </span>
+          )
+        }
+      >
+        <ItemEditor
+          key={`${item.id}-${item.stage}-${item.classified_at}`}
+          item={item}
+          fromProposal={waiting}
+          spaces={spaces}
+          submitLabel={waiting ? "Approve" : "Save"}
+          requireSpace
+          onSubmit={waiting ? approve : save}
+          onCancel={() => {}}
+          hideCancel
+          inline
+        />
+      </Card>
 
       <Card label="Proposal" aside={item.proposal && <span className="muted">{Math.round(item.proposal.confidence * 100)}% sure</span>}>
         {item.proposal ? (
@@ -84,7 +87,7 @@ export default function ItemPage({ version }: { version: number }) {
             <dt>shape</dt>
             <dd>{item.proposal.shape}</dd>
             <dt>space</dt>
-            <dd>{item.proposal.space}</dd>
+            <dd>{item.proposal.space ?? <span className="muted">none fits</span>}</dd>
             {item.proposal.title && (
               <>
                 <dt>title</dt>

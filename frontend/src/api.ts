@@ -1,4 +1,4 @@
-import type { Edit, Item } from "./types";
+import type { Answer, Capture, Edit, Item } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -43,7 +43,8 @@ export const login = (password: string) => send<{ ok: true }>("POST", "/api/logi
 export const logout = () => send<{ ok: true }>("POST", "/api/logout");
 export const capture = (text: string) => send<{ id: number }>("POST", "/api/capture", { text });
 
-export const getToday = () => api<{ date: string; items: Item[] }>("/api/today");
+export const getToday = () => api<{ date: string; items: Item[]; recent: Capture[] }>("/api/today");
+export const getCapture = (id: number) => api<Capture>(`/api/captures/${id}`);
 export const getAttention = () => api<{ items: Item[] }>("/api/attention");
 export const getSpaces = () => api<{ spaces: string[] }>("/api/spaces");
 
@@ -65,14 +66,8 @@ export function listItems(params: ListParams) {
 }
 
 export const getItem = (id: number) => api<Item>(`/api/items/${id}`);
-export interface AskResult {
-  answer: string;
-  item_ids: number[];
-  items: Item[];
-  matched?: boolean;
-}
 export const ask = (question: string, space?: string) =>
-  send<AskResult>("POST", "/api/ask", { question, space: space || undefined });
+  send<Answer>("POST", "/api/ask", { question, space: space || undefined });
 
 export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/items/${id}`, edit);
 export const approveItem = (id: number, edit?: Edit) =>

@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { logout, setUnauthorizedHandler } from "./api";
+import { getCapture, logout, setUnauthorizedHandler } from "./api";
 import Capture from "./Capture";
+import AnswerView from "./components/AnswerView";
 import All from "./screens/All";
 import Attention from "./screens/Attention";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
 import Today from "./screens/Today";
+import type { Answer } from "./types";
 
 type Theme = "light" | "dark";
 
@@ -24,6 +26,9 @@ export default function App() {
   const [authed, setAuthed] = useState(true);
   const [version, setVersion] = useState(0);
   const [theme, setTheme] = useState<Theme>(readTheme);
+  const [filing, setFiling] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<Answer | null>(null);
+  const pollRef = useRef(0);
   const bump = () => setVersion((v) => v + 1);
 
   useEffect(() => {
@@ -39,11 +44,30 @@ export default function App() {
     }
   }, [theme]);
 
-  // Classification finishes shortly after a capture; refresh once so the result shows up.
-  function onCaptured() {
+  /** Follow a capture until the runner is done; show an answer if it was a question. */
+  function onCaptured(id: number) {
     bump();
-    setTimeout(bump, 4000);
-    setTimeout(bump, 12000);
+    setAnswer(null);
+    setFiling("Filing…");
+    const token = ++pollRef.current;
+    const started = Date.now();
+    const tick = async () => {
+      if (pollRef.current !== token) return;
+      try {
+        const cap = await getCapture(id);
+        if (cap.status !== "pending") {
+          setFiling(null);
+          bump();
+          if (cap.answer) setAnswer(cap.answer);
+          return;
+        }
+      } catch {
+        /* keep polling */
+      }
+      if (Date.now() - started < 120_000) setTimeout(tick, 1000);
+      else setFiling(null);
+    };
+    setTimeout(tick, 1000);
   }
 
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
@@ -83,6 +107,8 @@ export default function App() {
       </header>
       <main>
         <Capture onCaptured={onCaptured} />
+        {filing && <p className="filing muted">{filing}</p>}
+        {answer && <AnswerView result={answer} onClose={() => setAnswer(null)} />}
         <Routes>
           <Route path="/" element={<Navigate to="/today" replace />} />
           <Route path="/today" element={<Today version={version} />} />
