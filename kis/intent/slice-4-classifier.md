@@ -30,6 +30,6 @@ Absorbs slice 3 (Today recent, ask bar, space select). No new screens. No new it
 
 ## Status
 
-- [ ] Phase 1 backend
-- [ ] Phase 2 frontend
-- [ ] Phase 3 eval, docs, live migration
+- [x] Phase 1 backend
+- [x] Phase 2 frontend
+- [x] Phase 3 eval, docs, live migration (2026-09-17)

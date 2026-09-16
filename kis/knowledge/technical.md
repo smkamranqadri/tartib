@@ -25,7 +25,7 @@ In dev, Vite proxies `/api` to port 8000.
 SQLite, WAL, stdlib `sqlite3`, one connection per request opened in a threadpool. No ORM.
 `captures(id, raw_text, source, created_at, status, error, answer_json, classified_at)` is the stored input, one row per capture.
 `items` are classifier output: `capture_id`, own `raw_text` excerpt, nullable `space`, task fields, `stage` (attention | filed), `proposal_json`, `proposal_error`, `classified_at`. A CHECK forbids `filed` with a null space.
-Migration 0002 (2026-09-17) created captures, backfilled one per item, rebuilt items, mapped `space='inbox'` to null + attention, dropped stage=inbox placeholders (their captures stay pending).
+At startup, after migrations, `store.reconcile_spaces` moves items whose space is not in `TARTIB_SPACES` to attention with no space. Migration 0002 (2026-09-17) created captures, backfilled one per item, rebuilt items, mapped `space='inbox'` to null + attention, dropped stage=inbox placeholders (their captures stay pending).
 `items_fts` is an FTS5 external-content table over `raw_text` and `title`, synced by triggers.
 A BEFORE UPDATE trigger aborts any write to `raw_text`.
 All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
