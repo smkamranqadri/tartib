@@ -1,4 +1,4 @@
-"""Today, Needs Attention, All. AI disabled: captures park in attention, tests approve them."""
+"""Today (tasks + recent captures), Needs Attention, All, spaces."""
 
 import sqlite3
 from datetime import UTC, datetime, timedelta
@@ -6,19 +6,18 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from tartib.queries import fts_query
-from tests.test_classify import wait_classified
+from tests.conftest import SPACES, capture, one_item
 
 
 def add(auth, text, **fields):
-    item_id = auth.post("/api/capture", json={"text": text}).json()["id"]
-    wait_classified(auth, item_id)
-    if fields:
-        auth.post(f"/api/items/{item_id}/approve", json=fields)
-    return item_id
+    item = one_item(auth, text)
+    fields.setdefault("space", "work")
+    auth.post(f"/api/items/{item['id']}/approve", json=fields)
+    return item["id"]
 
 
-def ids(payload):
-    return [i["id"] for i in payload["items"]]
+def ids(payload, key="items"):
+    return [i["id"] for i in payload[key]]
 
 
 def test_today_rules(auth, settings):
@@ -35,10 +34,9 @@ def test_today_rules(auth, settings):
     reminded = add(auth, "e", shape="task", title="e", remind_at=past)
     reminder_later = add(auth, "f", shape="task", title="f", remind_at=future)
     plain_task = add(auth, "g", shape="task", title="g")
-    note = add(auth, "h", shape="note", space="x")
+    note = add(auth, "h", shape="note")
     done = add(auth, "i", shape="task", title="i", due=today.isoformat(), status="done")
-    pending = auth.post("/api/capture", json={"text": "j"}).json()["id"]
-    wait_classified(auth, pending)  # stays in attention
+    pending = one_item(auth, "j")["id"]  # stays in attention
 
     payload = auth.get("/api/today").json()
     assert payload["date"] == today.isoformat()
@@ -49,30 +47,55 @@ def test_today_rules(auth, settings):
     assert ids(payload)[:2] == [overdue, due_today]  # overdue first
 
 
+def test_today_recent_captures(auth, settings):
+    caps = [capture(auth, f"note {i}")["id"] for i in range(5)]
+    conn = sqlite3.connect(settings.db_path)
+    # push two captures to yesterday
+    conn.execute(
+        "UPDATE captures SET created_at = ? WHERE id IN (?, ?)",
+        (
+            (datetime.now(UTC) - timedelta(days=1)).isoformat().replace("+00:00", "Z"),
+            caps[0],
+            caps[1],
+        ),
+    )
+    conn.commit()
+    conn.close()
+    recent = auth.get("/api/today").json()["recent"]
+    # the three captured today, newest first; the older two are not the newest 3 so excluded
+    assert [c["id"] for c in recent] == [caps[4], caps[3], caps[2]]
+    assert recent[0]["raw_text"] == "note 4"
+    assert recent[0]["status"] == "error" and len(recent[0]["items"]) == 1
+    assert recent[0]["items"][0]["stage"] == "attention"
+
+    # nothing captured today: still the newest 3
+    conn = sqlite3.connect(settings.db_path)
+    conn.execute(
+        "UPDATE captures SET created_at = ?",
+        ((datetime.now(UTC) - timedelta(days=2)).isoformat().replace("+00:00", "Z"),),
+    )
+    conn.commit()
+    conn.close()
+    assert [c["id"] for c in auth.get("/api/today").json()["recent"]] == [caps[4], caps[3], caps[2]]
+
+
 def test_attention_oldest_first(auth):
-    first = auth.post("/api/capture", json={"text": "first"}).json()["id"]
-    second = auth.post("/api/capture", json={"text": "second"}).json()["id"]
-    wait_classified(auth, second)
-    wait_classified(auth, first)
+    first = one_item(auth, "first")["id"]
+    second = one_item(auth, "second")["id"]
     assert ids(auth.get("/api/attention").json()) == [first, second]
-    auth.post(f"/api/items/{first}/reject")
+    auth.post(f"/api/items/{first}/approve", json={"space": "home"})
     assert ids(auth.get("/api/attention").json()) == [second]
 
 
-def test_spaces_are_filed_only(auth):
-    add(auth, "a", space="work", shape="note")
-    add(auth, "b", space="work", shape="note")
-    add(auth, "c", space="home", shape="note")
-    auth.post("/api/capture", json={"text": "d"})
-    assert auth.get("/api/spaces").json() == {"spaces": ["work", "home"]}
+def test_spaces_come_from_config(auth):
+    assert auth.get("/api/spaces").json() == {"spaces": SPACES.split(",")}
 
 
 def test_all_newest_first_with_filters_and_paging(auth):
     a = add(auth, "a", space="work", shape="task", title="A")
     b = add(auth, "b", space="home", shape="note")
     c = add(auth, "c", space="work", shape="note")
-    pending = auth.post("/api/capture", json={"text": "d"}).json()["id"]
-    wait_classified(auth, pending)
+    pending = one_item(auth, "d")["id"]
 
     assert ids(auth.get("/api/items").json()) == [pending, c, b, a]
     assert ids(auth.get("/api/items", params={"space": "Work"}).json()) == [c, a]
@@ -102,7 +125,7 @@ def test_search_matches_text_and_title(auth):
     assert ids(auth.get("/api/items", params={"q": "zzz"}).json()) == []
 
 
-def test_search_survives_title_edits(auth, settings):
+def test_search_survives_title_edits_and_deletes(auth, settings):
     item = add(auth, "raw words", shape="task", title="first title")
     auth.patch(f"/api/items/{item}", json={"title": "second title"})
     assert ids(auth.get("/api/items", params={"q": "second"}).json()) == [item]

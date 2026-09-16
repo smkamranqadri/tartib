@@ -1,14 +1,39 @@
-"""Shared write paths so the runner and the API file items the same way."""
+"""Row helpers and the shared write paths, so the runner and the API file items the same way."""
 
 from __future__ import annotations
 
+import json
 import sqlite3
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 
 from tartib.clock import utcnow_iso
 
 FILING_FIELDS = ("shape", "space", "title", "due", "remind_at")
 EDITABLE_FIELDS = FILING_FIELDS + ("starred", "status")
+
+
+class SpaceError(ValueError):
+    """A space that is not configured, or a missing space where one is required."""
+
+
+def serialize_item(row: sqlite3.Row) -> dict:
+    item = dict(row)
+    item["starred"] = bool(item["starred"])
+    raw = item.pop("proposal_json", None)
+    item["proposal"] = json.loads(raw) if raw else None
+    return item
+
+
+def serialize_capture(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
+    cap = dict(row)
+    raw = cap.pop("answer_json", None)
+    cap["answer"] = json.loads(raw) if raw else None
+    rows = conn.execute(
+        "SELECT * FROM items WHERE capture_id = ? ORDER BY id", (cap["id"],)
+    ).fetchall()
+    cap["items"] = [serialize_item(r) for r in rows]
+    return cap
 
 
 def to_db_value(field: str, value: object) -> object:
@@ -25,19 +50,81 @@ def to_db_value(field: str, value: object) -> object:
     return value
 
 
-def list_spaces(conn: sqlite3.Connection) -> list[str]:
-    rows = conn.execute(
-        "SELECT space, COUNT(*) AS n FROM items WHERE stage = 'filed'"
-        " GROUP BY space ORDER BY n DESC, space"
-    ).fetchall()
-    return [r["space"] for r in rows]
+def check_space(space: object, allowed: Sequence[str]) -> str | None:
+    if space is None:
+        return None
+    s = str(space).strip().lower()
+    if not s:
+        return None
+    if s not in allowed:
+        raise SpaceError(f"unknown space {s!r}; configured: {', '.join(allowed)}")
+    return s
 
 
-def update_fields(conn: sqlite3.Connection, item_id: int, fields: dict) -> None:
-    """Apply editable fields. A note never carries task fields."""
+def _clean(fields: dict, allowed: Sequence[str]) -> dict:
     values = {k: to_db_value(k, v) for k, v in fields.items() if k in EDITABLE_FIELDS}
+    if "space" in values:
+        values["space"] = check_space(values["space"], allowed)
     if values.get("shape") == "note":
         values.update(title=None, due=None, remind_at=None)
+    return values
+
+
+def create_capture(conn: sqlite3.Connection, text: str, source: str) -> int:
+    cur = conn.execute(
+        "INSERT INTO captures (raw_text, source, created_at) VALUES (?, ?, ?)",
+        (text, source, utcnow_iso()),
+    )
+    conn.commit()
+    return int(cur.lastrowid or 0)
+
+
+def insert_item(
+    conn: sqlite3.Connection,
+    *,
+    capture_id: int,
+    raw_text: str,
+    created_at: str,
+    fields: dict,
+    stage: str,
+    allowed: Sequence[str],
+    proposal_json: str | None = None,
+    proposal_error: str | None = None,
+) -> int:
+    values = _clean(fields, allowed)
+    if stage == "filed" and not values.get("space"):
+        raise SpaceError("a space is required to file an item")
+    cols = [
+        "capture_id",
+        "raw_text",
+        "created_at",
+        "stage",
+        "proposal_json",
+        "proposal_error",
+        "classified_at",
+        *values.keys(),
+    ]
+    params = [
+        capture_id,
+        raw_text,
+        created_at,
+        stage,
+        proposal_json,
+        proposal_error,
+        utcnow_iso(),
+        *values.values(),
+    ]
+    cur = conn.execute(
+        f"INSERT INTO items ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})", params
+    )
+    return int(cur.lastrowid or 0)
+
+
+def update_fields(
+    conn: sqlite3.Connection, item_id: int, fields: dict, allowed: Sequence[str]
+) -> None:
+    """Apply editable fields. Raises SpaceError for a bad space; the DB rejects filed + null."""
+    values = _clean(fields, allowed)
     if not values:
         return
     assignments = ", ".join(f"{k} = ?" for k in values)
@@ -48,11 +135,15 @@ def file_item(
     conn: sqlite3.Connection,
     item_id: int,
     fields: dict,
+    allowed: Sequence[str],
     *,
     proposal_json: str | None = None,
 ) -> None:
-    """Move an item to `filed` with the given fields, keeping the proposal for inspection."""
-    update_fields(conn, item_id, fields)
+    """Move an item to `filed` with the given fields. A space is required."""
+    values = _clean(fields, allowed)
+    if not values.get("space"):
+        raise SpaceError("a space is required to file an item")
+    update_fields(conn, item_id, values, allowed)
     sets = ["stage = 'filed'", "proposal_error = NULL", "classified_at = ?"]
     params: list[object] = [utcnow_iso()]
     if proposal_json is not None:

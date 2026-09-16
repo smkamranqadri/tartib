@@ -19,14 +19,16 @@ def connect(path: str) -> sqlite3.Connection:
     return conn
 
 
-def migrate(conn: sqlite3.Connection) -> int:
-    """Apply every migration newer than the recorded version. Returns the final version."""
+def migrate(conn: sqlite3.Connection, up_to: int | None = None) -> int:
+    """Apply every migration newer than the recorded version. Returns the final version.
+
+    `up_to` stops after that version; tests use it to build an old schema."""
     conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
     row = conn.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
     current = row["v"] or 0
     for path in sorted(MIGRATIONS.glob("*.sql")):
         version = int(path.name.split("_", 1)[0])
-        if version <= current:
+        if version <= current or (up_to is not None and version > up_to):
             continue
         conn.executescript(path.read_text())
         conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))

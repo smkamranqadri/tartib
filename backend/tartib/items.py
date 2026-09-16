@@ -11,19 +11,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from tartib.auth import require_auth
-from tartib.clock import utcnow_iso
-from tartib.deps import get_db
-from tartib.store import file_item, update_fields
+from tartib.config import Settings
+from tartib.deps import get_db, get_settings
+from tartib.store import SpaceError, create_capture, file_item, serialize_item, update_fields
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
-
-def serialize(row: sqlite3.Row) -> dict:
-    item = dict(row)
-    item["starred"] = bool(item["starred"])
-    raw = item.pop("proposal_json", None)
-    item["proposal"] = json.loads(raw) if raw else None
-    return item
+serialize = serialize_item  # kept for callers that import it from here
 
 
 def fetch_item(conn: sqlite3.Connection, item_id: int) -> sqlite3.Row:
@@ -41,23 +35,21 @@ class CaptureBody(BaseModel):
 def capture(
     body: CaptureBody, request: Request, conn: sqlite3.Connection = Depends(get_db)
 ) -> dict:
+    """Store the text as a capture and return its id. Classification runs in the background."""
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="text is empty")
-    cur = conn.execute(
-        "INSERT INTO items (raw_text, created_at) VALUES (?, ?)", (text, utcnow_iso())
-    )
-    conn.commit()
-    item_id = cur.lastrowid
+    source = "api" if request.headers.get("authorization", "")[:7].lower() == "bearer " else "web"
+    capture_id = create_capture(conn, text, source)
     runner = getattr(request.app.state, "runner", None)
     if runner is not None:
-        runner.enqueue(item_id)
-    return {"id": item_id}
+        runner.enqueue(capture_id)
+    return {"id": capture_id}
 
 
 @router.get("/items/{item_id}")
 def get_item(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
-    return serialize(fetch_item(conn, item_id))
+    return serialize_item(fetch_item(conn, item_id))
 
 
 class EditBody(BaseModel):
@@ -66,7 +58,7 @@ class EditBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     shape: Literal["task", "note"] | None = None
-    space: str | None = Field(default=None, min_length=1, max_length=80)
+    space: str | None = Field(default=None, max_length=80)
     title: str | None = Field(default=None, max_length=200)
     due: date | None = None
     remind_at: datetime | None = None
@@ -75,19 +67,39 @@ class EditBody(BaseModel):
 
     def provided(self) -> dict:
         data = self.model_dump(include=self.model_fields_set)
-        if "space" in data and data["space"] is not None:
-            data["space"] = data["space"].strip().lower() or "inbox"
         if "title" in data and data["title"] is not None:
             data["title"] = data["title"].strip() or None
         return data
 
 
+def _write(fn) -> dict:
+    try:
+        return fn()
+    except SpaceError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except sqlite3.IntegrityError as e:
+        if "space" in str(e).lower() or "CHECK" in str(e):
+            raise HTTPException(
+                status_code=422, detail="a filed item needs a configured space"
+            ) from e
+        raise
+
+
 @router.patch("/items/{item_id}")
-def edit_item(item_id: int, body: EditBody, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+def edit_item(
+    item_id: int,
+    body: EditBody,
+    conn: sqlite3.Connection = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
     fetch_item(conn, item_id)
-    update_fields(conn, item_id, body.provided())
-    conn.commit()
-    return serialize(fetch_item(conn, item_id))
+
+    def go() -> dict:
+        update_fields(conn, item_id, body.provided(), settings.spaces)
+        conn.commit()
+        return serialize_item(fetch_item(conn, item_id))
+
+    return _write(go)
 
 
 def _require_attention(row: sqlite3.Row) -> None:
@@ -97,21 +109,40 @@ def _require_attention(row: sqlite3.Row) -> None:
 
 @router.post("/items/{item_id}/approve")
 def approve(
-    item_id: int, body: EditBody | None = None, conn: sqlite3.Connection = Depends(get_db)
+    item_id: int,
+    body: EditBody | None = None,
+    conn: sqlite3.Connection = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
+    """File the item with its stored proposal, overridden by any fields in the body."""
     row = fetch_item(conn, item_id)
     _require_attention(row)
     fields: dict = json.loads(row["proposal_json"]) if row["proposal_json"] else {}
-    fields.pop("confidence", None)
+    fields = {
+        k: v for k, v in fields.items() if k in ("shape", "space", "title", "due", "remind_at")
+    }
+    fields.setdefault("shape", row["shape"])
     if body is not None:
         fields.update(body.provided())
-    file_item(conn, item_id, fields)
-    return serialize(fetch_item(conn, item_id))
+    if not fields.get("space"):
+        fields["space"] = row["space"]
+
+    def go() -> dict:
+        file_item(conn, item_id, fields, settings.spaces)
+        return serialize_item(fetch_item(conn, item_id))
+
+    return _write(go)
 
 
 @router.post("/items/{item_id}/reject")
 def reject(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """Discard the proposal. The item stays in Needs Attention as a plain note with no space."""
     row = fetch_item(conn, item_id)
     _require_attention(row)
-    file_item(conn, item_id, {"shape": "note", "space": "inbox"})
-    return serialize(fetch_item(conn, item_id))
+    conn.execute(
+        "UPDATE items SET shape = 'note', space = NULL, title = NULL, due = NULL,"
+        " remind_at = NULL, proposal_json = NULL, proposal_error = NULL WHERE id = ?",
+        (item_id,),
+    )
+    conn.commit()
+    return serialize_item(fetch_item(conn, item_id))

@@ -16,6 +16,7 @@ class Settings:
     tz: str
     db_path: str
     static_dir: str | None
+    spaces: tuple[str, ...]
     ai_command: str  # "codex", a path, or "off"
     ai_model: str | None
     ai_timeout: float
@@ -38,12 +39,20 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     secret = env.get("TARTIB_SECRET") or hashlib.sha256(f"tartib:{password}".encode()).hexdigest()
     tz = env.get("TARTIB_TZ") or "UTC"
     ZoneInfo(tz)  # fail fast on an unknown zone
+    spaces = tuple(
+        dict.fromkeys(
+            s.strip().lower() for s in env.get("TARTIB_SPACES", "").split(",") if s.strip()
+        )
+    )
+    if not spaces:
+        raise RuntimeError("TARTIB_SPACES is required, e.g. TARTIB_SPACES=work,home,health")
     return Settings(
         password=password,
         secret=secret,
         tz=tz,
         db_path=env.get("TARTIB_DB_PATH") or "/data/tartib.db",
         static_dir=env.get("TARTIB_STATIC_DIR") or None,
+        spaces=spaces,
         ai_command=env.get("TARTIB_AI_COMMAND", "codex"),
         ai_model=env.get("TARTIB_AI_MODEL") or None,
         ai_timeout=float(env.get("TARTIB_AI_TIMEOUT") or "120"),

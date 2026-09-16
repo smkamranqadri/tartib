@@ -3,12 +3,9 @@
 import json
 
 import pytest
-from fastapi.testclient import TestClient
 
 from tartib.ask import retrieval_query
-from tartib.main import create_app
-from tests.conftest import PASSWORD, make_settings
-from tests.test_classify import AI_ENV, wait_classified
+from tests.conftest import capture, proposal, records, set_ask_reply, set_classify_reply
 
 
 @pytest.mark.parametrize(
@@ -26,25 +23,12 @@ def test_retrieval_query(q, expected):
     assert retrieval_query(q) == expected
 
 
-@pytest.fixture
-def ai_client(tmp_path, monkeypatch):
-    for var in ("FAKE_CODEX_REPLY", "FAKE_CODEX_EXIT", "FAKE_CODEX_SLEEP", "FAKE_CODEX_RECORD"):
-        monkeypatch.delenv(var, raising=False)
-    with TestClient(create_app(make_settings(tmp_path, **AI_ENV))) as client:
-        client.headers["Authorization"] = f"Bearer {PASSWORD}"
-        yield client
-
-
 def seed(client, monkeypatch, texts):
     """Capture each text and file it as a note in the given space via the fake classifier."""
     ids = []
     for space, text in texts:
-        monkeypatch.setenv(
-            "FAKE_CODEX_REPLY", json.dumps({"shape": "note", "space": space, "confidence": 0.99})
-        )
-        item_id = client.post("/api/capture", json={"text": text}).json()["id"]
-        wait_classified(client, item_id)
-        ids.append(item_id)
+        set_classify_reply(monkeypatch, proposal(shape="note", text=text, space=space))
+        ids.append(capture(client, text)["items"][0]["id"])
     return ids
 
 
@@ -58,24 +42,46 @@ def test_ask_retrieves_matches_and_cites(ai_client, monkeypatch, tmp_path):
             ("work", "Standup moved to 10:30."),
         ],
     )
-    record = tmp_path / "argv.json"
+    record = tmp_path / "calls.jsonl"
     monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
-    monkeypatch.setenv(
-        "FAKE_CODEX_REPLY",
-        json.dumps({"answer": "You chose SQLite with FTS5.", "item_ids": [db_id, 999, db_id]}),
-    )
+    set_ask_reply(monkeypatch, "You chose SQLite with FTS5.", [db_id, 999, db_id])
     r = ai_client.post("/api/ask", json={"question": "what did I decide about sqlite vs postgres?"})
     assert r.status_code == 200
     body = r.json()
     assert body["answer"] == "You chose SQLite with FTS5."
     assert body["item_ids"] == [db_id]  # unknown and duplicate ids dropped
     assert body["items"][0]["id"] == db_id
-    assert body["items"][0]["raw_text"].startswith("Decided: use SQLite")
     assert body["matched"] is True
-    prompt = json.loads(record.read_text())["argv"][-1]
-    assert f"[id {db_id}]" in prompt and "SQLite with FTS5" in prompt
+    prompt = records(record)[-1]["argv"][-1]
+    assert prompt.startswith("You answer one person's question using only their own captured")
+    assert "Current datetime:" in prompt and "(Asia/Karachi)" in prompt
+    assert "For status questions" in prompt
+    assert f"[id {db_id}] " in prompt and "space: work · note" in prompt
+    assert "SQLite with FTS5" in prompt
     assert f"[id {gym_id}]" not in prompt  # only FTS matches are sent
-    assert "what did I decide about sqlite vs postgres?" in prompt
+    assert "Question: what did I decide about sqlite vs postgres?" in prompt
+
+
+def test_task_header_carries_status(ai_client, monkeypatch, tmp_path):
+    set_classify_reply(
+        monkeypatch,
+        proposal(
+            shape="task",
+            text="ship the invoice",
+            space="finance",
+            title="Ship the invoice",
+            due="2026-09-20",
+        ),
+    )
+    item = capture(ai_client, "ship the invoice")["items"][0]
+    ai_client.patch(f"/api/items/{item['id']}", json={"status": "done"})
+    record = tmp_path / "calls.jsonl"
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_ask_reply(monkeypatch, "Done.", [item["id"]])
+    ai_client.post("/api/ask", json={"question": "invoice status?"})
+    prompt = records(record)[-1]["argv"][-1]
+    assert f"[id {item['id']}] " in prompt
+    assert "task: Ship the invoice · due 2026-09-20 · done" in prompt
 
 
 def test_ask_falls_back_to_recent_in_space(ai_client, monkeypatch, tmp_path):
@@ -84,16 +90,13 @@ def test_ask_falls_back_to_recent_in_space(ai_client, monkeypatch, tmp_path):
         monkeypatch,
         [("work", "alpha note"), ("home", "beta note"), ("work", "gamma note")],
     )
-    record = tmp_path / "argv.json"
+    record = tmp_path / "calls.jsonl"
     monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
-    monkeypatch.setenv(
-        "FAKE_CODEX_REPLY", json.dumps({"answer": "Nothing on that.", "item_ids": []})
-    )
+    set_ask_reply(monkeypatch, "Nothing on that.", [])
     r = ai_client.post("/api/ask", json={"question": "zzzz unknown", "space": "Work"})
     assert r.status_code == 200
-    assert r.json()["matched"] is False
-    assert r.json()["item_ids"] == []
-    prompt = json.loads(record.read_text())["argv"][-1]
+    assert r.json()["matched"] is False and r.json()["item_ids"] == []
+    prompt = records(record)[-1]["argv"][-1]
     assert f"[id {ids[0]}]" in prompt and f"[id {ids[2]}]" in prompt
     assert f"[id {ids[1]}]" not in prompt  # other space excluded
 
@@ -101,7 +104,7 @@ def test_ask_falls_back_to_recent_in_space(ai_client, monkeypatch, tmp_path):
 def test_ask_is_read_only(ai_client, monkeypatch):
     ids = seed(ai_client, monkeypatch, [("work", "immutable thing")])
     before = ai_client.get(f"/api/items/{ids[0]}").json()
-    monkeypatch.setenv("FAKE_CODEX_REPLY", json.dumps({"answer": "x", "item_ids": ids}))
+    set_ask_reply(monkeypatch, "x", ids)
     ai_client.post("/api/ask", json={"question": "immutable"})
     assert ai_client.get(f"/api/items/{ids[0]}").json() == before
 
@@ -116,7 +119,7 @@ def test_ask_with_no_items(ai_client, monkeypatch):
         "matched": False,
     }
     seed(ai_client, monkeypatch, [("work", "something")])
-    r = ai_client.post("/api/ask", json={"question": "anything", "space": "empty-space"})
+    r = ai_client.post("/api/ask", json={"question": "anything", "space": "travel"})
     assert r.status_code == 200 and r.json()["matched"] is False and r.json()["items"] == []
 
 
@@ -124,8 +127,14 @@ def test_ask_errors(ai_client, monkeypatch, auth):
     seed(ai_client, monkeypatch, [("work", "something")])
     monkeypatch.setenv("FAKE_CODEX_EXIT", "2")
     r = ai_client.post("/api/ask", json={"question": "something"})
-    assert r.status_code == 502
-    assert "ask failed" in r.json()["detail"]
+    assert r.status_code == 502 and "ask failed" in r.json()["detail"]
+    monkeypatch.delenv("FAKE_CODEX_EXIT")
     assert ai_client.post("/api/ask", json={"question": "   "}).status_code == 422
-    # `auth` is a client with AI off
-    assert auth.post("/api/ask", json={"question": "x"}).status_code == 503
+    assert auth.post("/api/ask", json={"question": "x"}).status_code == 503  # AI off
+
+
+def test_ask_reply_shape_is_strict_json(ai_client, monkeypatch):
+    seed(ai_client, monkeypatch, [("work", "something")])
+    monkeypatch.setenv("FAKE_CODEX_REPLY_ASK", json.dumps({"answer": "", "item_ids": ["x", 1.5]}))
+    body = ai_client.post("/api/ask", json={"question": "something"}).json()
+    assert body["answer"] == "No answer." and body["item_ids"] == []

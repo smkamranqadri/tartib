@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime, time
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -11,8 +12,10 @@ from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
-from tartib.items import serialize
-from tartib.store import list_spaces
+from tartib.store import serialize_capture, serialize_item
+
+RECENT_MIN = 3
+RECENT_MAX = 20
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -21,9 +24,11 @@ router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 def today(
     conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict:
-    """Open tasks due today or earlier, starred, or whose reminder time has passed."""
+    """Open tasks due today or earlier, starred, or whose reminder time has passed,
+    plus the most recent captures: always the newest 3, extended to everything captured today."""
     now = utcnow()
-    day = today_in(settings.zone, now).isoformat()
+    today = today_in(settings.zone, now)
+    day = today.isoformat()
     rows = conn.execute(
         """
         SELECT * FROM items
@@ -33,7 +38,22 @@ def today(
         """,
         (day, utcnow_iso()),
     ).fetchall()
-    return {"date": day, "items": [serialize(r) for r in rows]}
+    start_of_day = (
+        datetime.combine(today, time.min, tzinfo=settings.zone).astimezone(UTC).isoformat()
+    ).replace("+00:00", "Z")
+    recent = conn.execute(
+        """
+        SELECT * FROM captures
+        WHERE id IN (SELECT id FROM captures ORDER BY id DESC LIMIT ?) OR created_at >= ?
+        ORDER BY id DESC LIMIT ?
+        """,
+        (RECENT_MIN, start_of_day, RECENT_MAX),
+    ).fetchall()
+    return {
+        "date": day,
+        "items": [serialize_item(r) for r in rows],
+        "recent": [serialize_capture(conn, r) for r in recent],
+    }
 
 
 @router.get("/attention")
@@ -41,12 +61,12 @@ def attention(conn: sqlite3.Connection = Depends(get_db)) -> dict:
     rows = conn.execute(
         "SELECT * FROM items WHERE stage = 'attention' ORDER BY created_at, id"
     ).fetchall()
-    return {"items": [serialize(r) for r in rows]}
+    return {"items": [serialize_item(r) for r in rows]}
 
 
 @router.get("/spaces")
-def spaces(conn: sqlite3.Connection = Depends(get_db)) -> dict:
-    return {"spaces": list_spaces(conn)}
+def spaces(settings: Settings = Depends(get_settings)) -> dict:
+    return {"spaces": list(settings.spaces)}
 
 
 def fts_query(q: str) -> str:
@@ -106,6 +126,6 @@ def list_items(
     rows = conn.execute(sql, params).fetchall()
     has_more = len(rows) > limit
     rows = rows[:limit]
-    items = [serialize(r) for r in rows]
+    items = [serialize_item(r) for r in rows]
     next_before = items[-1]["id"] if has_more and not match else None
     return {"items": items, "next_before": next_before}

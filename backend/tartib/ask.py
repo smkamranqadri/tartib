@@ -1,7 +1,9 @@
-"""POST /api/ask: answer a question from the user's own items. Read-only."""
+"""Answer a question from the user's own items. Read-only. Used by POST /api/ask and by the
+runner when a capture turns out to be a question."""
 
 from __future__ import annotations
 
+import asyncio
 import re
 import sqlite3
 
@@ -9,10 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from tartib.auth import require_auth
+from tartib.clock import utcnow
 from tartib.codex import CodexConfig, CodexError, run_json
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
-from tartib.items import serialize
+from tartib.store import serialize_item
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -27,6 +30,10 @@ STOPWORDS = frozenset(
     where which while who whom why will with would you your yours decide decided decision
     say said tell told think thought remember note notes wrote write""".split()
 )
+
+
+class AskError(Exception):
+    pass
 
 
 def retrieval_query(question: str) -> str:
@@ -77,13 +84,15 @@ PROMPT = """You answer one person's question using only their own captured notes
 Reply with one JSON object only: {{"answer": string, "item_ids": [integers]}}.
 
 Rules:
-- Use only the items below. If they do not contain the answer, say so plainly in "answer"
-  and return an empty "item_ids".
-- Quote or closely paraphrase the relevant item text; do not invent details.
-- "item_ids" lists the ids of every item you relied on, most relevant first.
-- Keep "answer" to a few sentences. Plain text, no markdown.
-- Do not run commands or read files; everything you need is below.
+- Use only the items below. If they do not contain the answer, say so plainly and return
+  an empty "item_ids".
+- Quote or closely paraphrase the item text; do not invent details.
+- For status questions, state what is open and what is done, using the task status in
+  each header. Do not guess dates; "as of" means the current datetime below.
+- "item_ids" lists every item you relied on, most relevant first.
+- A few sentences, plain text, no markdown. Do not run commands or read files.
 
+Current datetime: {now} ({zone})
 Question: {question}
 
 Items ({count}):
@@ -91,7 +100,8 @@ Items ({count}):
 
 
 def format_item(row: sqlite3.Row) -> str:
-    head = f"[id {row['id']}] {row['created_at'][:10]} · space: {row['space']} · {row['shape']}"
+    space = row["space"] or "(none)"
+    head = f"[id {row['id']}] {row['created_at'][:10]} · space: {space} · {row['shape']}"
     if row["shape"] == "task":
         head += f": {row['title'] or ''}"
         if row["due"]:
@@ -100,12 +110,49 @@ def format_item(row: sqlite3.Row) -> str:
     return f"{head}\n{row['raw_text']}"
 
 
-def build_prompt(question: str, rows: list) -> str:
+def build_prompt(question: str, rows: list, settings: Settings) -> str:
+    now = utcnow().astimezone(settings.zone)
     return PROMPT.format(
+        now=now.isoformat(),
+        zone=settings.tz,
         question=question.strip(),
         count=len(rows),
         items="\n\n".join(format_item(r) for r in rows),
     )
+
+
+EMPTY = {
+    "answer": "There are no items to answer from yet.",
+    "item_ids": [],
+    "items": [],
+    "matched": False,
+}
+
+
+async def answer_question(
+    conn: sqlite3.Connection, question: str, space: str | None, settings: Settings
+) -> dict:
+    """Retrieve, ask Codex, and shape the reply. Raises AskError when Codex fails."""
+    rows, matched = await asyncio.to_thread(retrieve, conn, question, space)
+    if not rows:
+        return dict(EMPTY)
+    cfg = CodexConfig(
+        command=settings.ai_command, model=settings.ai_model, timeout=settings.ai_timeout
+    )
+    try:
+        data = await run_json(build_prompt(question, rows, settings), ANSWER_SCHEMA, cfg)
+    except CodexError as e:
+        raise AskError(str(e)) from e
+    by_id = {r["id"]: r for r in rows}
+    raw_ids = data.get("item_ids") or []
+    item_ids = [i for i in dict.fromkeys(raw_ids) if isinstance(i, int) and i in by_id]
+    answer = str(data.get("answer") or "").strip() or "No answer."
+    return {
+        "answer": answer,
+        "item_ids": item_ids,
+        "items": [serialize_item(by_id[i]) for i in item_ids],
+        "matched": matched,
+    }
 
 
 class AskBody(BaseModel):
@@ -124,28 +171,7 @@ async def ask(
     question = body.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="question is empty")
-    rows, matched = retrieve(conn, question, body.space)
-    if not rows:
-        return {
-            "answer": "There are no items to answer from yet.",
-            "item_ids": [],
-            "items": [],
-            "matched": False,
-        }
-    cfg = CodexConfig(
-        command=settings.ai_command, model=settings.ai_model, timeout=settings.ai_timeout
-    )
     try:
-        data = await run_json(build_prompt(question, rows), ANSWER_SCHEMA, cfg)
-    except CodexError as e:
+        return await answer_question(conn, question, body.space, settings)
+    except AskError as e:
         raise HTTPException(status_code=502, detail=f"ask failed: {e}") from e
-    by_id = {r["id"]: r for r in rows}
-    raw_ids = data.get("item_ids") or []
-    item_ids = [i for i in dict.fromkeys(raw_ids) if isinstance(i, int) and i in by_id]
-    answer = str(data.get("answer") or "").strip() or "No answer."
-    return {
-        "answer": answer,
-        "item_ids": item_ids,
-        "items": [serialize(by_id[i]) for i in item_ids],
-        "matched": matched,
-    }
