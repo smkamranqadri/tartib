@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 
 from tartib import auth, db, items
 from tartib.config import Settings, load_settings
+from tartib.runner import Runner
 
 DEFAULT_STATIC = Path(__file__).resolve().parent.parent / "static"
 
@@ -24,7 +25,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             db.migrate(conn)
         finally:
             conn.close()
-        yield
+        runner = Runner(settings)
+        app.state.runner = runner
+        await runner.start()
+        try:
+            yield
+        finally:
+            await runner.stop()
 
     app = FastAPI(title="Tartib", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.settings = settings
