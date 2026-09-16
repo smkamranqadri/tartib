@@ -1,15 +1,11 @@
+import type { Edit, Item } from "./types";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
   ) {
     super(message);
-  }
-}
-
-export class Unauthorized extends ApiError {
-  constructor() {
-    super(401, "not logged in");
   }
 }
 
@@ -26,7 +22,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   });
   if (res.status === 401) {
     onUnauthorized();
-    throw new Unauthorized();
+    throw new ApiError(401, "not logged in");
   }
   if (!res.ok) {
     let detail = res.statusText;
@@ -35,15 +31,39 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       /* not json */
     }
-    throw new ApiError(res.status, String(detail));
+    throw new ApiError(res.status, typeof detail === "string" ? detail : JSON.stringify(detail));
   }
-  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
-export const post = <T,>(path: string, body?: unknown) =>
-  api<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+const send = <T,>(method: string, path: string, body?: unknown) =>
+  api<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
 
-export const login = (password: string) => post<{ ok: true }>("/api/login", { password });
-export const logout = () => post<{ ok: true }>("/api/logout");
-export const capture = (text: string) => post<{ id: number }>("/api/capture", { text });
+export const login = (password: string) => send<{ ok: true }>("POST", "/api/login", { password });
+export const logout = () => send<{ ok: true }>("POST", "/api/logout");
+export const capture = (text: string) => send<{ id: number }>("POST", "/api/capture", { text });
+
+export const getToday = () => api<{ date: string; items: Item[] }>("/api/today");
+export const getAttention = () => api<{ items: Item[] }>("/api/attention");
+export const getSpaces = () => api<{ spaces: string[] }>("/api/spaces");
+
+export interface ListParams {
+  q?: string;
+  space?: string;
+  shape?: string;
+  before?: number;
+  limit?: number;
+}
+export function listItems(params: ListParams) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== "" && v !== null) qs.set(k, String(v));
+  }
+  const suffix = qs.toString();
+  return api<{ items: Item[]; next_before: number | null }>(`/api/items${suffix ? `?${suffix}` : ""}`);
+}
+
+export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/items/${id}`, edit);
+export const approveItem = (id: number, edit?: Edit) =>
+  send<Item>("POST", `/api/items/${id}/approve`, edit);
+export const rejectItem = (id: number) => send<Item>("POST", `/api/items/${id}/reject`);

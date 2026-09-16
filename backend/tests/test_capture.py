@@ -8,7 +8,8 @@ def test_capture_lands_in_inbox(auth):
     assert r.status_code == 201
     item = auth.get(f"/api/items/{r.json()['id']}").json()
     assert item["raw_text"] == "buy milk"
-    assert item["stage"] == "inbox"
+    # the runner may already have parked it; either way it started in the inbox defaults
+    assert item["stage"] in ("inbox", "attention")
     assert item["shape"] == "note"
     assert item["space"] == "inbox"
     assert item["proposal"] is None

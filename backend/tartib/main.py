@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from tartib import auth, db, items
+from tartib import auth, db, items, queries
 from tartib.config import Settings, load_settings
 from tartib.runner import Runner
 
@@ -37,6 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.include_router(auth.router)
     app.include_router(items.router)
+    app.include_router(queries.router)
 
     @app.get("/api/health")
     def health() -> dict:
