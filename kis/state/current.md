@@ -1,7 +1,7 @@
 # Current
 
 - Branch: `main`, local only.
-- Task: none. Slice 5 UI simplification complete and deployed 2026-09-17, then adjusted on user feedback: Today merged into Home, chat bar back on every screen, Recent (3 captures + View all) under the list.
+- Task: none. Slice 5 UI simplification complete and deployed 2026-09-17, then adjusted on user feedback: Today merged into Home, chat bar back on every screen, Recent (3 captures + View all) under the list; chat bar off on All where the search field has an Ask button.
 - Command: `cd frontend && npm run typecheck && npm run build` / `cd backend && uv run pytest -q` / `docker compose up -d --build`.
 - Blocker: none. Claude fallback inside Docker still needs `CLAUDE_CODE_OAUTH_TOKEN`.
 - Next: user decides. Live container on http://localhost:8000.

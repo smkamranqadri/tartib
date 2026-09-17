@@ -119,7 +119,7 @@ export default function App() {
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
 
   return (
-    <div className="app has-askbar">
+    <div className={`app ${location.pathname === "/all" ? "" : "has-askbar"}`}>
       <header className="top">
         <NavLink to="/" className="brand" end>
           <img className="brand-mark" src="/icon-192.png" alt="" width={28} height={28} />
@@ -157,7 +157,7 @@ export default function App() {
           <Route path="*" element={<Home version={version} answer={answer} onCaptured={onCaptured} onCloseAnswer={() => setAnswer(null)} />} />
         </Routes>
       </main>
-      <AskBar spaces={spaces} />
+      {location.pathname !== "/all" && <AskBar spaces={spaces} />}
       <Toast toast={toast} />
     </div>
   );

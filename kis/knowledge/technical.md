@@ -63,7 +63,7 @@ PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   
 
 ## Frontend shell
 
-Routes: `/` Home (Capture + today's list + toast + question answers), `/today` redirects to `/`, `/attention`, `/all`, `/items/:id`. Pill nav: Today, Needs Attention, All. `AskBar` (chat bar) is rendered by App under every route, fixed to the bottom at the app column width. Theme toggle in localStorage `tartib-theme` via `data-theme` on `<html>`.
+Routes: `/` Home (Capture + today's list + toast + question answers), `/today` redirects to `/`, `/attention`, `/all`, `/items/:id`. Pill nav: Today, Needs Attention, All. `AskBar` (chat bar) is rendered by App under every route except `/all`, fixed to the bottom at the app column width, translucent with backdrop blur. On All the search field carries an Ask button instead. Theme toggle in localStorage `tartib-theme` via `data-theme` on `<html>`.
 `App` owns capture polling (`/api/captures/{id}` every 1s until done), the toast (`Toast`, "busy" stays, "final" fades after 4s), the question answer, and global keys: `c` navigates to `/` and dispatches `tartib:focus-capture`; `/` on All dispatches `tartib:focus-search`. Both are window events the screens listen for.
 `ItemRow` is the one row component: checkbox for filed tasks, title or first line, at most one chip (overdue, else reminder time), actions (relative time, star, edit link) shown on hover, focus-within, or a 500ms touch hold. Notes expand on tap.
 `Attention` keeps a local queue order; Enter approves via a window keydown listener re-bound each render; "Not now" rotates the queue.

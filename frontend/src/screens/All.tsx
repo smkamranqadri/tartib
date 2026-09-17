@@ -95,9 +95,14 @@ export default function All({ version }: { version: number }) {
           value={q}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKey}
-          placeholder="Search, or end with ? to ask"
+          placeholder="Search or ask your notes"
           aria-label="Search"
         />
+        {q.trim() && (
+          <button type="button" className="ask-btn" onClick={() => void runAsk()} disabled={asking} aria-label="Ask">
+            {asking ? "Thinking…" : "Ask"}
+          </button>
+        )}
         <select value={space} onChange={(e) => setSpace(e.target.value)} aria-label="Space">
           <option value="">Any space</option>
           {spaces.map((s) => (
@@ -110,7 +115,6 @@ export default function All({ version }: { version: number }) {
           <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} /> Show done
         </label>
       </div>
-      {asking && <p className="muted small">Thinking…</p>}
       {askError && <p className="error">{askError}</p>}
       {answer && <AnswerView result={answer} onClose={() => setAnswer(null)} />}
       {error && <p className="error">{error}</p>}
