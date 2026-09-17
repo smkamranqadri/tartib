@@ -11,9 +11,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from tartib.auth import require_auth
-from tartib.config import Settings
-from tartib.deps import get_db, get_settings
-from tartib.store import SpaceError, create_capture, file_item, serialize_item, update_fields
+from tartib.deps import get_db
+from tartib.store import (
+    SpaceError,
+    create_capture,
+    file_item,
+    list_spaces,
+    serialize_item,
+    update_fields,
+)
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -64,6 +70,7 @@ class EditBody(BaseModel):
     remind_at: datetime | None = None
     starred: bool | None = None
     status: Literal["open", "done"] | None = None
+    text: str | None = Field(default=None, min_length=1, max_length=20_000)
 
     def provided(self) -> dict:
         data = self.model_dump(include=self.model_fields_set)
@@ -90,12 +97,11 @@ def edit_item(
     item_id: int,
     body: EditBody,
     conn: sqlite3.Connection = Depends(get_db),
-    settings: Settings = Depends(get_settings),
 ) -> dict:
     fetch_item(conn, item_id)
 
     def go() -> dict:
-        update_fields(conn, item_id, body.provided(), settings.spaces)
+        update_fields(conn, item_id, body.provided(), list_spaces(conn))
         conn.commit()
         return serialize_item(fetch_item(conn, item_id))
 
@@ -112,7 +118,6 @@ def approve(
     item_id: int,
     body: EditBody | None = None,
     conn: sqlite3.Connection = Depends(get_db),
-    settings: Settings = Depends(get_settings),
 ) -> dict:
     """File the item with its stored proposal, overridden by any fields in the body."""
     row = fetch_item(conn, item_id)
@@ -128,7 +133,7 @@ def approve(
         fields["space"] = row["space"]
 
     def go() -> dict:
-        file_item(conn, item_id, fields, settings.spaces)
+        file_item(conn, item_id, fields, list_spaces(conn))
         return serialize_item(fetch_item(conn, item_id))
 
     return _write(go)
@@ -146,3 +151,12 @@ def reject(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
     )
     conn.commit()
     return serialize_item(fetch_item(conn, item_id))
+
+
+@router.delete("/items/{item_id}")
+def delete_item(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """Remove the item. Its capture stays, so what was typed is never lost."""
+    fetch_item(conn, item_id)
+    conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
+    conn.commit()
+    return {"ok": True, "id": item_id}

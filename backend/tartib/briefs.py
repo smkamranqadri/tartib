@@ -3,7 +3,6 @@ items and regenerated only when something in the space changed, or on explicit r
 
 from __future__ import annotations
 
-import hashlib
 import json
 import sqlite3
 
@@ -14,7 +13,7 @@ from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
-from tartib.store import serialize_item
+from tartib.store import list_spaces, serialize_item
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -59,35 +58,23 @@ def spaces_summary(
             "last_activity": r["last_activity"] if r else None,
         }
 
-    spaces = [entry(s, s) for s in settings.spaces]
-    # newest activity first; spaces with no activity keep config order at the end
-    spaces.sort(
-        key=lambda e: (
-            e["last_activity"] is None,
-            -(len(e["last_activity"] or "")),
-            e["last_activity"] or "",
-        )
+    configured = list_spaces(conn)
+    entries = [entry(s, s) for s in configured]
+    # newest activity first; spaces with no activity keep their table order at the end
+    active = sorted(
+        [e for e in entries if e["last_activity"]], key=lambda e: e["last_activity"], reverse=True
     )
-    spaces = sorted(spaces, key=lambda e: e["last_activity"] or "", reverse=True)
-    spaces = [e for e in spaces if e["last_activity"]] + [
-        e for e in [entry(s, s) for s in settings.spaces] if not e["last_activity"]
-    ]
+    spaces = active + [e for e in entries if not e["last_activity"]]
     return {"spaces": spaces, "unfiled": entry(UNFILED, None, unfiled=True)}
 
 
 def fingerprint(conn: sqlite3.Connection, space: str) -> str:
-    """Changes whenever any item in the space changes: count, newest change, and a hash of
-    every item's mutable fields (so it never depends on timestamp resolution)."""
+    """Changes only when an item is added to (or removed from) the space. Edits, done
+    ticks, and stars do not regenerate the brief; the refresh icon does."""
     row = conn.execute(
-        "SELECT COUNT(*), MAX(updated_at) FROM items WHERE space = ?", (space,)
+        "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM items WHERE space = ?", (space,)
     ).fetchone()
-    state = conn.execute(
-        "SELECT id, shape, stage, status, starred, title, due, remind_at FROM items"
-        " WHERE space = ? ORDER BY id",
-        (space,),
-    ).fetchall()
-    digest = hashlib.sha1(json.dumps([list(r) for r in state]).encode()).hexdigest()[:12]
-    return f"{row[0]}:{row[1] or ''}:{digest}"
+    return f"{row[0]}:{row[1]}"
 
 
 def brief_rows(conn: sqlite3.Connection, space: str) -> list[sqlite3.Row]:
@@ -132,7 +119,7 @@ async def space_brief(
     settings: Settings = Depends(get_settings),
 ) -> dict:
     space = space.strip().lower()
-    if space not in settings.spaces:
+    if space not in list_spaces(conn):
         raise HTTPException(status_code=404, detail="unknown space")
     fp = fingerprint(conn, space)
     cached = _cached(conn, space)

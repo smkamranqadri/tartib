@@ -89,3 +89,4 @@ def test_edit_cannot_touch_raw_text_or_stage(auth):
     assert auth.patch(f"/api/items/{item['id']}", json={"raw_text": "nope"}).status_code == 422
     assert auth.patch(f"/api/items/{item['id']}", json={"stage": "filed"}).status_code == 422
     assert auth.patch(f"/api/items/{item['id']}", json={"capture_id": 5}).status_code == 422
+    assert auth.patch(f"/api/items/{item['id']}", json={"raw_text": "nope"}).status_code == 422

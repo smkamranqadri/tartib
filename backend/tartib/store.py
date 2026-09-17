@@ -10,7 +10,7 @@ from datetime import UTC, date, datetime
 from tartib.clock import utcnow_iso
 
 FILING_FIELDS = ("shape", "space", "title", "due", "remind_at")
-EDITABLE_FIELDS = FILING_FIELDS + ("starred", "status")
+EDITABLE_FIELDS = FILING_FIELDS + ("starred", "status", "text")
 
 
 class SpaceError(ValueError):
@@ -61,8 +61,16 @@ def check_space(space: object, allowed: Sequence[str]) -> str | None:
     return s
 
 
+def list_spaces(conn: sqlite3.Connection) -> list[str]:
+    return [r["name"] for r in conn.execute("SELECT name FROM spaces ORDER BY position, name")]
+
+
 def _clean(fields: dict, allowed: Sequence[str]) -> dict:
     values = {k: to_db_value(k, v) for k, v in fields.items() if k in EDITABLE_FIELDS}
+    if "text" in values:
+        text = str(values.pop("text") or "").strip()
+        if text:
+            values["raw_text"] = text
     if "space" in values:
         values["space"] = check_space(values["space"], allowed)
     if values.get("shape") == "note":

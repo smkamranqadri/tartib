@@ -12,9 +12,10 @@ from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
-from tartib.store import serialize_capture, serialize_item
+from tartib.store import list_spaces, serialize_capture, serialize_item
 
-RECENT = 10
+RECENT = 3
+RECENT_PAGE = 50
 STALE_DAYS = 14
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
@@ -70,20 +71,26 @@ def attention(conn: sqlite3.Connection = Depends(get_db)) -> dict:
 
 
 @router.get("/config")
-def config(settings: Settings = Depends(get_settings)) -> dict:
-    """What the UI may show about this install. Nothing here is editable from the app."""
+def config(
+    conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
+) -> dict:
+    """What the UI may show about this install."""
     return {
         "tz": settings.tz,
-        "spaces": list(settings.spaces),
+        "spaces": list_spaces(conn),
         "ai": settings.ai_enabled,
         "fallback": bool(settings.ai_fallback_command),
         "autofile_confidence": settings.autofile_confidence,
     }
 
 
-@router.get("/spaces")
-def spaces(settings: Settings = Depends(get_settings)) -> dict:
-    return {"spaces": list(settings.spaces)}
+@router.get("/recent")
+def recent_captures(
+    limit: int = Query(default=RECENT_PAGE, ge=1, le=200),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> dict:
+    rows = conn.execute("SELECT * FROM captures ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return {"captures": [serialize_capture(conn, r) for r in rows]}
 
 
 def fts_query(q: str) -> str:

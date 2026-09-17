@@ -47,10 +47,13 @@ def test_today_rules(auth, settings):
     assert ids(payload)[:2] == [overdue, due_today]  # overdue first
 
 
-def test_today_recent_is_newest_ten(auth):
+def test_today_recent_is_newest_three_and_recent_page_is_fifty(auth):
     caps = [capture(auth, f"note {i}")["id"] for i in range(12)]
     recent = auth.get("/api/today").json()["recent"]
-    assert [c["id"] for c in recent] == list(reversed(caps))[:10]
+    assert [c["id"] for c in recent] == list(reversed(caps))[:3]
+    page = auth.get("/api/recent").json()["captures"]
+    assert [c["id"] for c in page] == list(reversed(caps))
+    assert len(auth.get("/api/recent", params={"limit": 5}).json()["captures"]) == 5
     assert recent[0]["raw_text"] == "note 11"
     assert recent[0]["status"] == "error" and len(recent[0]["items"]) == 1
     assert recent[0]["items"][0]["stage"] == "attention"

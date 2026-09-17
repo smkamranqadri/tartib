@@ -82,9 +82,13 @@ def test_brief_is_cached_by_fingerprint(ai_client, monkeypatch, tmp_path):
     assert again["fresh"] is False and again["text"] == first["text"]
     assert len(records(record)) == calls  # served from cache
 
-    # a change in the space invalidates the cache
+    # a done tick does not invalidate the cache; a new item in the space does
     ai_client.patch("/api/items/1", json={"status": "done"})
+    assert ai_client.get("/api/spaces/health/brief").json()["fresh"] is False
+    assert len(records(record)) == calls
     set_ask_reply(monkeypatch, "Nothing open.", [2])
+    file_note(ai_client, monkeypatch, "another health note", "health")
+    calls = len(records(record))  # the classify call
     third = ai_client.get("/api/spaces/health/brief").json()
     assert third["fresh"] is True and third["text"] == "Nothing open."
     assert len(records(record)) == calls + 1
@@ -148,7 +152,7 @@ def test_migration_0003_backfills_updated_at(tmp_path):
     path = str(tmp_path / "v1.db")
     build_v1(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == 3
+    assert db.migrate(conn) == 4
     rows = conn.execute("SELECT id, updated_at, created_at FROM items").fetchall()
     assert rows and all(r["updated_at"] == r["created_at"] for r in rows)
     assert conn.execute("SELECT COUNT(*) FROM briefs").fetchone()[0] == 0

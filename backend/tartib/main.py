@@ -9,10 +9,11 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from tartib import ask, auth, briefs, captures, db, items, queries
+from tartib import ask, auth, briefs, captures, db, items, queries, spaces
 from tartib.config import Settings, load_settings
 from tartib.runner import Runner
-from tartib.store import reconcile_spaces
+from tartib.spaces import seed_spaces
+from tartib.store import list_spaces, reconcile_spaces
 
 DEFAULT_STATIC = Path(__file__).resolve().parent.parent / "static"
 log = logging.getLogger("tartib")
@@ -26,7 +27,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         conn = db.connect(settings.db_path)
         try:
             db.migrate(conn)
-            moved = reconcile_spaces(conn, settings.spaces)
+            seeded = seed_spaces(conn, settings.spaces)
+            if seeded:
+                log.info("seeded %d spaces from TARTIB_SPACES", seeded)
+            moved = reconcile_spaces(conn, list_spaces(conn))
             if moved:
                 log.warning("%d items had unconfigured spaces; moved to Needs Attention", moved)
         finally:
@@ -47,6 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ask.router)
     app.include_router(captures.router)
     app.include_router(briefs.router)
+    app.include_router(spaces.router)
 
     @app.get("/api/health")
     def health() -> dict:

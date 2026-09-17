@@ -51,8 +51,8 @@ def test_v1_to_v2(tmp_path):
     path = str(tmp_path / "v1.db")
     build_v1(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == 3
-    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 3
+    assert db.migrate(conn) == 4
+    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 4
 
     caps = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM captures ORDER BY id")}
     assert len(caps) == 5
@@ -78,11 +78,11 @@ def test_v1_to_v2(tmp_path):
     assert (
         conn.execute("SELECT rowid FROM items_fts WHERE items_fts MATCH 'zebra'").fetchone()[0] == 5
     )
-    try:
-        conn.execute("UPDATE items SET raw_text = 'x' WHERE id = 1")
-        raise AssertionError("raw_text should be immutable")
-    except sqlite3.IntegrityError:
-        pass
+    conn.execute("UPDATE items SET raw_text = 'edited text' WHERE id = 1")
+    assert (
+        conn.execute("SELECT rowid FROM items_fts WHERE items_fts MATCH 'edited'").fetchone()[0]
+        == 1
+    )
     try:
         conn.execute("UPDATE items SET space = NULL WHERE id = 1")
         raise AssertionError("filed items need a space")
@@ -123,5 +123,5 @@ def test_migrate_is_idempotent(tmp_path):
     build_v1(path)
     conn = db.connect(path)
     db.migrate(conn)
-    assert db.migrate(conn) == 3
+    assert db.migrate(conn) == 4
     assert conn.execute("SELECT COUNT(*) FROM captures").fetchone()[0] == 5

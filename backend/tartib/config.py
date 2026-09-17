@@ -57,8 +57,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             s.strip().lower() for s in env.get("TARTIB_SPACES", "").split(",") if s.strip()
         )
     )
-    if not spaces:
-        raise RuntimeError("TARTIB_SPACES is required, e.g. TARTIB_SPACES=work,home,health")
     return Settings(
         password=password,
         secret=secret,
