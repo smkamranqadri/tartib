@@ -14,7 +14,7 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
 
   return (
     <div className="screen">
-      <PageHead eyebrow="Settings" title="Preferences" />
+      <PageHead title="Settings" subtitle="How this copy of Tartib is set up." />
       <Card icon={<SettingsIcon />} label="Appearance" aside={<span className="muted">{theme}</span>}>
         <Row title="Theme" desc="Light or dark. Follows your system until you choose.">
           <div className="seg">

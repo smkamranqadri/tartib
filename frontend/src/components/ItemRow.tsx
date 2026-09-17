@@ -1,21 +1,15 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { editItem } from "../api";
 import { formatDueLong, formatRelative, formatRemind, todayLocal } from "../format";
 import type { Edit, Item } from "../types";
-import { ClockIcon, NoteIcon } from "./Icons";
+import { AlertIcon, NoteIcon } from "./Icons";
+import Row from "./Row";
 
-interface Props {
-  item: Item;
-  onChange: (item: Item) => void;
-}
-
-/** One row: leading control, title, muted meta "space · 2h ago", due at the right.
- *  Hover or long-press reveals star and edit. Notes expand on tap. */
-export default function ItemRow({ item, onChange }: Props) {
-  const [revealed, setRevealed] = useState(false);
+/** An item as a row. Leading glyph: checkbox for a filed task, alert for something
+ *  awaiting a decision, note for a note. */
+export default function ItemRow({ item, onChange }: { item: Item; onChange: (item: Item) => void }) {
   const [error, setError] = useState<string | null>(null);
-  const holdTimer = useRef<number | null>(null);
   const isTask = item.shape === "task";
   const editable = item.stage === "filed";
   const waiting = item.stage === "attention";
@@ -33,26 +27,14 @@ export default function ItemRow({ item, onChange }: Props) {
   const firstLine = item.raw_text.split("\n")[0];
   const headline = isTask ? item.title || firstLine : firstLine;
 
-  function startHold() {
-    holdTimer.current = window.setTimeout(() => setRevealed((r) => !r), 500);
-  }
-  function endHold() {
-    if (holdTimer.current) window.clearTimeout(holdTimer.current);
-    holdTimer.current = null;
-  }
-
-  const meta = [waiting ? "needs attention" : item.space ?? "no space", formatRelative(item.updated_at ?? item.created_at)];
+  const meta: string[] = [waiting ? "needs attention" : (item.space ?? "no space"), formatRelative(item.updated_at ?? item.created_at)];
   if (waiting && item.proposal) meta.push(`${Math.round(item.proposal.confidence * 100)}%`);
 
   return (
-    <li
-      className={`row ${item.status === "done" ? "done" : ""} ${overdue ? "overdue" : ""} ${revealed ? "revealed" : ""} ${waiting ? "waiting" : ""}`}
-      onTouchStart={startHold}
-      onTouchEnd={endHold}
-      onTouchMove={endHold}
-    >
-      <div className="row-main">
-        {isTask && editable ? (
+    <Row
+      className={`${item.status === "done" ? "done" : ""} ${overdue ? "overdue" : ""} ${waiting ? "waiting" : ""}`}
+      leading={
+        isTask && editable ? (
           <input
             type="checkbox"
             className="check"
@@ -61,24 +43,29 @@ export default function ItemRow({ item, onChange }: Props) {
             aria-label="Done"
           />
         ) : (
-          <span className="row-icon muted">{waiting ? <ClockIcon /> : <NoteIcon />}</span>
-        )}
-        <div className="row-body">
-          <Link to={`/items/${item.id}`} className="row-text">
-            {headline}
-          </Link>
-          <span className="row-meta muted">
-            {meta.map((m, i) => (
-              <span key={i}>
-                {i > 0 && <span className="sep"> · </span>}
-                {m}
-              </span>
-            ))}
-          </span>
-        </div>
-        {isTask && item.due && <span className={`row-due ${overdue ? "overdue" : "muted"}`}>{formatDueLong(item.due)}</span>}
-        {isTask && !item.due && item.remind_at && <span className="row-due muted">⏰ {formatRemind(item.remind_at)}</span>}
-        {isTask && editable && (
+          <span className="row-icon muted">{waiting ? <AlertIcon /> : <NoteIcon />}</span>
+        )
+      }
+      title={
+        <Link to={`/items/${item.id}`} className="row-text">
+          {headline}
+        </Link>
+      }
+      meta={meta.map((m, i) => (
+        <span key={i}>
+          {i > 0 && <span className="sep"> · </span>}
+          {m}
+        </span>
+      ))}
+      right={
+        isTask && item.due ? (
+          <span className={`row-due ${overdue ? "overdue" : "muted"}`}>{formatDueLong(item.due)}</span>
+        ) : isTask && item.remind_at ? (
+          <span className="row-due muted">⏰ {formatRemind(item.remind_at)}</span>
+        ) : undefined
+      }
+      trailing={
+        isTask && editable ? (
           <button
             type="button"
             className={`star always ${item.starred ? "on" : ""}`}
@@ -87,14 +74,15 @@ export default function ItemRow({ item, onChange }: Props) {
           >
             {item.starred ? "★" : "☆"}
           </button>
-        )}
-        <span className="row-actions">
-          <Link to={`/items/${item.id}`} className="icon-btn" aria-label="Edit">
-            ✎
-          </Link>
-        </span>
-      </div>
+        ) : undefined
+      }
+      actions={
+        <Link to={`/items/${item.id}`} className="icon-btn" aria-label="Edit">
+          ✎
+        </Link>
+      }
+    >
       {error && <span className="error">{error}</span>}
-    </li>
+    </Row>
   );
 }

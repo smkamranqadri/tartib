@@ -5,8 +5,8 @@ import Capture from "./Capture";
 import AskBar from "./components/AskBar";
 import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
 import Toast, { type ToastState } from "./components/Toast";
-import Attention from "./screens/Attention";
 import Home from "./screens/Home";
+import Inbox from "./screens/Inbox";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
 import Recent from "./screens/Recent";
@@ -57,7 +57,7 @@ export default function App() {
   const bump = () => setVersion((v) => v + 1);
   const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];
   const onSearchPage = location.pathname.startsWith("/spaces") || location.pathname.startsWith("/search");
-  const showChat = location.pathname === "/" || location.pathname === "/attention";
+  const showChat = location.pathname === "/" || location.pathname === "/inbox";
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthed(false));
@@ -140,7 +140,7 @@ export default function App() {
             <NavLink to="/" end>
               <HomeIcon /> Home
             </NavLink>
-            <NavLink to="/attention">
+            <NavLink to="/inbox">
               <InboxIcon /> Inbox
             </NavLink>
             <NavLink to="/spaces" className={onSearchPage ? "active" : undefined}>
@@ -157,14 +157,16 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home version={version} answer={answer} onCloseAnswer={() => setAnswer(null)} />} />
             <Route path="/today" element={<Navigate to="/" replace />} />
-            <Route path="/attention" element={<Attention version={version} onDecided={bump} />} />
-            <Route path="/inbox" element={<Navigate to="/attention" replace />} />
+            <Route path="/inbox" element={<Inbox version={version} onDecided={bump} />} />
+            <Route path="/inbox/attention" element={<Waiting version={version} onDecided={bump} />} />
+            <Route path="/inbox/recent" element={<Recent version={version} />} />
+            <Route path="/attention" element={<Navigate to="/inbox" replace />} />
+            <Route path="/attention/all" element={<Navigate to="/inbox/attention" replace />} />
+            <Route path="/recent" element={<Navigate to="/inbox/recent" replace />} />
             <Route path="/spaces" element={<Spaces version={version} onChanged={bump} />} />
             <Route path="/spaces/:name" element={<Space version={version} onChanged={bump} />} />
-            <Route path="/attention/all" element={<Waiting version={version} onDecided={bump} />} />
             <Route path="/search" element={<Navigate to="/spaces" replace />} />
             <Route path="/all" element={<Navigate to="/spaces" replace />} />
-            <Route path="/recent" element={<Recent version={version} />} />
             <Route path="/settings" element={<Settings onSignedOut={() => setAuthed(false)} />} />
             <Route path="/items/:id" element={<ItemPage version={version} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -5,6 +5,7 @@ import Card from "../components/Card";
 import { ClockIcon } from "../components/Icons";
 import PageHead from "../components/PageHead";
 import RecentList from "../components/RecentList";
+import { ErrorLine, Loading } from "../components/Status";
 import type { Capture } from "../types";
 import { useLoad } from "../useLoad";
 
@@ -30,11 +31,11 @@ export default function Recent({ version }: { version: number }) {
 
   return (
     <div className="screen">
-      <BackLink fallback="/" />
-      <PageHead eyebrow="Recent" title="Everything you captured" subtitle="Newest first." />
+      <BackLink fallback="/inbox" />
+      <PageHead eyebrow="Inbox" title="Everything you captured" subtitle="Newest first, filed or not." />
       <Card icon={<ClockIcon />} label="Captures" aside={data ? `${captures.length}${next !== null ? "+" : ""}` : "…"}>
-        {error && <p className="error">{error}</p>}
-        {loading && !data && <p className="muted">Loading…</p>}
+        {error && <ErrorLine>{error}</ErrorLine>}
+        {loading && !data && <Loading />}
         {data && <RecentList captures={captures} />}
         {next !== null && (
           <p className="view-all">

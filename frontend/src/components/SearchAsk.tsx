@@ -70,7 +70,7 @@ export default function SearchAsk({
           aria-label="Search"
         />
         {value.trim() && (
-          <button type="button" className="ask-btn" onClick={() => void runAsk()} disabled={asking} aria-label="Ask">
+          <button type="button" className="primary" onClick={() => void runAsk()} disabled={asking} aria-label="Ask">
             {asking ? "Thinking…" : "Ask"}
           </button>
         )}

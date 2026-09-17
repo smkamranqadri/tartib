@@ -4,8 +4,10 @@ import { createSpace, getSpacesSummary, listItems } from "../api";
 import Card from "../components/Card";
 import { SearchIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
+import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import SearchAsk from "../components/SearchAsk";
+import { Empty, ErrorLine, Loading } from "../components/Status";
 import { formatRelative } from "../format";
 import type { Item, SpaceSummary } from "../types";
 import { useLoad } from "../useLoad";
@@ -16,8 +18,6 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
   const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [createError, setCreateError] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim()), 200);
@@ -42,42 +42,30 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
       <div className="title-row">
         <PageHead title="Spaces" subtitle="Where things live. Search across all of them, or end with ? to ask." />
         <div className="title-actions">
-          {!creating ? (
+          {creating ? (
+            <NameForm
+              label="New space name"
+              placeholder="name, e.g. gym"
+              submitLabel="Create"
+              onSubmit={async (name) => {
+                const r = await createSpace(name);
+                onChanged();
+                setCreated(r.name);
+              }}
+              onCancel={() => setCreating(false)}
+            />
+          ) : (
             <button type="button" className="ghost" onClick={() => setCreating(true)}>
               + New space
             </button>
-          ) : (
-            <form
-              className="new-space-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setCreateError(null);
-                try {
-                  const r = await createSpace(newName);
-                  onChanged();
-                  setCreated(r.name);
-                } catch (err) {
-                  setCreateError(err instanceof Error ? err.message : "failed");
-                }
-              }}
-            >
-              <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="name, e.g. gym" aria-label="New space name" maxLength={24} />
-              <button type="submit" className="primary" disabled={!newName.trim()}>
-                Create
-              </button>
-              <button type="button" className="ghost" onClick={() => { setCreating(false); setCreateError(null); }}>
-                Cancel
-              </button>
-              {createError && <span className="error">{createError}</span>}
-            </form>
           )}
         </div>
       </div>
       <SearchAsk value={q} onChange={setQ} placeholder="Search everything, or end with ? to ask" large />
       {debounced ? (
         <Card icon={<SearchIcon />} label="Results" aside={<span className="muted">{count} {count === 1 ? "item" : "items"}</span>}>
-          {results.error && <p className="error">{results.error}</p>}
-          {results.data && groups.length === 0 && <p className="empty muted">No items match.</p>}
+          {results.error && <ErrorLine>{results.error}</ErrorLine>}
+          {results.data && groups.length === 0 && <Empty>No items match.</Empty>}
           {groups.map(([g, items]) => (
             <div key={g ?? "unfiled"} className="result-group">
               <p className="section-label muted">{g ? <Link to={`/spaces/${g}`}>{g}</Link> : "Unfiled"}</p>
@@ -91,8 +79,8 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
         </Card>
       ) : (
         <>
-          {summary.error && <p className="error">{summary.error}</p>}
-          {summary.loading && !summary.data && <p className="muted">Loading…</p>}
+          {summary.error && <ErrorLine>{summary.error}</ErrorLine>}
+          {summary.loading && !summary.data && <Loading />}
           {summary.data && (
             <div className="space-grid">
               {summary.data.spaces.map((s) => (
@@ -109,7 +97,7 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
 
 function SpaceCard({ s }: { s: SpaceSummary }) {
   return (
-    <Link to={s.unfiled ? "/attention" : `/spaces/${s.name}`} className={`space-card ${s.unfiled ? "unfiled" : ""}`}>
+    <Link to={s.unfiled ? "/inbox" : `/spaces/${s.name}`} className={`space-card ${s.unfiled ? "unfiled" : ""}`}>
       <span className="space-name">
         {s.unfiled ? "Unfiled" : s.name}
         {s.overdue > 0 && <span className="overdue-dot" title={`${s.overdue} overdue`} aria-label={`${s.overdue} overdue`} />}

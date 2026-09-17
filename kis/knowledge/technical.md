@@ -73,10 +73,18 @@ PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   
 
 ## Frontend shell
 
-Routes: `/` Home (dashboard; DOM order Today, Needs attention, Recent = phone order; grid areas put Needs attention right on desktop), `/attention` Inbox (3 `ApprovalCard`s, Stale, Recent), `/attention/all` (every waiting item as cards), `/spaces` (cards, New space in the title row, grouped search; `?space=` redirects), `/spaces/:name` (`Space` page: back, filter + manage in the title row, scoped search, `SpaceDetail`), `/recent` (paged), `/settings`, `/items/:id` (editable text, File it / Proposal accordions closed once filed, original capture shown when different, delete), `/today` -> `/`. Pill nav with inline SVG icons (`components/Icons.tsx`).
-`App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/attention` only, and keys `c` / `/`.
-Components: `RecentList` (captures rendered as one `ItemRow` per item, plain row for captures with no item; row edits kept in local state), `ApprovalCard` (one waiting item as a decision; `hotkey` binds Enter), `PageHead` (eyebrow, h1, subtitle), `Card` (icon + uppercase label + right aside), `ItemRow` (meta line, due at right, hover/long-press actions), `SearchAsk` (search-or-ask field), `SpaceDetail` (brief, tasks, notes; collapse state in localStorage `tartib-space-<name>`).
-Layout: app column max 1240px; dashboard grid 1.5fr/1fr above 900px; single column below. Tokens: teal accent, green-tinted near-black dark theme, matching light theme.
+Routes: `/` Home (dashboard), `/inbox`, `/inbox/attention` (every waiting item), `/inbox/recent` (paged captures), `/spaces`, `/spaces/:name`, `/settings`, `/items/:id`. Redirects: `/attention`, `/attention/all`, `/recent`, `/today`, `/search`, `/all`. Pill nav Home · Inbox · Spaces · Settings; the Inbox pill stays active across all three inbox routes.
+`App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
+
+One component per pattern, each the only owner of its markup:
+- `Row` is the list row primitive (leading, title, meta, right, trailing, actions; long-press reveal). `ItemRow` and `RecentList` compose it; no screen writes row markup.
+- `Menu` is the "…" dropdown, taking an items array, closing on selection, Escape, and outside click.
+- `Confirm` is the inline "Delete X? Yes / No" line. `NameForm` is the create-and-rename field, owning its own error state.
+- `Card` renders section cards and, with `collapsible`/`open`/`onToggle`, the accordions on the space and item pages.
+- `PageHead` (optional eyebrow, title, subtitle) and `BackLink` (history-aware, per-page fallback) carry the header convention in SPEC.
+- `Status` exports `Loading`, `ErrorLine`, and `Empty`.
+- `ApprovalCard` is one waiting item as a decision; `hotkey` binds Enter. `SearchAsk` is the search-or-ask field.
+One primary button class (`.primary`), one ghost, one icon button. Space page collapse state lives in localStorage `tartib-space-<name>`.
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 
 ## Maintenance

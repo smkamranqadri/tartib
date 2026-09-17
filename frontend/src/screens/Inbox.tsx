@@ -7,13 +7,14 @@ import { AlertIcon, CheckSquareIcon, ClockIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
 import PageHead from "../components/PageHead";
 import RecentList from "../components/RecentList";
+import { Empty, ErrorLine, Loading } from "../components/Status";
 import type { Item } from "../types";
 import { useLoad } from "../useLoad";
 
 const SHOW = 3;
 
 /** Inbox: the newest waiting items as decision cards (Enter takes the first), stale tasks, recent. */
-export default function Attention({ version, onDecided }: { version: number; onDecided: () => void }) {
+export default function Inbox({ version, onDecided }: { version: number; onDecided: () => void }) {
   const { data, setData, error, loading } = useLoad(getAttention, [version]);
   const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
   const recent = useLoad(getToday, [version]).data?.recent ?? [];
@@ -25,8 +26,7 @@ export default function Attention({ version, onDecided }: { version: number; onD
     setOrder((prev) => {
       const ids = [...items].sort((a, b) => b.id - a.id).map((i) => i.id); // newest first
       const kept = prev.filter((id) => ids.includes(id));
-      const added = ids.filter((id) => !kept.includes(id));
-      return [...kept, ...added];
+      return [...kept, ...ids.filter((id) => !kept.includes(id))];
     });
   }, [items]);
 
@@ -43,16 +43,16 @@ export default function Attention({ version, onDecided }: { version: number; onD
     setData({ ...data, stale: data.stale.filter((i) => i.id !== next.id || next.status === "open").map((i) => (i.id === next.id ? next : i)) });
   }
 
-  if (error) return <p className="error">{error}</p>;
-  if (loading && !data) return <p className="muted">Loading…</p>;
+  if (error) return <ErrorLine>{error}</ErrorLine>;
+  if (loading && !data) return <Loading />;
 
   const shown = order.slice(0, SHOW).map((id) => items.find((i) => i.id === id)).filter((i): i is Item => !!i);
 
   return (
     <div className="screen">
-      <PageHead title="Inbox" />
+      <PageHead title="Inbox" subtitle="Approve what the classifier proposed, or file it yourself." />
       <Card icon={<AlertIcon />} label="Needs attention" aside={items.length === 0 ? "All caught up" : `${items.length} ${items.length === 1 ? "thing" : "things"} to decide`}>
-        {items.length === 0 && <p className="empty muted">All caught up.</p>}
+        {items.length === 0 && <Empty>All caught up.</Empty>}
         <div className="cards">
           {shown.map((item, i) => (
             <ApprovalCard key={item.id} item={item} spaces={spaces} hotkey={i === 0} onApproved={(id) => replace(id, null)} onNotNow={notNow} onRejected={(next) => replace(next.id, next)} />
@@ -60,12 +60,12 @@ export default function Attention({ version, onDecided }: { version: number; onD
         </div>
         {items.length > SHOW && (
           <p className="view-all">
-            <Link to="/attention/all">View all {items.length} →</Link>
+            <Link to="/inbox/attention">View all {items.length} →</Link>
           </p>
         )}
       </Card>
       <Card icon={<CheckSquareIcon />} label="Stale tasks" aside={<span className="muted">{stale.length} · untouched {data?.stale_days ?? 14} days</span>}>
-        {stale.length === 0 && <p className="empty muted">Nothing has gone quiet.</p>}
+        {stale.length === 0 && <Empty>Nothing has gone quiet.</Empty>}
         {stale.length > 0 && (
           <ul className="rows flat">
             {stale.map((item) => (
@@ -77,7 +77,7 @@ export default function Attention({ version, onDecided }: { version: number; onD
       <Card icon={<ClockIcon />} label="Recent" aside={<span className="muted">last 3</span>}>
         <RecentList captures={recent} />
         <p className="view-all">
-          <Link to="/recent">View all →</Link>
+          <Link to="/inbox/recent">View all →</Link>
         </p>
       </Card>
     </div>

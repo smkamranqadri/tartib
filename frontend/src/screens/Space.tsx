@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { deleteSpace, renameSpace } from "../api";
+import BackLink from "../components/BackLink";
+import Confirm from "../components/Confirm";
+import Menu from "../components/Menu";
+import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import SearchAsk from "../components/SearchAsk";
 import SpaceDetail, { type ShapeFilter } from "./SpaceDetail";
@@ -13,9 +17,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
   const [filter, setFilter] = useState<ShapeFilter>("all");
-  const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
-  const [newName, setNewName] = useState(space);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [manageError, setManageError] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
@@ -27,23 +29,11 @@ export default function Space({ version, onChanged }: { version: number; onChang
   useEffect(() => {
     setQ("");
     setFilter("all");
-    setMenu(false);
     setRenaming(false);
     setConfirmDelete(false);
     setManageError(null);
   }, [space]);
 
-  async function doRename() {
-    setManageError(null);
-    try {
-      const r = await renameSpace(space, newName);
-      setRenaming(false);
-      onChanged();
-      navigate(`/spaces/${encodeURIComponent(r.name)}`, { replace: true });
-    } catch (err) {
-      setManageError(err instanceof Error ? err.message : "failed");
-    }
-  }
   async function doDelete() {
     setManageError(null);
     try {
@@ -58,11 +48,9 @@ export default function Space({ version, onChanged }: { version: number; onChang
 
   return (
     <div className="screen">
-      <p className="crumbs">
-        <Link to="/spaces">← Spaces</Link>
-      </p>
+      <BackLink fallback="/spaces" />
       <div className="title-row">
-        <PageHead eyebrow="Space" title={space} />
+        <PageHead eyebrow="Spaces" title={space} subtitle="Brief, tasks, and notes in this space." />
         <div className="title-actions">
           <div className="seg" role="group" aria-label="Shape">
             {(["all", "task", "note"] as ShapeFilter[]).map((f) => (
@@ -72,41 +60,34 @@ export default function Space({ version, onChanged }: { version: number; onChang
             ))}
           </div>
           {renaming ? (
-            <form className="new-space-form" onSubmit={(e) => { e.preventDefault(); void doRename(); }}>
-              <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="Rename space" maxLength={24} />
-              <button type="submit" className="primary" disabled={!newName.trim() || newName.trim().toLowerCase() === space}>
-                Rename
-              </button>
-              <button type="button" className="ghost" onClick={() => setRenaming(false)}>
-                Cancel
-              </button>
-            </form>
+            <NameForm
+              initial={space}
+              label="Rename space"
+              submitLabel="Rename"
+              onSubmit={async (value) => {
+                const r = await renameSpace(space, value);
+                setRenaming(false);
+                onChanged();
+                navigate(`/spaces/${encodeURIComponent(r.name)}`, { replace: true });
+              }}
+              onCancel={() => setRenaming(false)}
+            />
           ) : confirmDelete ? (
-            <span className="confirm">
-              Delete <b>{space}</b>?{" "}
-              <button type="button" className="ghost danger" onClick={() => void doDelete()}>
-                Yes, delete
-              </button>{" "}
-              <button type="button" className="ghost" onClick={() => setConfirmDelete(false)}>
-                No
-              </button>
-            </span>
+            <Confirm question={<>Delete <b>{space}</b>?</>} onConfirm={() => void doDelete()} onCancel={() => setConfirmDelete(false)} />
           ) : (
-            <span className="more">
-              <button type="button" className="icon-btn" aria-label="Manage space" onClick={() => setMenu((m) => !m)}>
-                …
-              </button>
-              {menu && (
-                <span className="menu">
-                  <a href="#rename" onClick={(e) => { e.preventDefault(); setMenu(false); setNewName(space); setRenaming(true); }}>
-                    Rename
-                  </a>
-                  <button type="button" disabled={(itemCount ?? 1) > 0} title={itemCount ? `${itemCount} items still here` : undefined} onClick={() => { setMenu(false); setConfirmDelete(true); }}>
-                    Delete{itemCount ? ` (${itemCount} items)` : ""}
-                  </button>
-                </span>
-              )}
-            </span>
+            <Menu
+              label="Manage space"
+              items={[
+                { label: "Rename", onSelect: () => setRenaming(true) },
+                {
+                  label: itemCount ? `Delete (${itemCount} items)` : "Delete",
+                  danger: true,
+                  disabled: (itemCount ?? 1) > 0,
+                  title: itemCount ? `${itemCount} items still here` : undefined,
+                  onSelect: () => setConfirmDelete(true),
+                },
+              ]}
+            />
           )}
           {manageError && <span className="error">{manageError}</span>}
         </div>

@@ -25,5 +25,5 @@ Old paths redirect: `/attention` -> `/inbox`, `/attention/all` -> `/inbox/attent
 Leading glyph vocabulary: checkbox = filed task, alert = needs a decision, note = note.
 
 ## Status
-- [ ] components + screens
-- [ ] proof + deploy
+- [x] components + screens
+- [x] proof + deploy (2026-09-17, see kis/state/current.md)

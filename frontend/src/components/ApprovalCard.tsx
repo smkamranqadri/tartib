@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { approveItem, rejectItem } from "../api";
 import { formatDue } from "../format";
 import type { Item, Shape } from "../types";
+import Menu from "./Menu";
 import SpaceSelect from "./SpaceSelect";
 
 interface Draft {
@@ -37,13 +37,11 @@ export default function ApprovalCard({
 }) {
   const [draft, setDraft] = useState<Draft>(() => draftOf(item));
   const [editing, setEditing] = useState<"title" | "due" | null>(null);
-  const [menu, setMenu] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(draftOf(item));
     setEditing(null);
-    setMenu(false);
     setMsg(null);
   }, [item.id, item.proposal, item.space]);
 
@@ -66,7 +64,6 @@ export default function ApprovalCard({
   }
 
   async function reject() {
-    setMenu(false);
     try {
       onRejected(await rejectItem(item.id));
     } catch (err) {
@@ -86,7 +83,6 @@ export default function ApprovalCard({
         void approve();
       } else if (e.key === "Escape") {
         setEditing(null);
-        setMenu(false);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -142,19 +138,12 @@ export default function ApprovalCard({
             Not now
           </button>
         )}
-        <span className="more">
-          <button type="button" className="icon-btn" aria-label="More" onClick={() => setMenu((m) => !m)}>
-            …
-          </button>
-          {menu && (
-            <span className="menu">
-              <button type="button" onClick={() => void reject()}>
-                Reject proposal
-              </button>
-              <Link to={`/items/${item.id}`}>Open</Link>
-            </span>
-          )}
-        </span>
+        <Menu
+          items={[
+            { label: "Reject proposal", danger: true, onSelect: () => void reject() },
+            { label: "Open", to: `/items/${item.id}` },
+          ]}
+        />
       </div>
     </div>
   );

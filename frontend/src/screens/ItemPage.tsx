@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { approveItem, deleteItem, editItem, getCapture, getItem, getSpaces } from "../api";
+import BackLink from "../components/BackLink";
 import Card from "../components/Card";
+import Confirm from "../components/Confirm";
 import ItemEditor from "../components/ItemEditor";
+import Menu from "../components/Menu";
+import { ErrorLine, Loading } from "../components/Status";
 import { formatDue, formatRelative, formatRemind } from "../format";
 import type { Capture as CaptureRecord, Edit } from "../types";
 import { useLoad } from "../useLoad";
@@ -17,7 +21,6 @@ export default function ItemPage({ version }: { version: number }) {
   const [text, setText] = useState("");
   const [editingText, setEditingText] = useState(false);
   const [open, setOpen] = useState<{ file: boolean; proposal: boolean } | null>(null);
-  const [menu, setMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -28,8 +31,8 @@ export default function ItemPage({ version }: { version: number }) {
     getCapture(item.capture_id).then(setCapture).catch(() => setCapture(null));
   }, [item?.id, item?.stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) return <p className="error">{error}</p>;
-  if (loading || !item) return <p className="muted">Loading…</p>;
+  if (error) return <ErrorLine>{error}</ErrorLine>;
+  if (loading || !item) return <Loading />;
 
   const isTask = item.shape === "task";
   const waiting = item.stage === "attention";
@@ -67,39 +70,27 @@ export default function ItemPage({ version }: { version: number }) {
 
   return (
     <div className="screen item-page">
-      <p className="crumbs">
-        <Link to="/spaces">Spaces</Link>
-        {item.space && (
-          <>
-            {" "}
-            / <Link to={`/spaces/${item.space}`}>{item.space}</Link>
-          </>
-        )}{" "}
-        <span className="muted">/ #{item.id}</span>
-      </p>
+      <BackLink fallback={item.space ? `/spaces/${item.space}` : "/inbox"} />
       <Card
         label={isTask ? "Task" : "Note"}
         aside={
           <span className="item-aside">
             <span className="muted">
-              {item.space ?? "no space"} · <span title={new Date(item.created_at).toLocaleString()}>{formatRelative(item.created_at)}</span>
-              {waiting && <> · <span className="chip stage-attention">needs attention</span></>}
-            </span>
-            <span className="more">
-              <button type="button" className="icon-btn" aria-label="More" onClick={() => setMenu((m) => !m)}>
-                …
-              </button>
-              {menu && (
-                <span className="menu">
-                  <a href="#edit" onClick={(e) => { e.preventDefault(); setMenu(false); setEditingText(true); }}>
-                    Edit text
-                  </a>
-                  <button type="button" onClick={() => { setMenu(false); setConfirmDelete(true); }}>
-                    Delete
-                  </button>
-                </span>
+              {item.space ? <Link to={`/spaces/${item.space}`}>{item.space}</Link> : "no space"} ·{" "}
+              <span title={new Date(item.created_at).toLocaleString()}>{formatRelative(item.created_at)}</span>
+              {waiting && (
+                <>
+                  {" "}
+                  · <span className="chip stage-attention">needs attention</span>
+                </>
               )}
             </span>
+            <Menu
+              items={[
+                { label: "Edit text", onSelect: () => setEditingText(true) },
+                { label: "Delete", danger: true, onSelect: () => setConfirmDelete(true) },
+              ]}
+            />
           </span>
         }
       >
@@ -122,17 +113,9 @@ export default function ItemPage({ version }: { version: number }) {
           </p>
         )}
         {confirmDelete && (
-          <p className="confirm">
-            Delete this {item.shape}? The original capture stays.{" "}
-            <button type="button" className="ghost danger" onClick={() => void remove()}>
-              Yes, delete
-            </button>{" "}
-            <button type="button" className="ghost" onClick={() => setConfirmDelete(false)}>
-              No
-            </button>
-          </p>
+          <Confirm question={<>Delete this {item.shape}? The original capture stays.</>} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />
         )}
-        {msg && <p className="error">{msg}</p>}
+        {msg && <ErrorLine>{msg}</ErrorLine>}
         {isTask && (
           <div className="item-meta">
             <span className="chip">{item.status}</span>
@@ -145,13 +128,13 @@ export default function ItemPage({ version }: { version: number }) {
 
       <Card
         className="accordion"
-        label={
-          <button type="button" className="section-toggle" onClick={() => setOpen((o) => ({ ...(o ?? { file: false, proposal: false }), file: !o?.file }))} aria-expanded={!!open?.file}>
-            {waiting ? "File it" : "Edit"} {open?.file ? "▾" : "▸"}
-          </button>
-        }
+        label={waiting ? "File it" : "Edit"}
+        collapsible
+        open={!!open?.file}
+        onToggle={() => setOpen((o) => ({ ...(o ?? { file: false, proposal: false }), file: !o?.file }))}
         aside={
-          !waiting && isTask && (
+          !waiting &&
+          isTask && (
             <span className="toggles">
               <button type="button" className="ghost" onClick={() => void save({ starred: !item.starred })}>
                 {item.starred ? "★ Starred" : "☆ Star"}
@@ -163,64 +146,57 @@ export default function ItemPage({ version }: { version: number }) {
           )
         }
       >
-        {open?.file && (
-          <ItemEditor
-            key={`${item.id}-${item.stage}-${item.classified_at}`}
-            item={item}
-            fromProposal={waiting}
-            spaces={spaces}
-            submitLabel={waiting ? "Approve" : "Save"}
-            requireSpace
-            onSubmit={waiting ? approve : save}
-            onCancel={() => {}}
-            hideCancel
-            inline
-          />
-        )}
+        <ItemEditor
+          key={`${item.id}-${item.stage}-${item.classified_at}`}
+          item={item}
+          fromProposal={waiting}
+          spaces={spaces}
+          submitLabel={waiting ? "Approve" : "Save"}
+          requireSpace
+          onSubmit={waiting ? approve : save}
+          onCancel={() => {}}
+          hideCancel
+          inline
+        />
       </Card>
 
       <Card
         className="accordion"
-        label={
-          <button type="button" className="section-toggle" onClick={() => setOpen((o) => ({ ...(o ?? { file: false, proposal: false }), proposal: !o?.proposal }))} aria-expanded={!!open?.proposal}>
-            Proposal {open?.proposal ? "▾" : "▸"}
-          </button>
-        }
+        label="Proposal"
+        collapsible
+        open={!!open?.proposal}
+        onToggle={() => setOpen((o) => ({ ...(o ?? { file: false, proposal: false }), proposal: !o?.proposal }))}
         aside={item.proposal && <span className="muted">{Math.round(item.proposal.confidence * 100)}% sure</span>}
       >
-        {open?.proposal && (
-          <>
-            {item.proposal ? (
-              <dl className="kv">
-                <dt>shape</dt>
-                <dd>{item.proposal.shape}</dd>
-                <dt>space</dt>
-                <dd>{item.proposal.space ?? <span className="muted">none fits</span>}</dd>
-                {item.proposal.title && (
-                  <>
-                    <dt>title</dt>
-                    <dd>{item.proposal.title}</dd>
-                  </>
-                )}
-                <dt>due</dt>
-                <dd>{item.proposal.due ?? "—"}</dd>
-                {item.proposal.remind_at && (
-                  <>
-                    <dt>remind</dt>
-                    <dd>{formatRemind(item.proposal.remind_at)}</dd>
-                  </>
-                )}
-              </dl>
-            ) : (
-              <p className="muted">No proposal{item.proposal_error ? `: ${item.proposal_error}` : "."}</p>
+        {item.proposal ? (
+          <dl className="kv">
+            <dt>shape</dt>
+            <dd>{item.proposal.shape}</dd>
+            <dt>space</dt>
+            <dd>{item.proposal.space ?? <span className="muted">none fits</span>}</dd>
+            {item.proposal.title && (
+              <>
+                <dt>title</dt>
+                <dd>{item.proposal.title}</dd>
+              </>
             )}
-            {originalDiffers && capture && (
-              <div className="original">
-                <p className="section-label muted">What you wrote</p>
-                <p className="raw muted">{capture.raw_text}</p>
-              </div>
+            <dt>due</dt>
+            <dd>{item.proposal.due ?? "—"}</dd>
+            {item.proposal.remind_at && (
+              <>
+                <dt>remind</dt>
+                <dd>{formatRemind(item.proposal.remind_at)}</dd>
+              </>
             )}
-          </>
+          </dl>
+        ) : (
+          <p className="muted">No proposal{item.proposal_error ? `: ${item.proposal_error}` : "."}</p>
+        )}
+        {originalDiffers && capture && (
+          <div className="original">
+            <p className="section-label muted">What you wrote</p>
+            <p className="raw muted">{capture.raw_text}</p>
+          </div>
         )}
       </Card>
     </div>

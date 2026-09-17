@@ -41,19 +41,35 @@ A background call to `classify(text, context)` returns a list of proposals `{tex
 
 Any filed item's `space`, `shape`, `title`, `due`, `remind_at`, `starred`, and `status` can be changed. `raw_text` cannot.
 
-## Screens (dashboard layout, 2026-09-17)
+## Screens
 
-Shell: brand "Tartib ترتیب", pill nav Home · Inbox · Spaces · Settings with icons, and a capture bar under the header on every screen (auto-growing box, mic when the browser supports on-device speech, Add). Enter or Add saves, Shift+Enter adds a line; the box clears at once, a toast says "Saved" then the outcome; a question capture navigates to Home and shows its answer. Chat bar on Home and Inbox only. `c` focuses capture anywhere; `/` focuses search on Search.
+Shell: brand "Tartib ترتیب", pill nav Home · Inbox · Spaces · Settings with icons, and a capture bar under the header on every screen (auto-growing box, mic when the browser supports on-device speech, Add). Enter or Add saves, Shift+Enter adds a line; the box clears at once, a toast says "Saved" then the outcome; a question capture navigates to Home and shows its answer. Chat bar on Home and Inbox only. `c` focuses capture anywhere; `/` focuses search on the Spaces screens.
 
-1. Home `/`: eyebrow DASHBOARD, title = today's date. Two columns from 900px, one below. Left: Today (open tasks due today or overdue, starred, passed reminders; starred first; count) and Recent (last 3 captures, "View all" -> `/recent`). Right: Needs attention (top 3 of queue then stale, "View all", and a line naming the most recently touched space). On phone the order is Today, Needs attention, Recent.
-2. Inbox `/attention`: title "Inbox". Card "Needs attention · N things to decide" = the 3 newest waiting items as decision cards (text, proposal sentence with tappable words, Approve, Not now, "…" with Reject and Open); Enter approves the first; "View all N" -> `/attention/all` with every waiting item as the same cards. Stale tasks = open filed tasks untouched 14+ days. Recent = last 3, "View all".
-3. Spaces `/spaces`: title "Spaces" (or the selected space). Search-or-ask field (Ask button once there is text; trailing "?" or Cmd/Ctrl+Enter). Chips: All spaces + each space; Any shape / Tasks / Notes; state in the URL. No query + All spaces -> space cards (name, "4 open · 12 notes", last activity, overdue dot; Unfiled muted, links to Inbox). No query + a space -> that space's Brief (cached, refresh), Tasks (Show done), Notes, collapsible and remembered per space. Query -> results grouped by space. `/spaces`, `/spaces/{name}`, `/all` redirect here.
+Header convention: the **eyebrow** names the page only when the title does not; the **subtitle** says what the page is for and never carries a count (counts live in the card header that owns them); **Back** is one control, history-aware with a per-page fallback.
+
+```text
+Route              Back    Eyebrow    Title                    Subtitle
+/                  —       DASHBOARD  <today's date>           Today, what needs you, and what you captured.
+/inbox             —       —          Inbox                    Approve what the classifier proposed, or file it yourself.
+/spaces            —       —          Spaces                   Where things live. Search across all, or end with ? to ask.
+/settings          —       —          Settings                 How this copy of Tartib is set up.
+/inbox/attention   Back    INBOX      Everything waiting       Every item that needs a decision.
+/inbox/recent      Back    INBOX      Everything you captured  Newest first, filed or not.
+/spaces/{name}     Back    SPACES     <space name>             Brief, tasks, and notes in this space.
+/items/{id}        Back    —          —                        — (the card holds the item)
+```
+
+1. Home `/`: Today (open tasks due today or overdue, starred, passed reminders; starred first), Needs attention (top 3 of queue then stale, "View all", and a line naming the most recently touched space), Recent (last 3 captures, "View all"). Two columns from 900px with Needs attention on the right; on phone the order is Today, Needs attention, Recent.
+2. Inbox `/inbox`: card "Needs attention · N things to decide" holding the 3 newest waiting items as decision cards (text, proposal sentence with tappable words, Approve, Not now, "…" with Reject and Open); Enter approves the first; "View all N" opens `/inbox/attention`. Then Stale tasks (open filed tasks untouched 14+ days) and Recent (last 3, "View all" opens `/inbox/recent`).
+3. Spaces `/spaces`: title row with "+ New space" at the right (lowercase, digits, dashes, 24 max). Search-or-ask across everything, results grouped by space. Cards: name, "4 open · 12 notes", last activity, overdue dot; Unfiled muted, links to Inbox. A card opens `/spaces/{name}`: Back, title row with an All / Tasks / Notes filter and "…" (Rename carries items; Delete only when empty), scoped search-or-ask, Brief (cached until an item is added or removed, refresh icon, cleared when switching spaces), Tasks (Show done), Notes, collapsible and remembered per space.
 4. Settings `/settings`: Appearance (theme), Classifier (Codex on/off, fallback, threshold), Device (voice capture, timezone, installed), Spaces (configured list), Account (sign out). Read-only except theme and sign out.
-5. Item page `/items/{id}`: the item's text (editable via "…" > Edit text or double-click), status chips, "File it" (while waiting) or "Edit" (filed) and "Proposal" as accordions, open while waiting and closed once filed; the Proposal shows the original capture text when it differs. "…" also holds Delete with an inline confirm.
-6. Recent `/recent`: "← Back" (history, else Home), captures newest first, 50 at a time with "Load more". `/attention/all` has the same Back control.
+5. Item page `/items/{id}`: the item's text (editable via "…" > Edit text or double-click), status chips, the space name linking to its space, "File it" (while waiting) or "Edit" (filed) and "Proposal" as accordions, open while waiting and closed once filed; the Proposal shows the original capture text when it differs. "…" also holds Delete with an inline confirm.
+6. Recent `/inbox/recent`: captures newest first, 50 at a time with "Load more".
 7. Login: one password field.
 
-Rows everywhere: leading checkbox (filed tasks) or icon, title (links to the item page for tasks and notes), muted meta "space · 2h ago" (or "needs attention · 70%"), "due Fri, Sep 18" at the right for dated tasks, overdue rows tinted, the star always visible on tasks, hover or long-press reveals edit.
+Old paths redirect: `/attention` -> `/inbox`, `/attention/all` -> `/inbox/attention`, `/recent` -> `/inbox/recent`, `/today` -> `/`, `/search` and `/all` -> `/spaces`.
+
+Rows everywhere come from one component: leading glyph (checkbox for a filed task, alert for something awaiting a decision, note for a note), title linking to the item page, muted meta "space · 2h ago" (or "needs attention · 70%"), "due Fri, Sep 18" at the right for dated tasks, overdue rows tinted, the star always visible on tasks, hover or long-press reveals edit.
 
 ## Out of scope
 

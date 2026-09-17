@@ -36,10 +36,6 @@ export function formatRemind(iso: string): string {
   });
 }
 
-export function formatCreated(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
 /** ISO UTC -> value for <input type="datetime-local"> in the browser zone. */
 export function toLocalInput(iso: string | null): string {
   if (!iso) return "";
