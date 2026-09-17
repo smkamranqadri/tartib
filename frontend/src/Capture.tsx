@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { capture } from "./api";
 import { MicIcon } from "./components/Icons";
 
@@ -30,7 +30,7 @@ export default function Capture({ onCaptured }: { onCaptured: (id: number) => vo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
-  const ref = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
   const rec = useRef<Recognition | null>(null);
   const supported = speechSupported();
 
@@ -84,15 +84,30 @@ export default function Capture({ onCaptured }: { onCaptured: (id: number) => vo
     r.start();
   }
 
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 6 * 24 + 24) + "px";
+  }, [text]);
+
+  function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void submit();
+    }
+  }
+
   return (
     <form className="capture-bar" onSubmit={submit}>
-      <input
+      <textarea
         ref={ref}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Capture anything…"
+        onKeyDown={onKey}
+        placeholder="Capture anything… Shift+Enter for a new line"
         aria-label="Capture"
-        autoComplete="off"
+        rows={1}
       />
       {supported && (
         <button type="button" className={`icon-btn mic ${listening ? "on" : ""}`} onClick={toggleMic} aria-label={listening ? "Stop listening" : "Dictate"} title="Dictate">

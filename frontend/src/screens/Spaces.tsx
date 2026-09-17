@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { getSpacesSummary, listItems } from "../api";
+import { createSpace, getSpacesSummary, listItems } from "../api";
 import Card from "../components/Card";
 import { SearchIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
@@ -13,8 +13,11 @@ import SpaceDetail from "./SpaceDetail";
 
 type Shape = "" | "task" | "note";
 
-/** Find anything: search-or-ask, space and shape chips. With no query: the space cards, or one space's detail. */
-export default function Search({ version }: { version: number }) {
+/** Spaces: search-or-ask across everything, space and shape chips, the cards, or one space's detail. */
+export default function Spaces({ version, onChanged }: { version: number; onChanged: () => void }) {
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
   const space = params.get("space") ?? "";
   const shape = (params.get("shape") ?? "") as Shape;
@@ -48,7 +51,7 @@ export default function Search({ version }: { version: number }) {
 
   return (
     <div className="screen">
-      <PageHead eyebrow="Search" title="Find anything" subtitle="Full-text over every capture, or end with ? to ask." />
+      <PageHead eyebrow="Spaces" title={space || "Spaces"} subtitle={space ? undefined : "Where things live. Search across all of them, or end with ? to ask."} />
       <SearchAsk value={q} onChange={setQ} space={space || undefined} placeholder={space ? `Search ${space}, or ask` : "Search everything"} large />
       <div className="chip-rows">
         <div className="chips" role="group" aria-label="Space">
@@ -61,6 +64,37 @@ export default function Search({ version }: { version: number }) {
             </button>
           ))}
         </div>
+        {!creating ? (
+          <button type="button" className="ghost new-space" onClick={() => setCreating(true)}>
+            + New space
+          </button>
+        ) : (
+          <form
+            className="new-space-form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setCreateError(null);
+              try {
+                const r = await createSpace(newName);
+                setNewName("");
+                setCreating(false);
+                onChanged();
+                setParam("space", r.name);
+              } catch (err) {
+                setCreateError(err instanceof Error ? err.message : "failed");
+              }
+            }}
+          >
+            <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="name, e.g. gym" aria-label="New space name" maxLength={24} />
+            <button type="submit" className="primary" disabled={!newName.trim()}>
+              Create
+            </button>
+            <button type="button" className="ghost" onClick={() => { setCreating(false); setCreateError(null); }}>
+              Cancel
+            </button>
+            {createError && <span className="error">{createError}</span>}
+          </form>
+        )}
         <div className="chips" role="group" aria-label="Shape">
           {(["", "task", "note"] as Shape[]).map((s) => (
             <button key={s || "any"} type="button" className={`chip-btn ${shape === s ? "on" : ""}`} onClick={() => setParam("shape", s)}>
@@ -88,7 +122,7 @@ export default function Search({ version }: { version: number }) {
           ))}
         </Card>
       ) : space ? (
-        <SpaceDetail space={space} query="" version={version} />
+        <SpaceDetail space={space} query="" version={version} onRenamed={(name) => { onChanged(); setParam("space", name); }} onDeleted={() => { onChanged(); setParam("space", ""); }} />
       ) : (
         <>
           {summary.error && <p className="error">{summary.error}</p>}

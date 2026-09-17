@@ -58,6 +58,7 @@ export interface Edit {
   remind_at?: string | null;
   starred?: boolean;
   status?: Status;
+  text?: string;
 }
 
 export interface SpaceSummary {

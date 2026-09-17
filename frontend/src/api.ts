@@ -79,3 +79,9 @@ export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/it
 export const approveItem = (id: number, edit?: Edit) =>
   send<Item>("POST", `/api/items/${id}/approve`, edit);
 export const rejectItem = (id: number) => send<Item>("POST", `/api/items/${id}/reject`);
+export const deleteItem = (id: number) => send<{ ok: true; id: number }>("DELETE", `/api/items/${id}`);
+export const getRecent = (limit = 50) => api<{ captures: Capture[] }>(`/api/recent?limit=${limit}`);
+export const createSpace = (name: string) => send<{ spaces: string[]; name: string }>("POST", "/api/spaces", { name });
+export const renameSpace = (old: string, name: string) =>
+  send<{ spaces: string[]; name: string }>("PATCH", `/api/spaces/${encodeURIComponent(old)}`, { name });
+export const deleteSpace = (name: string) => send<{ spaces: string[] }>("DELETE", `/api/spaces/${encodeURIComponent(name)}`);

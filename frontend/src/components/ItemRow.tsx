@@ -14,7 +14,6 @@ interface Props {
  *  Hover or long-press reveals star and edit. Notes expand on tap. */
 export default function ItemRow({ item, onChange }: Props) {
   const [revealed, setRevealed] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const holdTimer = useRef<number | null>(null);
   const isTask = item.shape === "task";
@@ -33,7 +32,6 @@ export default function ItemRow({ item, onChange }: Props) {
 
   const firstLine = item.raw_text.split("\n")[0];
   const headline = isTask ? item.title || firstLine : firstLine;
-  const hasMore = !isTask && item.raw_text.trim() !== firstLine.trim();
 
   function startHold() {
     holdTimer.current = window.setTimeout(() => setRevealed((r) => !r), 500);
@@ -66,15 +64,9 @@ export default function ItemRow({ item, onChange }: Props) {
           <span className="row-icon muted">{waiting ? <ClockIcon /> : <NoteIcon />}</span>
         )}
         <div className="row-body">
-          {isTask ? (
-            <Link to={`/items/${item.id}`} className="row-text">
-              {headline}
-            </Link>
-          ) : (
-            <button type="button" className={`row-text ${hasMore && !expanded ? "expandable" : ""}`} onClick={() => setExpanded((e) => !e)}>
-              {expanded ? item.raw_text : headline}
-            </button>
-          )}
+          <Link to={`/items/${item.id}`} className="row-text">
+            {headline}
+          </Link>
           <span className="row-meta muted">
             {meta.map((m, i) => (
               <span key={i}>
@@ -82,12 +74,6 @@ export default function ItemRow({ item, onChange }: Props) {
                 {m}
               </span>
             ))}
-            {expanded && !isTask && (
-              <>
-                <span className="sep"> · </span>
-                <Link to={`/items/${item.id}`}>open</Link>
-              </>
-            )}
           </span>
         </div>
         {isTask && item.due && <span className={`row-due ${overdue ? "overdue" : "muted"}`}>{formatDueLong(item.due)}</span>}

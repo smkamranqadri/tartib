@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { approveItem, getAttention, getSpaces, rejectItem } from "../api";
+import { approveItem, getAttention, getSpaces, getToday, rejectItem } from "../api";
 import Card from "../components/Card";
-import { CheckSquareIcon, InboxIcon } from "../components/Icons";
+import { AlertIcon, CheckSquareIcon, ClockIcon, InboxIcon } from "../components/Icons";
+import RecentList from "../components/RecentList";
 import ItemRow from "../components/ItemRow";
 import PageHead from "../components/PageHead";
 import SpaceSelect from "../components/SpaceSelect";
@@ -32,6 +33,7 @@ function draftOf(item: Item): Draft {
 export default function Attention({ version, onDecided }: { version: number; onDecided: () => void }) {
   const { data, setData, error, loading } = useLoad(getAttention, [version]);
   const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
+  const recent = useLoad(getToday, [version]).data?.recent ?? [];
   const [order, setOrder] = useState<number[]>([]);
   const [pass, setPass] = useState(0); // how many "Not now" in this round
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -83,6 +85,11 @@ export default function Attention({ version, onDecided }: { version: number; onD
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "failed");
     }
+  }
+
+  function bringForward(id: number) {
+    setOrder((o) => [id, ...o.filter((x) => x !== id)]);
+    setPass(0);
   }
 
   function notNow() {
@@ -210,6 +217,36 @@ export default function Attention({ version, onDecided }: { version: number; onD
           </div>
         )}
       </Card>
+      <Card icon={<AlertIcon />} label="Waiting" aside={remaining}>
+        {remaining === 0 && <p className="empty muted">Nothing waiting.</p>}
+        {remaining > 0 && (
+          <ul className="rows flat">
+            {order.map((id) => items.find((i) => i.id === id)).filter((i): i is Item => !!i).map((item) => (
+              <li key={item.id} className={`row waiting ${item.id === current?.id ? "current" : ""}`}>
+                <div className="row-main">
+                  <span className="row-icon muted">
+                    <AlertIcon />
+                  </span>
+                  <div className="row-body">
+                    <button type="button" className="row-text" onClick={() => bringForward(item.id)}>
+                      {item.shape === "task" && item.title ? item.title : item.raw_text.split("\n")[0]}
+                    </button>
+                    <span className="row-meta muted">
+                      {item.proposal ? item.proposal.shape : item.shape}
+                      {item.proposal?.space ? <> · {item.proposal.space}</> : <> · no space fits</>}
+                      {item.proposal && <> · {Math.round(item.proposal.confidence * 100)}%</>}
+                      {item.id === current?.id && <> · <b>now</b></>}
+                    </span>
+                  </div>
+                  <Link to={`/items/${item.id}`} className="icon-btn" aria-label="Open">
+                    ✎
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
       <Card icon={<CheckSquareIcon />} label="Stale tasks" aside={<span className="muted">{stale.length} · untouched {data?.stale_days ?? 14} days</span>}>
         {stale.length === 0 && <p className="empty muted">Nothing has gone quiet.</p>}
         {stale.length > 0 && (
@@ -219,6 +256,12 @@ export default function Attention({ version, onDecided }: { version: number; onD
             ))}
           </ul>
         )}
+      </Card>
+      <Card icon={<ClockIcon />} label="Recent" aside={<span className="muted">last 3</span>}>
+        <RecentList captures={recent} />
+        <p className="view-all">
+          <Link to="/recent">View all →</Link>
+        </p>
       </Card>
     </div>
   );

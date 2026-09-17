@@ -3,13 +3,14 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams }
 import { getCapture, getSpaces, setUnauthorizedHandler } from "./api";
 import Capture from "./Capture";
 import AskBar from "./components/AskBar";
-import { HomeIcon, InboxIcon, SearchIcon, SettingsIcon } from "./components/Icons";
+import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
 import Toast, { type ToastState } from "./components/Toast";
 import Attention from "./screens/Attention";
 import Home from "./screens/Home";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
-import Search from "./screens/Search";
+import Recent from "./screens/Recent";
+import Spaces from "./screens/Spaces";
 import Settings from "./screens/Settings";
 import { ThemeContext, type Theme } from "./theme";
 import type { Answer, Capture as CaptureRecord } from "./types";
@@ -43,7 +44,7 @@ function outcome(cap: CaptureRecord): string {
 
 function SpaceRedirect() {
   const { name = "" } = useParams();
-  return <Navigate to={`/search?space=${encodeURIComponent(name)}`} replace />;
+  return <Navigate to={`/spaces?space=${encodeURIComponent(name)}`} replace />;
 }
 
 export default function App() {
@@ -58,7 +59,7 @@ export default function App() {
   const location = useLocation();
   const bump = () => setVersion((v) => v + 1);
   const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];
-  const onSearchPage = location.pathname.startsWith("/search") || location.pathname.startsWith("/spaces");
+  const onSearchPage = location.pathname.startsWith("/spaces") || location.pathname.startsWith("/search");
   const showChat = location.pathname === "/" || location.pathname === "/attention";
 
   useEffect(() => {
@@ -145,8 +146,8 @@ export default function App() {
             <NavLink to="/attention">
               <InboxIcon /> Inbox
             </NavLink>
-            <NavLink to="/search" className={onSearchPage ? "active" : undefined}>
-              <SearchIcon /> Search
+            <NavLink to="/spaces" className={onSearchPage ? "active" : undefined}>
+              <LayersIcon /> Spaces
             </NavLink>
             <NavLink to="/settings">
               <SettingsIcon /> Settings
@@ -161,10 +162,11 @@ export default function App() {
             <Route path="/today" element={<Navigate to="/" replace />} />
             <Route path="/attention" element={<Attention version={version} onDecided={bump} />} />
             <Route path="/inbox" element={<Navigate to="/attention" replace />} />
-            <Route path="/search" element={<Search version={version} />} />
-            <Route path="/spaces" element={<Navigate to="/search" replace />} />
+            <Route path="/spaces" element={<Spaces version={version} onChanged={bump} />} />
             <Route path="/spaces/:name" element={<SpaceRedirect />} />
-            <Route path="/all" element={<Navigate to="/search" replace />} />
+            <Route path="/search" element={<Navigate to="/spaces" replace />} />
+            <Route path="/all" element={<Navigate to="/spaces" replace />} />
+            <Route path="/recent" element={<Recent version={version} />} />
             <Route path="/settings" element={<Settings onSignedOut={() => setAuthed(false)} />} />
             <Route path="/items/:id" element={<ItemPage version={version} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

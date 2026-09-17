@@ -50,7 +50,7 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
         </Row>
       </Card>
       <Card icon={<LayersIcon />} label="Spaces" aside={<span className="muted">{config?.spaces.length ?? "…"}</span>}>
-        <Row title="Configured spaces" desc="Set by TARTIB_SPACES in .env. The classifier files only into these.">
+        <Row title="Your spaces" desc="Create, rename, or delete them on the Spaces page. The classifier files only into these.">
           <span className="muted">{config?.spaces.join(" · ") ?? "…"}</span>
         </Row>
       </Card>
