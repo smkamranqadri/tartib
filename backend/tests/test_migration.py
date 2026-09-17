@@ -51,8 +51,8 @@ def test_v1_to_v2(tmp_path):
     path = str(tmp_path / "v1.db")
     build_v1(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == 4
-    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 4
+    assert db.migrate(conn) == 6
+    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 6
 
     caps = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM captures ORDER BY id")}
     assert len(caps) == 5
@@ -123,5 +123,33 @@ def test_migrate_is_idempotent(tmp_path):
     build_v1(path)
     conn = db.connect(path)
     db.migrate(conn)
-    assert db.migrate(conn) == 4
+    assert db.migrate(conn) == 6
     assert conn.execute("SELECT COUNT(*) FROM captures").fetchone()[0] == 5
+
+
+def test_0005_writes_off_reminders_that_are_already_due(tmp_path):
+    """The first tick after this deploy must be silent, not a replay of every past reminder."""
+    path = str(tmp_path / "v4.db")
+    conn = db.connect(path)
+    db.migrate(conn, up_to=4)
+    conn.execute(
+        "INSERT INTO captures (id, raw_text, source, created_at, status)"
+        " VALUES (1, 'x', 'migrated', '2026-09-01T10:00:00Z', 'done')"
+    )
+    for id_, remind_at in ((1, "2026-01-01T10:00:00Z"), (2, "2099-01-01T10:00:00Z"), (3, None)):
+        conn.execute(
+            "INSERT INTO items (id, capture_id, raw_text, space, shape, stage, created_at,"
+            " updated_at, remind_at) VALUES (?, 1, 'x', 'work', 'task', 'filed',"
+            " '2026-09-01T10:00:00Z', '2026-09-01T10:00:00Z', ?)",
+            (id_, remind_at),
+        )
+    conn.commit()
+
+    assert db.migrate(conn) == 6
+    rows = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM items")}
+    assert rows[1]["reminded_at"] is not None  # already due: written off
+    assert rows[2]["reminded_at"] is None  # still ahead: will fire
+    assert rows[3]["reminded_at"] is None
+    # Writing the backfill must not look like someone touched these items.
+    assert all(r["updated_at"] == "2026-09-01T10:00:00Z" for r in rows.values())
+    conn.close()

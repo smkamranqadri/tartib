@@ -9,8 +9,9 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from tartib import ask, auth, briefs, captures, db, items, queries, spaces
+from tartib import ask, auth, briefs, captures, db, items, push, queries, spaces
 from tartib.config import Settings, load_settings
+from tartib.reminders import Reminders
 from tartib.runner import Runner
 from tartib.spaces import seed_spaces
 from tartib.store import list_spaces, reconcile_spaces
@@ -38,9 +39,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         runner = Runner(settings)
         app.state.runner = runner
         await runner.start()
+        # Without VAPID keys there is nothing to sign a push with, so the loop stays off
+        # rather than marking reminders sent that nobody could have received.
+        reminders = Reminders(settings) if settings.push_enabled else None
+        if reminders is not None:
+            try:
+                push.check_key(settings)
+            except Exception as e:  # a bad key must not quietly consume every reminder
+                log.error("TARTIB_VAPID_PRIVATE is unusable (%s); reminders stay off", e)
+                reminders = None
+        app.state.reminders = reminders
         try:
+            if reminders is not None:
+                await reminders.start()
             yield
         finally:
+            if reminders is not None:
+                await reminders.stop()
             await runner.stop()
 
     app = FastAPI(title="Tartib", lifespan=lifespan, docs_url=None, redoc_url=None)
@@ -52,6 +67,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(captures.router)
     app.include_router(briefs.router)
     app.include_router(spaces.router)
+    app.include_router(push.router)
 
     @app.get("/api/health")
     def health() -> dict:

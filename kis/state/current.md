@@ -1,20 +1,89 @@
 # Current
 
-- Branch: `main`, local only, working tree clean.
-- Task: slice 11, push reminders. Plan approved 2026-09-17 in `kis/intent/slice-11-reminders.md`. Not started.
+- Branch: `main`, local only. Slice 11 is complete in the working tree, not in git.
+- Task: none in flight. Slice 11 (push reminders) is done and deployed; slices 12 to 14 are
+  approved but unplanned, in `kis/intent/backlog.md`.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (92 passed) and `uv run pytest -m eval` (16 real-Codex fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
-- Blocker: none. The phone proof needs a temporary HTTPS tunnel; Web Push will not work over `http://localhost` from a phone.
-  Nothing is installed yet: `brew install cloudflared`, then `cloudflared tunnel --url http://localhost:8000`.
-- After 11: slices 12 to 14 are approved but unplanned; they are listed in `kis/intent/backlog.md`.
-- Next: implement slice 11 in three steps, in this order: migration 0005 plus the subscriptions table and the 60s loop, then `sw.js` and the Settings toggle, then proof and deploy.
+- Verify: `cd backend && uv run pytest -q` (126 passed) and `uv run pytest -m eval` (16 real-Codex
+  fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
+- Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
+  that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
+  `the serve command` and `the network down command` end it; doing so means enabling
+  reminders again afterwards, since a subscription is bound to that exact origin.
+- Push keys live in `.env` (2026-09-18). `cd backend && uv run python -m tartib.vapid` prints a
+  fresh set; regenerating invalidates every subscription, and Settings re-mints on next open.
+- Settings shows the installed service worker version (`DEVICE` -> Reminders worker). A phone
+  silently sitting on an old worker cost a whole debugging round before that existed.
+- Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
+- Next: nothing queued. Slice 12 (pomodoro) is next in the backlog and needs a plan; note that
+  its "session-done push" contradicts rule 4, which allows exactly two things to push.
 
-## Proof (2026-09-17)
+## Proof (2026-09-18) — slice 11 step 3, on the phone
 
-Backend 92 tests pass; frontend typechecks and builds. Every route was driven headlessly at 390px and 1280px with the fake classifier, and the live container was rebuilt and answered `/api/health`. Real Codex was exercised on the host for classification, briefs, and ask. Slice 11 has no proof yet.
+Deployed to the live container: schema 6, all 47 items intact, public key served and the private
+key absent from every response. Real Apple Web Push subscription from the phone
+(`web.push.apple.com`), made through Settings over HTTPS.
+
+Three reminders armed two minutes out, each fired by the 60s loop within 36 to 48 seconds of
+coming due, each accepted by Apple with the subscription's failure count staying at 0. The phone
+buzzed on a locked screen.
+
+Tapping the notification does not open `/today`: the app opens wherever it was left. Three
+approaches were tried and each was confirmed installed on the phone before being ruled out; the
+plan records them. Accepted as a limitation rather than fixed.
+
+An automated browser cannot substitute for the phone here: Playwright's Chrome has no
+push-service credentials, so `pushManager.subscribe()` fails with "Registration failed -
+permission denied" both headless and headed.
+
+## Proof (2026-09-18) — slice 11 step 2
+
+The built app driven in headless Chrome, because the service worker only registers in a
+production build:
+
+- 20 checks on Settings: the worker registers, the button appears only before asking, enabling
+  POSTs with the server's own key and flips the card to "on", turning off drops the row, and the
+  blocked and no-key states each explain themselves and offer no button that cannot work.
+- A push delivered to the real service worker shows the reminder carrying `/today`. Tapping it
+  (the handler fired in the worker's own scope) takes the open tab there by routing in the app:
+  a half-typed capture survived, and a tap while already on `/today` reloads nothing.
+- Two reminders due in one tick both survive; the same reminder re-fired still replaces itself.
+- Rotating the server's VAPID key: the stale subscription is dropped, re-minted with the new key,
+  and the dead row deleted, ending at exactly one subscription.
+- The failure counter, in the real container against an unresolvable push host: the subscription
+  survives seven failed pushes and is dropped on the eighth. Migration 0006 rehearsed on a copy
+  of the live database, 4 -> 6 clean.
+- Screenshots at 390px and 1280px, in light and dark, plus the failed-enable error state.
+- Not proved here: a real push service (Chrome's is unreachable, so `PushManager.subscribe` is
+  stubbed; everything on our side of it is real) and a real phone. Both are step 3.
+
+## Proof (2026-09-17) — slice 11 step 1:
+
+- `cd backend && uv run pytest -q` - 121 passed (was 92); `uv run ruff check .` and
+  `ruff format --check .` - clean. Three times in a row, and under three machine timezones.
+- The new guards were mutation-checked: breaking the trigger, the re-arm rule, the stage filter,
+  the digest seed, or the key check each fails a named test.
+- Migration rehearsed on a copy of the live 47-item database: 4 -> 5 clean, a past reminder
+  written off, a future one still armed, no item's `updated_at` moved.
+- In a container built from this tree, on a spare port: a reminder armed one minute back fired on
+  the loop's own 60s tick with nobody poking it, the push reached real DNS, the failure was logged
+  and the subscription kept (only 404/410 deletes one), and the private key appears in no log line.
+  A truncated key logs "reminders stay off" and the app still serves.
+- Not proved yet: anything on a phone, and any real push accepted by a real push service.
+
+Earlier (v0.1): every route driven headlessly at 390px and 1280px with the fake classifier; real
+Codex exercised on the host for classification, briefs, and ask.
 
 ## Known gaps
 
 - The Claude fallback inside Docker needs `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`; without it a Codex outage still parks captures in the Inbox.
 - A brief refreshes only when an item is added or removed, or on its refresh icon.
 - Voice capture depends on the browser; it was proved with an injected engine, not real dictation.
+- The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
+  Inbox screen also shows.
+- No `pushsubscriptionchange` handler: when a push service rotates an endpoint, reminders are
+  silently off until the user next opens Settings, which re-registers it.
+- Tapping a reminder on iOS opens Tartib but does not navigate to `/today`. Whether iOS runs the
+  worker's `notificationclick` at all was never established; see the plan for what was tried.
+- Reminders depend on the Mac being awake and on a private network running at both ends. There is no
+  hosting, so a closed laptop means no reminders.

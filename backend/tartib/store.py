@@ -7,7 +7,7 @@ import sqlite3
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 
-from tartib.clock import utcnow_iso
+from tartib.clock import utcnow_iso, utcnow_ms_iso
 
 FILING_FIELDS = ("shape", "space", "title", "due", "remind_at")
 EDITABLE_FIELDS = FILING_FIELDS + ("starred", "status", "text")
@@ -150,6 +150,16 @@ def update_fields(
     values = _clean(fields, allowed)
     if not values:
         return
+    if "remind_at" in values:
+        # Moving a reminder re-arms it; without this a reminder that fired could never fire
+        # again. It has to be a real *change*: the editor resends `remind_at` on every save,
+        # so clearing on presence alone would re-fire the same reminder after a title edit.
+        # The touch trigger skips writes that change `reminded_at`, so this edit -- a real
+        # one, made by a person -- sets `updated_at` itself.
+        row = conn.execute("SELECT remind_at FROM items WHERE id = ?", (item_id,)).fetchone()
+        if row is not None and row["remind_at"] != values["remind_at"]:
+            values["reminded_at"] = None
+            values["updated_at"] = utcnow_ms_iso()
     assignments = ", ".join(f"{k} = ?" for k in values)
     conn.execute(f"UPDATE items SET {assignments} WHERE id = ?", (*values.values(), item_id))
 

@@ -51,7 +51,19 @@ export const getBrief = (space: string, refresh = false) =>
 export const getCapture = (id: number) => api<Capture>(`/api/captures/${id}`);
 export const getAttention = () => api<{ items: Item[]; stale: Item[]; stale_days: number }>("/api/attention");
 export const getConfig = () =>
-  api<{ tz: string; spaces: string[]; ai: boolean; fallback: boolean; autofile_confidence: number }>("/api/config");
+  api<{
+    tz: string;
+    spaces: string[];
+    ai: boolean;
+    fallback: boolean;
+    autofile_confidence: number;
+    vapid_public: string | null;
+  }>("/api/config");
+
+export const subscribePush = (endpoint: string, keys: { p256dh: string; auth: string }) =>
+  send<{ id: number }>("POST", "/api/subscriptions", { endpoint, keys });
+export const unsubscribePush = (endpoint: string) =>
+  send<{ ok: true; removed: number }>("DELETE", "/api/subscriptions", { endpoint });
 export const getSpaces = () => api<{ spaces: string[] }>("/api/spaces");
 
 export interface ListParams {

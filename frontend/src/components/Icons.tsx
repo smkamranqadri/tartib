@@ -72,6 +72,12 @@ export const MicIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
   </svg>
 );
+export const BellIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z" />
+    <path d="M10 19a2 2 0 0 0 4 0" />
+  </svg>
+);
 export const LayersIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <path d="m12 4 8 4.5-8 4.5-8-4.5z" />

@@ -60,12 +60,69 @@ when both counts are zero is wrong: skip when N and M are both 0.
   the digest sends once per day across a restart.
 - Done when: a reminder set two minutes out buzzes a locked phone over a temporary HTTPS
   tunnel, and tapping it opens `/today` in the tab that is already open.
+  **Outcome 2026-09-18: the buzz is proved, the tap is not.** Accepted and closed anyway; the
+  second clause is recorded as a limitation below rather than met.
 
 The tunnel is for proving this once. Subscriptions, the worker, and any iOS home-screen
-install bind to that exact origin, so a new tunnel means enabling reminders again. Living
-with reminders needs real HTTPS hosting, which is not in this slice.
+install bind to that exact origin, so a new tunnel means enabling reminders again.
+
+That turned out better than planned: the HTTPS is the private network's HTTPS, not a throwaway tunnel,
+so the origin is stable and reminders keep working for as long as that network runs on both the
+Mac and the phone. Nothing is exposed publicly. Real hosting is still what would make this
+independent of the laptop being awake.
+
+## Decided while building step 1
+
+- No fake clock in `clock.py`: `Reminders.tick(now)` takes the clock as an argument instead.
+- The digest's last-sent date lives in a new `app_state` key/value table.
+- `reminded_at` is cleared only when `remind_at` actually **changes**. The editor resends it on
+  every save, so clearing on presence alone re-fired a spent reminder after a title edit.
+- Marking an item reminded must not count as a human touch, or a fired reminder would hide the
+  task from the 14-day stale list. Migration 0005 narrows the `items_touch_update` trigger.
+- An unusable `TARTIB_VAPID_PRIVATE` logs an error and leaves the loop off, rather than marking
+  reminders sent that nobody could receive.
+- A first start after `TARTIB_SUMMARY_TIME` writes that day's digest off, so installing at 22:00
+  does not greet you with one.
+
+Step 2:
+
+- The payload carries a `tag`: `item-<id>` per reminder, `digest` for the digest. One shared tag
+  made a second reminder due in the same tick silently replace the first.
+- A tapped notification asks the open tab to route in place and only reloads it if nothing
+  answers, so a half-typed capture survives the tap.
+- A subscription minted with a superseded VAPID key is dropped and re-minted, and the dead row
+  is deleted server-side: that push fails with 403, which nothing prunes on its own.
+- Turning off unsubscribes the browser first, then the server. The other order could be
+  re-registered by the next visit to Settings, turning reminders back on for someone who had
+  just turned them off.
+- Beyond the plan's "404 or 410 deletes the row": migration 0006 adds `subscriptions.failures`,
+  and an endpoint that fails for any other reason 8 times in a row is dropped too. Without it a
+  permanently broken endpoint is retried on every tick forever. A delivery, or the browser
+  re-subscribing, clears the count.
+
+## The tap does not open `/today` on iOS
+
+Three attempts, each proved installed on the phone and each still landing wherever the app
+was left:
+
+1. `WindowClient.navigate()` after `focus()` -- does nothing to a frozen client.
+2. `postMessage` with a reply, falling back to `navigate()` -- an iOS home-screen app is
+   frozen while the worker runs and cannot answer inside any sane timeout.
+3. The worker writing the destination to the Cache API for the app to pick up when it wakes,
+   read on mount, `visibilitychange`, `focus`, `pageshow`, and a short burst of retries.
+
+The third is still in the code: it is correct, it is proved on desktop, and it costs nothing.
+Whether iOS dispatches `notificationclick` to the worker at all was never established -- a
+diagnostic row was built to answer exactly that and the question was dropped before it was
+read. That is the first thing to look at if this is ever picked up again.
+
+What works, which is the point of the slice: the reminder arrives and buzzes a locked phone
+at the time you asked, and tapping it opens Tartib.
 
 ## Status
-- [ ] migration + subscriptions + loop
-- [ ] service worker + Settings
-- [ ] proof + deploy
+- [x] migration + subscriptions + loop (2026-09-17)
+- [x] service worker + Settings (2026-09-18)
+- [x] proof + deploy (2026-09-18) -- deployed and proved on the phone, except the tap target
+
+Step 3 can now have the keys in `.env`: enabling reminders in Settings is what step 2 added,
+so a browser can subscribe before any reminder comes due.

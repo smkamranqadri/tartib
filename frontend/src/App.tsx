@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { getCapture, getSpaces, setUnauthorizedHandler } from "./api";
+import { takePendingNav } from "./push";
 import Capture from "./Capture";
 import AskBar from "./components/AskBar";
 import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
@@ -53,6 +54,49 @@ export default function App() {
   const pollRef = useRef(0);
   const toastTimer = useRef<number | null>(null);
   const navigate = useNavigate();
+
+  /* A tapped reminder routes here instead of reloading the page, so whatever is half-typed
+     in the capture bar survives. A running page hears the message; one that was asleep when
+     the tap happened -- every iOS home-screen app is -- finds the note when it wakes. */
+  useEffect(() => {
+    const go = (url: string) => navigate(url);
+    const check = () => {
+      if (document.visibilityState === "visible") takePendingNav().then((url) => url && go(url));
+    };
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "tartib:navigate" || typeof event.data.url !== "string") return;
+      takePendingNav(); // the note has been acted on
+      go(event.data.url);
+    };
+    if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", onMessage);
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    window.addEventListener("pageshow", check);
+    /* iOS does not reliably fire any of those when a home-screen app resumes, so waking also
+       looks for the note a few times rather than trusting one event. Bounded: a permanent
+       timer would cost battery for something that may never come. */
+    const burst = () => {
+      let left = 6;
+      const id = window.setInterval(() => {
+        check();
+        if ((left -= 1) <= 0) window.clearInterval(id);
+      }, 500);
+      timers.push(id);
+    };
+    const timers: number[] = [];
+    document.addEventListener("visibilitychange", burst);
+    window.addEventListener("focus", burst);
+    burst();
+    return () => {
+      if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", onMessage);
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+      window.removeEventListener("pageshow", check);
+      document.removeEventListener("visibilitychange", burst);
+      window.removeEventListener("focus", burst);
+      for (const id of timers) window.clearInterval(id);
+    };
+  }, [navigate]);
   const location = useLocation();
   const bump = () => setVersion((v) => v + 1);
   const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];

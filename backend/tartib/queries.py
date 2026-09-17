@@ -81,6 +81,8 @@ def config(
         "ai": settings.ai_enabled,
         "fallback": bool(settings.ai_fallback_command),
         "autofile_confidence": settings.autofile_confidence,
+        # The public key only. The private one never leaves the process.
+        "vapid_public": settings.vapid_public if settings.push_enabled else None,
     }
 
 

@@ -5,11 +5,11 @@ How Tartib is built. Proven by the Phase 1 to 4 scaffold on 2026-09-17.
 ## Layout
 
 ```text
-backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces, queries, ask, briefs, classify, codex, runner, store, clock, reclassify, main
+backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces, queries, ask, briefs, classify, codex, runner, reminders, push, vapid, store, clock, reclassify, main
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
 backend/tests/      pytest + TestClient; the AI runs as a real subprocess pointed at fake_codex.py (fake_claude.py for the fallback)
-frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Waiting, Recent, Spaces, Space, SpaceDetail, Settings, ItemPage, Login), components/ (one per pattern, listed under Frontend shell)
-frontend/public/    manifest.webmanifest, sw.js, icons
+frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, push.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Waiting, Recent, Spaces, Space, SpaceDetail, Settings, ItemPage, Login), components/ (one per pattern, listed under Frontend shell)
+frontend/public/    manifest.webmanifest, sw.js (app shell + push; hand-bumped SW_VERSION), icons
 Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex + @anthropic-ai/claude-code runs uvicorn
 docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
 ```
@@ -28,6 +28,7 @@ SQLite, WAL, stdlib `sqlite3`, one connection per request opened in a threadpool
 `briefs(space PK, fingerprint, text, item_ids JSON, created_at)` caches one AI brief per space. Fingerprint = item count and newest item id, so only adding or removing an item regenerates it; the refresh icon forces it.
 `spaces(name PK, position, created_at)` (migration 0004) is the list of spaces; `spaces.seed_spaces` fills it from `TARTIB_SPACES` once when empty; `store.list_spaces(conn)` is what the classifier, validation, summary, and reconcile read. Migration 0004 also dropped the item text immutability trigger and made the FTS update trigger fire on `raw_text` too.
 At startup, after migrations, `store.reconcile_spaces` moves items whose space is no longer in the `spaces` table to attention with no space. Migration 0002 (2026-09-17) created captures, backfilled one per item, rebuilt items, mapped `space='inbox'` to null + attention, dropped stage=inbox placeholders (their captures stay pending).
+`subscriptions(id, endpoint UNIQUE, p256dh, auth, created_at, last_seen_at)` and `app_state(key PK, value)` arrived with migration 0005, which also added `items.reminded_at` (UTC ISO, null = not sent) and wrote off every reminder already due, so the first tick after that deploy is silent. 0005 also narrowed `items_touch_update` to skip writes that change `reminded_at`: a fired reminder is not a human touch and must not reset the stale clock. The one write that clears `reminded_at` (`store.update_fields`, when `remind_at` actually changes) sets `updated_at` itself.
 `items_fts` is an FTS5 external-content table over `raw_text` and `title`, synced by triggers.
 A BEFORE UPDATE trigger aborts any write to a capture's `raw_text`; the matching trigger on items was dropped in migration 0004, so a filed item's text is editable.
 All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
@@ -48,9 +49,17 @@ Tests point `TARTIB_AI_COMMAND` at `tests/fake_codex.py`, driven by `FAKE_CODEX_
 `runner.py` owns an `asyncio.Queue`; capture enqueues via `call_soon_threadsafe`; one consumer task processes items; startup enqueues every `stage='inbox'` row. Errors are written to `proposal_error` and never retried automatically.
 `store.py` is the single write path for filing, shared by the runner, approve, reject, and PATCH.
 
+## Reminders
+
+`reminders.Reminders` is one 60s task started in the lifespan beside the runner's consumer, and only when both VAPID keys are set and `push.check_key` accepts the private one; a bad key logs an error and leaves the loop off rather than consuming reminders nobody could receive. `tick(now)` takes the clock as an argument, so tests drive it.
+Due = `stage='filed' AND status='open' AND reminded_at IS NULL AND remind_at <= now AND remind_at > now - 6h`. Anything older than that 6h grace is marked sent without pushing, so a container down overnight does not replay the night. `reminded_at` is set once per item even when every push fails, guarded on the `remind_at` the tick read so a reminder moved mid-push is not swallowed.
+One digest per local day at the first tick past `TARTIB_SUMMARY_TIME`, skipped when both counts are zero but still recording the date in `app_state.digest_date`; a first start after that time writes the day off. Payload is `{title, url}`; `url` is always `/today`.
+The payload is `{title, url, tag}`; `tag` is `item-<id>` per reminder and `digest` for the digest, so one notification replaces only itself.
+`push.py` is the transport and the subscriptions table's owner: `broadcast` pushes to every row and deletes any endpoint answering 404 or 410 at once. Any other failure increments `subscriptions.failures` (migration 0006) and the row is dropped after `MAX_FAILURES` (8) in a row, since a push service is allowed a bad minute but not a permanent one; a delivery or a re-subscribe resets the count to 0. `pywebpush` signs with the private key, which never reaches a response, a log line, or an error body. `python -m tartib.vapid` prints a fresh base64url key pair for `.env`.
+
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85), `TARTIB_VAPID_PUBLIC`, `TARTIB_VAPID_PRIVATE`, `TARTIB_VAPID_EMAIL` (default `mailto:tartib@localhost`), `TARTIB_SUMMARY_TIME` (default `08:00`, read in `TARTIB_TZ`, validated at load). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 
@@ -73,12 +82,16 @@ GET    /api/spaces/summary -> {spaces:[{name, open, notes, overdue, total, last_
 GET    /api/spaces/{space}/brief[?refresh=true] -> {space, text, item_ids, items, updated_at, fresh}
        briefs.py; feeds open tasks + 15 newest notes, cap 30, fixed question;
        404 unknown space, 503 AI off, 502 Codex failure; empty space -> "Nothing here yet." with no call
-GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence}   read-only
+GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence, vapid_public}   read-only
+POST   /api/subscriptions {endpoint, keys:{p256dh, auth}} -> 201 {id}   upserts on endpoint
+DELETE /api/subscriptions {endpoint} -> {ok, removed}
+GET    /api/subscriptions -> {enabled, count}
 ```
 
 ## Frontend shell
 
 Routes: `/` Home (dashboard), `/inbox`, `/inbox/attention` (every waiting item), `/inbox/recent` (paged captures), `/spaces`, `/spaces/:name`, `/settings`, `/items/:id`. Redirects: `/attention`, `/attention/all`, `/recent`, `/today`, `/search`, `/all`. Pill nav Home · Inbox · Spaces · Settings; the Inbox pill stays active across all three inbox routes.
+`push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible.
 `App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
 
 One component per pattern, each the only owner of its markup:
