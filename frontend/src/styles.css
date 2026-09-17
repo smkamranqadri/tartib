@@ -62,7 +62,8 @@ button.link { background: none; border: 0; color: var(--muted); cursor: pointer;
 .icon-btn:hover { border-color: var(--line); color: var(--fg); }
 
 /* home = capture */
-.home { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 12vh; }
+.home { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 4vh; }
+.home .today { width: 100%; max-width: 640px; }
 .capture { width: 100%; max-width: 640px; }
 .capture textarea {
   width: 100%; resize: none; padding: 18px 20px; border: 1px solid var(--line);
@@ -207,5 +208,27 @@ button.ghost.danger { color: var(--danger); }
   .top-actions { grid-area: actions; }
   .editor-row { flex-direction: column; }
   .kv { grid-template-columns: 70px 1fr; }
-  .home { padding-top: 6vh; }
+  .home { padding-top: 2vh; }
+}
+
+/* chat bar, every screen, app-column width */
+.app.has-askbar { padding-bottom: 120px; }
+.askbar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 20;
+  width: min(100% - 32px, 688px);
+  background: var(--panel); border: 1px solid var(--line); border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.08);
+}
+.askbar .answer { margin: 0 0 10px; max-height: 40vh; overflow: auto; }
+.ask { display: flex; gap: 8px; margin: 0; flex-wrap: wrap; }
+.ask input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }
+.ask select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }
+.ask button[type="submit"] { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 8px 16px; cursor: pointer; }
+.toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
+@media (max-width: 640px) {
+  .app.has-askbar { padding-bottom: 170px; }
+  .askbar .ask select { flex: 1; }
+  .toast { bottom: calc(140px + env(safe-area-inset-bottom)); }
 }

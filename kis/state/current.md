@@ -1,7 +1,7 @@
 # Current
 
 - Branch: `main`, local only.
-- Task: none. Slice 5 UI simplification complete and deployed 2026-09-17.
+- Task: none. Slice 5 UI simplification complete and deployed 2026-09-17, then adjusted on user feedback: Today merged into Home, chat bar back on every screen.
 - Command: `cd frontend && npm run typecheck && npm run build` / `cd backend && uv run pytest -q` / `docker compose up -d --build`.
 - Blocker: none. Claude fallback inside Docker still needs `CLAUDE_CODE_OAUTH_TOKEN`.
 - Next: user decides. Live container on http://localhost:8000.
@@ -18,6 +18,11 @@
   - All: `/` focuses search; "what did I fix?" + Enter -> answer above results citing /items/4; typing clears it; Show done adds the done row; note collapsed to first line, expands on tap.
   - No page errors.
 - `docker compose up -d --build`: health ok, `/` serves the new shell.
+
+## Proof (2026-09-17, follow-up: merged page + chat bar)
+
+- `npm run typecheck`, `npm run build`: clean.
+- Headless Chrome, phone and desktop dark: Home shows the focused capture box and the 3 Today rows; `/today` redirects to `/`; chat bar visible on `/`, `/attention`, `/all`, and an item page; question through the bar returns the answer with a citation; `c` from All lands on `/` with the box focused. No page errors.
 
 ## Known gaps
 

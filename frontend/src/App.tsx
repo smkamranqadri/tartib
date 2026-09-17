@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { getCapture, logout, setUnauthorizedHandler } from "./api";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { getCapture, getSpaces, logout, setUnauthorizedHandler } from "./api";
+import AskBar from "./components/AskBar";
 import Toast, { type ToastState } from "./components/Toast";
 import All from "./screens/All";
 import Attention from "./screens/Attention";
 import Home from "./screens/Home";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
-import Today from "./screens/Today";
 import type { Answer, Capture } from "./types";
+import { useLoad } from "./useLoad";
 
 type Theme = "light" | "dark";
 
@@ -49,6 +50,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const bump = () => setVersion((v) => v + 1);
+  const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthed(false));
@@ -117,7 +119,7 @@ export default function App() {
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
 
   return (
-    <div className="app">
+    <div className="app has-askbar">
       <header className="top">
         <NavLink to="/" className="brand" end>
           <img className="brand-mark" src="/icon-192.png" alt="" width={28} height={28} />
@@ -125,9 +127,8 @@ export default function App() {
         </NavLink>
         <nav className="pills">
           <NavLink to="/" end>
-            Capture
+            Today
           </NavLink>
-          <NavLink to="/today">Today</NavLink>
           <NavLink to="/attention">Needs Attention</NavLink>
           <NavLink to="/all">All</NavLink>
         </nav>
@@ -149,13 +150,14 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<Home version={version} answer={answer} onCaptured={onCaptured} onCloseAnswer={() => setAnswer(null)} />} />
-          <Route path="/today" element={<Today version={version} />} />
+          <Route path="/today" element={<Navigate to="/" replace />} />
           <Route path="/attention" element={<Attention version={version} onDecided={bump} />} />
           <Route path="/all" element={<All version={version} />} />
           <Route path="/items/:id" element={<ItemPage version={version} />} />
           <Route path="*" element={<Home version={version} answer={answer} onCaptured={onCaptured} onCloseAnswer={() => setAnswer(null)} />} />
         </Routes>
       </main>
+      <AskBar spaces={spaces} />
       <Toast toast={toast} />
     </div>
   );
