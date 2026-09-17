@@ -57,46 +57,60 @@ export default function App() {
 
   /* A tapped reminder routes here instead of reloading the page, so whatever is half-typed
      in the capture bar survives. A running page hears the message; one that was asleep when
-     the tap happened -- every iOS home-screen app is -- finds the note when it wakes. */
+     the tap happened -- every iOS home-screen app is -- finds the note when it wakes.
+
+     `useNavigate` returns a new function on every route change, so it is held in a ref: as a
+     dependency it would tear this down and restart the retries each time you moved around. */
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   useEffect(() => {
-    const go = (url: string) => navigate(url);
-    const check = () => {
-      if (document.visibilityState === "visible") takePendingNav().then((url) => url && go(url));
+    let consuming = false;
+    const timers = new Set<number>();
+    const check = async () => {
+      // Only one reader at a time: taking the note is a read then a delete, and two readers
+      // can both see it and both navigate, leaving a Back press that appears to do nothing.
+      if (consuming || document.visibilityState !== "visible") return;
+      consuming = true;
+      try {
+        const url = await takePendingNav();
+        if (url) navigateRef.current(url);
+      } finally {
+        consuming = false;
+      }
     };
-    const onMessage = (event: MessageEvent) => {
-      if (event.data?.type !== "tartib:navigate" || typeof event.data.url !== "string") return;
-      takePendingNav(); // the note has been acted on
-      go(event.data.url);
-    };
-    if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", onMessage);
-    document.addEventListener("visibilitychange", check);
-    window.addEventListener("focus", check);
-    window.addEventListener("pageshow", check);
-    /* iOS does not reliably fire any of those when a home-screen app resumes, so waking also
-       looks for the note a few times rather than trusting one event. Bounded: a permanent
-       timer would cost battery for something that may never come. */
-    const burst = () => {
+    /* iOS does not reliably fire any resume event a home-screen app can hear, so waking looks
+       for the note a few times rather than trusting one event. Bounded, and only on a resume:
+       a timer that outlives that would cost battery for something that may never come. */
+    const wake = () => {
       let left = 6;
       const id = window.setInterval(() => {
-        check();
-        if ((left -= 1) <= 0) window.clearInterval(id);
+        void check();
+        if ((left -= 1) <= 0) {
+          window.clearInterval(id);
+          timers.delete(id);
+        }
       }, 500);
-      timers.push(id);
+      timers.add(id);
     };
-    const timers: number[] = [];
-    document.addEventListener("visibilitychange", burst);
-    window.addEventListener("focus", burst);
-    burst();
+    /* The worker writes the note before it messages anyone, so this only has to look. Acting
+       on the message directly would race the same note and navigate twice. */
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "tartib:navigate") void check();
+    };
+
+    if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", onMessage);
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("focus", wake);
+    window.addEventListener("pageshow", wake);
+    void check();
     return () => {
       if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", onMessage);
-      document.removeEventListener("visibilitychange", check);
-      window.removeEventListener("focus", check);
-      window.removeEventListener("pageshow", check);
-      document.removeEventListener("visibilitychange", burst);
-      window.removeEventListener("focus", burst);
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("focus", wake);
+      window.removeEventListener("pageshow", wake);
       for (const id of timers) window.clearInterval(id);
     };
-  }, [navigate]);
+  }, []);
   const location = useLocation();
   const bump = () => setVersion((v) => v + 1);
   const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];

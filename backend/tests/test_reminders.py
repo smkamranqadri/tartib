@@ -548,7 +548,11 @@ def test_an_unusable_private_key_turns_the_loop_off(tmp_path, caplog):
     broken = dict(VAPID, TARTIB_VAPID_PRIVATE="not-a-key")
     with caplog.at_level("ERROR"):
         with TestClient(create_app(make_settings(tmp_path, **broken, **QUIET))) as client:
+            client.headers["Authorization"] = f"Bearer {PASSWORD}"
             assert client.app.state.reminders is None
+            # and the UI is told, or it would offer to switch on something that cannot fire
+            assert client.get("/api/config").json()["vapid_public"] is None
+            assert client.get("/api/subscriptions").json()["enabled"] is False
     assert "unusable" in caplog.text
     assert "not-a-key" not in caplog.text  # never log the key itself
 
@@ -562,3 +566,17 @@ def test_a_generated_key_passes_the_startup_check(tmp_path):
         TARTIB_VAPID_EMAIL="mailto:me@example.com",
     )
     push.check_key(settings)  # raises if the pair the generator prints is not usable
+
+
+def test_one_bad_minute_does_not_spend_every_strike(auth, tmp_path):
+    """Eight reminders due in the same tick while the network is down is one bad minute, not
+    eight. Spending all eight strikes there deletes a live subscription."""
+    endpoint = subscribe(auth)
+    sender = FakeSender(raises={endpoint: RuntimeError("briefly unreachable")})
+    reminders, _ = loop(tmp_path, sender=sender, **QUIET)
+    for n in range(push.MAX_FAILURES):
+        task_with_reminder(auth, f"reminder {n}", "2026-09-17T03:59:00Z")
+
+    assert reminders.tick(MORNING)["reminded"] == push.MAX_FAILURES
+    assert auth.get("/api/subscriptions").json()["count"] == 1, "the phone was dropped in one tick"
+    assert failures(tmp_path) == 1

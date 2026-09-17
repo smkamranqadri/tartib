@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
-from tartib.deps import get_db, get_settings
+from tartib.deps import get_db, get_settings, push_ready
 from tartib.store import list_spaces, serialize_capture, serialize_item
 
 RECENT = 3
@@ -72,7 +72,9 @@ def attention(conn: sqlite3.Connection = Depends(get_db)) -> dict:
 
 @router.get("/config")
 def config(
-    conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
+    conn: sqlite3.Connection = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    can_push: bool = Depends(push_ready),
 ) -> dict:
     """What the UI may show about this install."""
     return {
@@ -81,8 +83,9 @@ def config(
         "ai": settings.ai_enabled,
         "fallback": bool(settings.ai_fallback_command),
         "autofile_confidence": settings.autofile_confidence,
-        # The public key only. The private one never leaves the process.
-        "vapid_public": settings.vapid_public if settings.push_enabled else None,
+        # The public key only, and only when a push could actually be delivered. The private
+        # one never leaves the process.
+        "vapid_public": settings.vapid_public if can_push else None,
     }
 
 

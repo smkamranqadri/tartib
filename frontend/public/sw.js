@@ -7,7 +7,7 @@ const CACHE = "tartib-shell-v1";
 const PENDING_NAV = "/__pending-nav";
 /* Bumped by hand whenever this file changes. The app shows it in Settings, so "is the phone
    actually running this worker?" is a question with an answer instead of a guess. */
-const SW_VERSION = "2026-09-18.3";
+const SW_VERSION = "2026-09-18.4";
 const VERSION_KEY = "/__sw-version";
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -102,7 +102,7 @@ self.addEventListener("notificationclick", (event) => {
       } catch {
         /* the browser may refuse; where it ends up still matters more */
       }
-      if (new URL(open.url).pathname === url) {
+      if (new URL(open.url).pathname === new URL(url, self.location.origin).pathname) {
         await cache.delete(PENDING_NAV); // already there; leave no note to act on later
         return;
       }

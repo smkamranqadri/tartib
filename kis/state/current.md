@@ -4,7 +4,7 @@
 - Task: none in flight. Slice 11 (push reminders) is done and deployed; slices 12 to 14 are
   approved but unplanned, in `kis/intent/backlog.md`.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (126 passed) and `uv run pytest -m eval` (16 real-Codex
+- Verify: `cd backend && uv run pytest -q` (127 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
 - Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
   that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
@@ -17,6 +17,21 @@
 - Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
 - Next: nothing queued. Slice 12 (pomodoro) is next in the backlog and needs a plan; note that
   its "session-done push" contradicts rule 4, which allows exactly two things to push.
+
+## Review after the slice (2026-09-18)
+
+A review of the committed slice found two real defects, both fixed and mutation-checked:
+
+- One tick sends one notification per due item, and each failure was counted separately, so a
+  handful of reminders during a single outage spent all eight strikes and deleted a live
+  subscription. A tick now charges one strike per endpoint.
+- An unusable VAPID key left the loop off but still advertised `vapid_public`, so Settings would
+  offer to enable reminders, say "on", and never deliver one.
+
+Also: the wake-up retries in `App.tsx` restarted on every route change (`useNavigate` changes
+identity), so moving around the app kept a 500ms poll alive; taking the pending note was not
+guarded against two readers, which could push the same route twice; and the worker version row
+said "not installed" for exactly the stale worker it was built to catch.
 
 ## Proof (2026-09-18) — slice 11 step 3, on the phone
 

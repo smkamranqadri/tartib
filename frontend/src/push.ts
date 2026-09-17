@@ -13,14 +13,21 @@ const VERSION_KEY = "/__sw-version";
 /** Which service worker is actually installed here. Null means none has activated yet.
  *  Shown in Settings: a phone quietly sitting on an old worker is otherwise invisible, and
  *  it wasted a lot of time once. */
-export async function workerVersion(): Promise<string | null> {
-  if (!("caches" in window)) return null;
-  try {
-    const hit = await (await caches.open(SHELL_CACHE)).match(VERSION_KEY);
-    return hit ? await hit.text() : null;
-  } catch {
-    return null;
+export async function workerVersion(): Promise<string> {
+  let marked: string | null = null;
+  if ("caches" in window) {
+    try {
+      const hit = await (await caches.open(SHELL_CACHE)).match(VERSION_KEY);
+      marked = hit ? await hit.text() : null;
+    } catch {
+      marked = null;
+    }
   }
+  if (marked) return marked;
+  // No marker but a worker is driving the page: it predates the marker, which is exactly the
+  // stale worker this row exists to catch. Saying "not installed" would point the wrong way.
+  const controlled = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
+  return controlled ? "older than 2026-09-18.2" : "not installed";
 }
 
 /** Ask the browser to re-check `sw.js`. Without this a phone can sit on an old worker for
@@ -96,6 +103,12 @@ function subscribedKey(sub: PushSubscription): string | null {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+/** Base64url with any padding removed, so a key pasted into `.env` with `=` on the end is not
+ *  mistaken for a different key and re-minted on every visit to Settings. */
+function sameKey(a: string | null, b: string): boolean {
+  return a !== null && a.replace(/=+$/, "") === b.replace(/=+$/, "");
+}
+
 export async function currentSubscription(): Promise<PushSubscription | null> {
   if (!pushSupported()) return null;
   const reg = await navigator.serviceWorker.getRegistration();
@@ -114,7 +127,7 @@ async function mintSubscription(
   vapidPublic: string,
 ): Promise<PushSubscription> {
   let sub = await reg.pushManager.getSubscription();
-  if (sub && subscribedKey(sub) !== vapidPublic) {
+  if (sub && !sameKey(subscribedKey(sub), vapidPublic)) {
     const dead = sub.endpoint;
     await sub.unsubscribe().catch(() => undefined);
     // Tell the server too. A push to a subscription made with the old key comes back 403,

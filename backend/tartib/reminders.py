@@ -154,21 +154,23 @@ class Reminders:
         conn = db.connect(self.settings.db_path)
         try:
             reminded = 0
+            # One strike per endpoint per tick, however many notifications this tick sends.
+            struck: set[int] = set()
             for row in due_items(conn, now):
                 title = row["title"] or row["raw_text"][:80]
                 # The tag is per item: a notification replaces only itself, never another
                 # task's. Two reminders due in the same tick must both survive.
                 payload = {"title": title, "url": "/today", "tag": f"item-{row['id']}"}
-                push.broadcast(conn, payload, self.settings, self.sender)
+                push.broadcast(conn, payload, self.settings, self.sender, struck)
                 mark_reminded(conn, row["id"], row["remind_at"], iso(now))
                 reminded += 1
             expired = expire_stale(conn, now)
-            digest = self._digest(conn, now)
+            digest = self._digest(conn, now, struck)
             return {"reminded": reminded, "expired": expired, "digest": digest}
         finally:
             conn.close()
 
-    def _digest(self, conn: sqlite3.Connection, now: datetime) -> bool:
+    def _digest(self, conn: sqlite3.Connection, now: datetime, struck: set[int]) -> bool:
         day = digest_due(conn, self.settings, now)
         if day is None:
             return False
@@ -180,5 +182,5 @@ class Reminders:
             return False
         title = f"{due} due today, {waiting} need attention"
         payload = {"title": title, "url": "/today", "tag": "digest"}
-        push.broadcast(conn, payload, self.settings, self.sender)
+        push.broadcast(conn, payload, self.settings, self.sender, struck)
         return True

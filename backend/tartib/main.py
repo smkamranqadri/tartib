@@ -49,6 +49,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 log.error("TARTIB_VAPID_PRIVATE is unusable (%s); reminders stay off", e)
                 reminders = None
         app.state.reminders = reminders
+        # What the UI is told. With the loop off, offering to enable reminders would earn a
+        # card that says "on" over something that can never fire.
+        app.state.push_ready = reminders is not None
         try:
             if reminders is not None:
                 await reminders.start()

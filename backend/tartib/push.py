@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tartib.auth import require_auth
 from tartib.clock import utcnow_iso
 from tartib.config import Settings
-from tartib.deps import get_db, get_settings
+from tartib.deps import get_db, push_ready
 
 log = logging.getLogger("tartib.push")
 
@@ -62,8 +62,11 @@ def mark_delivered(conn: sqlite3.Connection, sub_id: int) -> None:
 
 def mark_failed(conn: sqlite3.Connection, sub_id: int) -> int:
     """Count one failure and drop the subscription once it has failed MAX_FAILURES times in a
-    row. Returns the new count; 0 means the row is gone."""
-    conn.execute("UPDATE subscriptions SET failures = failures + 1 WHERE id = ?", (sub_id,))
+    row. Returns the new count, 0 if that dropped it, or -1 if the row was already gone."""
+    cur = conn.execute("UPDATE subscriptions SET failures = failures + 1 WHERE id = ?", (sub_id,))
+    if cur.rowcount == 0:
+        conn.commit()
+        return -1
     row = conn.execute("SELECT failures FROM subscriptions WHERE id = ?", (sub_id,)).fetchone()
     failures = int(row["failures"]) if row else 0
     if failures >= MAX_FAILURES:
@@ -106,10 +109,21 @@ def send(row: sqlite3.Row, payload: dict, settings: Settings) -> None:
         raise
 
 
-def broadcast(conn: sqlite3.Connection, payload: dict, settings: Settings, sender=send) -> int:
+def broadcast(
+    conn: sqlite3.Connection,
+    payload: dict,
+    settings: Settings,
+    sender=send,
+    struck: set[int] | None = None,
+) -> int:
     """Push to every subscription. An endpoint the push service disowns is deleted at once; any
     other failure is counted, and counted out after MAX_FAILURES in a row. One broken browser
-    must not hold up the rest. Returns the sends that worked."""
+    must not hold up the rest. Returns the sends that worked.
+
+    `struck` carries the endpoints already penalised in this pass. A tick can send many
+    notifications, and a push service that is unreachable for that minute would otherwise fail
+    every one of them and use up every strike at once -- deleting a subscription that is very
+    much alive. One bad minute is worth one strike."""
     delivered = 0
     for row in subscriptions(conn):
         try:
@@ -118,11 +132,18 @@ def broadcast(conn: sqlite3.Connection, payload: dict, settings: Settings, sende
             drop_subscription(conn, row["endpoint"])
             log.info("dropped a subscription the push service no longer knows")
         except Exception as e:  # a push is best effort: one broken browser is not fatal
+            if struck is not None and row["id"] in struck:
+                log.warning("push failed again in the same pass: %s", e)
+                continue
+            if struck is not None:
+                struck.add(row["id"])
             failures = mark_failed(conn, row["id"])
-            if failures:
+            if failures > 0:
                 log.warning("push failed (%d in a row): %s", failures, e)
-            else:
+            elif failures == 0:
                 log.warning("dropped a subscription after %d failures: %s", MAX_FAILURES, e)
+            else:
+                log.warning("push failed for a subscription already gone: %s", e)
         else:
             mark_delivered(conn, row["id"])
             delivered += 1
@@ -162,9 +183,9 @@ def unsubscribe(body: UnsubscribeBody, conn: sqlite3.Connection = Depends(get_db
 
 
 @router.get("/subscriptions")
-def count(
-    conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
-) -> dict:
-    """What Settings shows: whether this install can push at all, and how many browsers listen."""
+def count(conn: sqlite3.Connection = Depends(get_db), can_push: bool = Depends(push_ready)) -> dict:
+    """Whether this install can push at all, and how many browsers are listening. Not used by
+    the app, which reads `vapid_public` from `/api/config`; this is for looking in from
+    outside, and the tests use it."""
     row = conn.execute("SELECT COUNT(*) AS n FROM subscriptions").fetchone()
-    return {"enabled": settings.push_enabled, "count": row["n"]}
+    return {"enabled": can_push, "count": row["n"]}

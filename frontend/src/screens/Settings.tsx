@@ -84,15 +84,26 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
 }
 
 function WorkerVersion() {
-  const [version, setVersion] = useState<string | null | undefined>(undefined);
+  const [version, setVersion] = useState<string | undefined>(undefined);
   useEffect(() => {
     // Show what is installed straight away; an update check needs the network, and waiting
     // for it would leave this reading "…" exactly when someone is trying to read it.
-    workerVersion().then(setVersion);
-    refreshWorker().then(() => workerVersion().then(setVersion));
+    const read = () => workerVersion().then(setVersion);
+    read();
+    // An update finishes installing before the new worker activates and writes its version,
+    // so the reading right after `update()` is the old one. Read again when it takes over.
+    const onChange = () => read();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("controllerchange", onChange);
+    }
+    refreshWorker().then(read);
+    return () => {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+      }
+    };
   }, []);
-  if (version === undefined) return <>…</>;
-  return <>{version ?? "not installed"}</>;
+  return <>{version ?? "…"}</>;
 }
 
 const WORDING: Record<PushState, string> = {
