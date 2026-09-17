@@ -7,7 +7,7 @@ Hard constraints. Do not relax without an explicit decision recorded here.
 3. One set of prompts and schemas, run through CLIs as subprocesses. Primary: Codex CLI. Optional fallback when Codex fails: Claude Code CLI, same prompts (added 2026-09-17 after a Codex usage-limit outage). No HTTP provider.
 4. No projects, no tags. One read-only "ask" over existing items is allowed since 2026-09-17; it never writes.
    Push is allowed since 2026-09-17, for two things only: a reminder the user set on a task, and one daily
-   digest at `TARTIB_SUMMARY_TIME`. Nothing else pushes, ever. Pomodoro is allowed since 2026-09-17 as session
+   digest at a time you configure. Nothing else pushes, ever. Pomodoro is allowed since 2026-09-17 as session
    logging only: no charts, no streaks, no history screen, no cycle or long-break logic. The rule these two
    carve-outs preserve is that Tartib does not nag; it reminds you of what you asked it to remind you of.
 5. One password from env. No user accounts, no signup.

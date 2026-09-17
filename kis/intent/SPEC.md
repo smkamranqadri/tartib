@@ -73,8 +73,4 @@ Rows everywhere come from one component: leading glyph (checkbox for a filed tas
 
 ## Out of scope
 
-Projects, tags, offline capture queue, multi-user.
-
-This list dropped four entries on 2026-09-17. The ask feature and the Claude fallback had already shipped
-under rules 4 and 3 and should never have still been here. Push and pomodoro left under the rule 4
-carve-outs and are planned as slices 11 and 12; neither is built yet, so neither has a section above.
+Projects, tags, offline capture queue, multi-user. Push and pomodoro left this list on 2026-09-17 under the rule 4 carve-outs.

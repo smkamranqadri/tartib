@@ -3,8 +3,7 @@
 Two lists: work that is approved and waiting for a plan, then candidates that are not required
 and may never happen. How Tartib is built lives in `../knowledge/technical.md`.
 
-Approved on 2026-09-17, not yet planned. Only slice 11 has a plan file; these get one each
-when they come up:
+Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 
 - **12 pomodoro** — sessions table, browser timer, top bar, end sheet with three outcomes,
   counts on Today and in the brief prompt. Depends on 11 for the session-done push, and the

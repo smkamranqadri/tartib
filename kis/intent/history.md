@@ -4,6 +4,9 @@ What each slice changed, newest first. All are done and deployed. Current truth 
 `SPEC.md` (product), `../knowledge/technical.md` (how it is built), and `../knowledge/rules.md`
 (hard rules). Where a slice below disagrees with those, they win; the full plans are in git.
 
+Scope rules changed on 2026-09-17: rule 4 stopped banning push and pomodoro, and SPEC's Out of
+scope list dropped the ask feature and the Claude fallback, both of which had already shipped.
+
 - **10 · consistency** (2026-09-17) One header convention: the eyebrow names the page only when the title does not, the subtitle says what the page is for and never carries a count, Back is one history-aware control. Inbox took its drill-downs at `/inbox/attention` and `/inbox/recent`. Extracted `Row`, `Menu`, `Confirm`, `NameForm`, `Status`; `Card` gained a collapsible mode. One primary button class.
 - **9 · inbox cards** (2026-09-17) Inbox shows the newest waiting items as decision cards with Enter on the first. Recent pages by capture id. Spaces dropped its chip bar; each space opens on its own page. Star always visible on task rows.
 - **8 · feedback round** (2026-09-17) Spaces became a table the user manages. A filed item's text became editable and deletable. Brief cache keyed on add or remove only. Capture bar grew multi-line.
