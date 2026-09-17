@@ -17,6 +17,6 @@ Replaces All. Nav stays Today · Attention · Spaces (Home remains capture + tod
 - Scoped "?" search answers from that space only. Collapse state per space survives reload.
 
 ## Status
-- [ ] backend
-- [ ] frontend
-- [ ] proof
+- [x] backend
+- [x] frontend
+- [x] proof (2026-09-17, see kis/state/current.md)
