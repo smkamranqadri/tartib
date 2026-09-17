@@ -6,11 +6,17 @@ and may never happen. How Tartib is built lives in `../knowledge/technical.md`.
 Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 
 - **12 pomodoro** — sessions table, browser timer, top bar, end sheet with three outcomes,
-  counts on Today and in the brief prompt. Depends on 11 for the session-done push, and the
-  brief fingerprint will not notice session counts as it stands.
+  counts on Today and in the brief prompt. The brief fingerprint will not notice session counts
+  as it stands.
+  **Decide before planning:** this entry has always said "depends on 11 for the session-done
+  push", but rule 4 allows push for two things only, a reminder you set and the daily digest,
+  and names pomodoro as session logging with no extras. A session-done push would be a third
+  pusher and needs either a new carve-out in rule 4 or dropping from the slice. Slice 11 shipped
+  without it.
 - **13 presentation** — markdown on the item page, note bodies and briefs; a live editor that
   styles as you type and never rewrites the stored bytes; eight themes in Settings; delete the
-  redundant Edit link at `frontend/src/components/ItemRow.tsx:79`.
+  redundant Edit link in `frontend/src/components/ItemRow.tsx` (the one with `aria-label="Edit"`;
+  it was line 79 when this was written and line numbers drift).
 - **14 AI contract** — the classifier prompt editable and stored as an override with the
   default shipped in code; Ask becomes continuous.
 
