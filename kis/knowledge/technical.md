@@ -25,7 +25,8 @@ In dev, Vite proxies `/api` to port 8000.
 SQLite, WAL, stdlib `sqlite3`, one connection per request opened in a threadpool. No ORM.
 `captures(id, raw_text, source, created_at, status, error, answer_json, classified_at)` is the stored input, one row per capture.
 `items` are classifier output: `capture_id`, own `raw_text` excerpt, nullable `space`, task fields, `stage` (attention | filed), `proposal_json`, `proposal_error`, `classified_at`. A CHECK forbids `filed` with a null space. `updated_at` (migration 0003) is internal, set by AFTER INSERT / AFTER UPDATE triggers with millisecond UTC timestamps; the update trigger only fires when the statement did not set `updated_at` itself, so it never recurses.
-`briefs(space PK, fingerprint, text, item_ids JSON, created_at)` caches one AI brief per space. Fingerprint = item count, max updated_at, and a sha1 of every item's mutable fields, so any change in the space invalidates it.
+`briefs(space PK, fingerprint, text, item_ids JSON, created_at)` caches one AI brief per space. Fingerprint = item count and newest item id, so only adding or removing an item regenerates it; the refresh icon forces it.
+`spaces(name PK, position, created_at)` (migration 0004) is the list of spaces; `spaces.seed_spaces` fills it from `TARTIB_SPACES` once when empty; `store.list_spaces(conn)` is what the classifier, validation, summary, and reconcile read. Migration 0004 also dropped the item text immutability trigger and made the FTS update trigger fire on `raw_text` too.
 At startup, after migrations, `store.reconcile_spaces` moves items whose space is not in `TARTIB_SPACES` to attention with no space. Migration 0002 (2026-09-17) created captures, backfilled one per item, rebuilt items, mapped `space='inbox'` to null + attention, dropped stage=inbox placeholders (their captures stay pending).
 `items_fts` is an FTS5 external-content table over `raw_text` and `title`, synced by triggers.
 A BEFORE UPDATE trigger aborts any write to `raw_text`.
@@ -64,13 +65,16 @@ GET    /api/spaces/{space}/brief[?refresh=true] -> {space, text, item_ids, items
 GET    /api/today also returns active_space; recent = newest 10 captures
 GET    /api/attention -> {items, stale, stale_days}   stale = open filed tasks with updated_at older than 14 days
 GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence}   read-only
+GET/POST /api/spaces, PATCH /api/spaces/{name} {name} (rename cascades to items and briefs), DELETE /api/spaces/{name} (409 unless empty)   names ^[a-z0-9][a-z0-9-]{0,23}$
+PATCH  /api/items/{id} also accepts text (the item's own text)     DELETE /api/items/{id} (capture stays)
+GET    /api/recent?limit=50 -> {captures}   Today recent = 3
 PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   POST /api/items/{id}/reject
 ```
 
 ## Frontend shell
 
-Routes: `/` Home (dashboard), `/attention` Inbox (`/inbox` -> it), `/search` (absorbs Spaces; `?space=&shape=&q=` in the URL; `/spaces`, `/spaces/:name`, `/all` redirect), `/settings`, `/items/:id`, `/today` -> `/`. Pill nav with inline SVG icons (`components/Icons.tsx`).
-`App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (single-line input, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/attention` only, and keys `c` / `/`.
+Routes: `/` Home (dashboard; DOM order Today, Needs attention, Recent = phone order; grid areas put Needs attention right on desktop), `/attention` Inbox (queue card, Waiting list, Stale, Recent), `/spaces` (`?space=&shape=&q=`; cards, New space, space detail with rename/delete; `/search`, `/all`, `/spaces/:name` redirect), `/recent` (last 50 captures), `/settings`, `/items/:id` (editable text, File it / Proposal accordions closed once filed, original capture shown when different, delete), `/today` -> `/`. Pill nav with inline SVG icons (`components/Icons.tsx`).
+`App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/attention` only, and keys `c` / `/`.
 Components: `PageHead` (eyebrow, h1, subtitle), `Card` (icon + uppercase label + right aside), `ItemRow` (meta line, due at right, hover/long-press actions), `SearchAsk` (search-or-ask field), `SpaceDetail` (brief, tasks, notes; collapse state in localStorage `tartib-space-<name>`).
 Layout: app column max 1240px; dashboard grid 1.5fr/1fr above 900px; single column below. Tokens: teal accent, green-tinted near-black dark theme, matching light theme.
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.

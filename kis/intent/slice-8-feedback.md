@@ -13,6 +13,6 @@
 - Item page: text editable; "File it"/"Edit" and "Proposal" are accordions, open while waiting, closed once filed; original capture text shown when it differs; "…" with Delete.
 
 ## Status
-- [ ] phase 1 backend
-- [ ] phase 2 frontend
-- [ ] phase 3 proof + live migration + deploy
+- [x] phase 1 backend
+- [x] phase 2 frontend
+- [x] phase 3 proof + live migration + deploy (2026-09-17, see kis/state/current.md)

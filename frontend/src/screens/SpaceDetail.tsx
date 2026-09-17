@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { deleteSpace, getBrief, listItems, renameSpace } from "../api";
 import ItemRow from "../components/ItemRow";
@@ -43,13 +43,18 @@ export default function SpaceDetail({ space, query, version, onRenamed, onDelete
     }
   }, [open, space]);
 
+  const briefToken = useRef(0);
   async function loadBrief(refresh = false) {
+    const token = ++briefToken.current;
     setBriefState("loading");
     setBriefError(null);
     try {
-      setBrief(await getBrief(space, refresh));
+      const b = await getBrief(space, refresh);
+      if (token !== briefToken.current) return; // a newer load (other space) won
+      setBrief(b);
       setBriefState("ok");
     } catch (err) {
+      if (token !== briefToken.current) return;
       setBriefError(err instanceof Error ? err.message : "brief failed");
       setBriefState("error");
     }

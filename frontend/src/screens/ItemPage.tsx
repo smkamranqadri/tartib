@@ -103,7 +103,7 @@ export default function ItemPage({ version }: { version: number }) {
           </span>
         }
       >
-        {isTask && item.title && !editingText && <h2 className="item-title">{item.title}</h2>}
+        {isTask && item.title && !editingText && item.title.trim() !== item.raw_text.trim() && <h2 className="item-title">{item.title}</h2>}
         {editingText ? (
           <div className="text-edit">
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(12, Math.max(3, text.split("\n").length + 1))} aria-label="Text" autoFocus />
