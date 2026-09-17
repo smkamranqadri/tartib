@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from tartib.auth import require_auth
 from tartib.clock import utcnow
-from tartib.codex import CodexConfig, CodexError, run_json
+from tartib.codex import CodexError, run_json
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
 from tartib.store import serialize_item
@@ -136,11 +136,10 @@ async def answer_question(
     rows, matched = await asyncio.to_thread(retrieve, conn, question, space)
     if not rows:
         return dict(EMPTY)
-    cfg = CodexConfig(
-        command=settings.ai_command, model=settings.ai_model, timeout=settings.ai_timeout
-    )
     try:
-        data = await run_json(build_prompt(question, rows, settings), ANSWER_SCHEMA, cfg)
+        data = await run_json(
+            build_prompt(question, rows, settings), ANSWER_SCHEMA, settings.codex()
+        )
     except CodexError as e:
         raise AskError(str(e)) from e
     by_id = {r["id"]: r for r in rows}

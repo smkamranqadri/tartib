@@ -11,7 +11,6 @@ from tartib import db
 from tartib.ask import AskError, answer_question
 from tartib.classify import ClassifyError, Context, Proposal, classify
 from tartib.clock import utcnow, utcnow_iso
-from tartib.codex import CodexConfig
 from tartib.config import Settings
 from tartib.store import SpaceError, insert_item
 
@@ -70,7 +69,7 @@ class Runner:
             now=utcnow().astimezone(s.zone),
             zone=s.zone,
             spaces=list(s.spaces),
-            codex=CodexConfig(command=s.ai_command, model=s.ai_model, timeout=s.ai_timeout),
+            codex=s.codex(),
         )
         try:
             proposals = await classify(text, context)

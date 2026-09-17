@@ -10,7 +10,7 @@ backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schem
 backend/tests/      pytest + TestClient; AI endpoint mocked with respx
 frontend/src/       React + Vite + TS. api.ts, screens/ (Today, Attention, All, ItemPage, Login), components/ (Card, ItemRow, ItemEditor), format.ts, useLoad.ts
 frontend/public/    manifest.webmanifest, sw.js, icons
-Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex runs uvicorn
+Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex + @anthropic-ai/claude-code runs uvicorn
 docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
 ```
 
@@ -38,7 +38,7 @@ All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
 
 ## Classification runtime
 
-`codex.py` is the one AI transport: `run_json(prompt, schema, cfg)` runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. Timeout kills the process.
+`codex.py` is the one AI transport: `run_json(prompt, schema, cfg)` runs the primary CLI and, on any `CodexError`, the fallback if `TARTIB_AI_FALLBACK_COMMAND` is set (dialect by executable name: `claude` -> `claude --print --no-session-persistence --output-format json --json-schema <schema> --tools "" --max-turns 1 [--model M] <prompt>`, reply read from the envelope's `structured_output`; the `CLAUDECODE` env var is stripped so a parent Claude Code session cannot block it). Codex runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. Timeout kills the process.
 `classify.py` builds the filing prompt (user-authored, verbatim, plus a `text` excerpt bullet), validates `{"proposals": [...]}`, and normalizes: questions carry nothing, unknown spaces become null and cap confidence at 0.6, notes drop task fields, naive reminder times are converted from `TARTIB_TZ` to UTC.
 `runner.py` queues capture ids. Per capture: classify, insert one item per non-question proposal (excerpt as raw_text, filed or attention by space + threshold), answer the first question proposal via `ask.answer_question` and store it on the capture, mark done. Any failure: one null-space note in attention, capture status error.
 `ask.py` (`answer_question`, used by POST /api/ask and the runner) retrieves up to 20 items by FTS5 OR-query over the question's content words (stopwords dropped, prefix on words of 4+ chars), falls back to the 20 most recent in the space, sends them to Codex with the user-authored answer prompt (includes current datetime, task status in headers) and a `{answer, item_ids}` schema, then filters cited ids to the retrieved set. Read-only; about 7 to 10s per question.
@@ -48,7 +48,7 @@ Tests point `TARTIB_AI_COMMAND` at `tests/fake_codex.py`, driven by `FAKE_CODEX_
 
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (required, comma-separated), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (required, comma-separated), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 
@@ -63,7 +63,7 @@ PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   
 
 ## Frontend shell
 
-Centered pill nav with three routes, capture box on every screen (polls `/api/captures/{id}` until done, shows "Filing…", then the answer panel for questions), Today has a Recent card of captures, All has a fixed bottom Ask bar with the answer above it, the editor's space field is `SpaceSelect` over `TARTIB_SPACES`, section cards with uppercase labels (`Card` component), theme toggle stored in localStorage as `tartib-theme` and applied via `data-theme` on `<html>`. Routes: `/today`, `/attention`, `/all`, `/items/:id`.
+Centered pill nav with three routes, capture box on every screen (polls `/api/captures/{id}` until done, shows "Filing…", then the answer panel for questions), Today has a Recent card of the newest 3 captures, every screen has a fixed bottom Ask bar (`AskBar`, rendered by App, width = app column) with the answer above it, the editor's space field is `SpaceSelect` over `TARTIB_SPACES`, section cards with uppercase labels (`Card` component), theme toggle stored in localStorage as `tartib-theme` and applied via `data-theme` on `<html>`. Routes: `/today`, `/attention`, `/all`, `/items/:id`.
 
 ## Verification commands
 

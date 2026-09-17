@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import UTC, datetime, time
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -14,8 +13,7 @@ from tartib.config import Settings
 from tartib.deps import get_db, get_settings
 from tartib.store import serialize_capture, serialize_item
 
-RECENT_MIN = 3
-RECENT_MAX = 20
+RECENT = 3
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -25,7 +23,7 @@ def today(
     conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict:
     """Open tasks due today or earlier, starred, or whose reminder time has passed,
-    plus the most recent captures: always the newest 3, extended to everything captured today."""
+    plus the newest 3 captures."""
     now = utcnow()
     today = today_in(settings.zone, now)
     day = today.isoformat()
@@ -38,17 +36,7 @@ def today(
         """,
         (day, utcnow_iso()),
     ).fetchall()
-    start_of_day = (
-        datetime.combine(today, time.min, tzinfo=settings.zone).astimezone(UTC).isoformat()
-    ).replace("+00:00", "Z")
-    recent = conn.execute(
-        """
-        SELECT * FROM captures
-        WHERE id IN (SELECT id FROM captures ORDER BY id DESC LIMIT ?) OR created_at >= ?
-        ORDER BY id DESC LIMIT ?
-        """,
-        (RECENT_MIN, start_of_day, RECENT_MAX),
-    ).fetchall()
+    recent = conn.execute("SELECT * FROM captures ORDER BY id DESC LIMIT ?", (RECENT,)).fetchall()
     return {
         "date": day,
         "items": [serialize_item(r) for r in rows],

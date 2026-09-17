@@ -4,7 +4,7 @@ Hard constraints. Do not relax without an explicit decision recorded here.
 
 1. A capture's `raw_text` is immutable, and so is each item's excerpt. Classification proposes fields around the text and never rewrites it.
 2. Capture never waits on AI. A capture request returns as soon as the row is stored.
-3. One classifier only: the Codex CLI run as a subprocess. No HTTP provider, no second adapter. (Changed 2026-09-17 from an OpenAI-compatible endpoint; the user has no API endpoint.)
+3. One set of prompts and schemas, run through CLIs as subprocesses. Primary: Codex CLI. Optional fallback when Codex fails: Claude Code CLI, same prompts (added 2026-09-17 after a Codex usage-limit outage). No HTTP provider.
 4. No projects, no tags, no pomodoro, no push notifications. One read-only "ask" over existing items is allowed since 2026-09-17; it never writes.
 5. One password from env. No user accounts, no signup.
 6. Memory budget is 512MB for the whole compose stack.

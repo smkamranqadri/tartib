@@ -1,9 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { ask, getSpaces, listItems } from "../api";
-import AnswerView from "../components/AnswerView";
+import { useEffect, useState } from "react";
+import { getSpaces, listItems } from "../api";
 import Card from "../components/Card";
 import ItemRow from "../components/ItemRow";
-import type { Answer, Item } from "../types";
+import type { Item } from "../types";
 import { useLoad } from "../useLoad";
 
 export default function All({ version }: { version: number }) {
@@ -51,7 +50,7 @@ export default function All({ version }: { version: number }) {
   const count = data ? `${items.length}${data.next_before ? "+" : ""}` : "";
 
   return (
-    <div className="screen has-askbar">
+    <div className="screen">
       <Card label="Search" aside={count && <span className="muted">{count} items</span>}>
         <div className="filters">
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes and tasks" aria-label="Search" />
@@ -88,59 +87,6 @@ export default function All({ version }: { version: number }) {
           </button>
         )}
       </Card>
-      <AskBar spaces={spaces} />
-    </div>
-  );
-}
-
-/** Chat-style bar pinned to the bottom of the viewport. The answer opens above it. */
-function AskBar({ spaces }: { spaces: string[] }) {
-  const [question, setQuestion] = useState("");
-  const [space, setSpace] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Answer | null>(null);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    const value = question.trim();
-    if (!value || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      setResult(await ask(value, space));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "ask failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="askbar">
-      <div className="askbar-inner">
-        {result && <AnswerView result={result} onClose={() => setResult(null)} />}
-        {error && <p className="error">{error}</p>}
-        <form className="ask" onSubmit={submit}>
-          <input
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask your notes: what did I decide about…"
-            aria-label="Question"
-          />
-          <select value={space} onChange={(e) => setSpace(e.target.value)} aria-label="Ask in space">
-            <option value="">All spaces</option>
-            {spaces.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <button type="submit" disabled={busy || !question.trim()}>
-            {busy ? "Thinking…" : "Ask"}
-          </button>
-        </form>
-      </div>
     </div>
   );
 }

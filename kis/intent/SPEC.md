@@ -42,10 +42,11 @@ Any filed item's `space`, `shape`, `title`, `due`, `remind_at`, `starred`, and `
 
 ## Screens
 
-1. Today: open tasks due today in `TARTIB_TZ`, plus starred open tasks, plus open tasks whose `remind_at` has passed. Overdue tasks count as due today. Below them, Recent: the newest 3 captures, extended to everything captured today (cap 20), each with its status, items, or answer.
+1. Today: open tasks due today in `TARTIB_TZ`, plus starred open tasks, plus open tasks whose `remind_at` has passed. Overdue tasks count as due today. Below them, Recent: the newest 3 captures, each with its status, items, or answer.
 2. Needs Attention: items in `stage=attention`, oldest first, with approve / edit / reject.
-3. All: FTS5 search over `raw_text` and `title`, filter by space, shape, and status, newest first. Empty query lists everything. A chat-style Ask bar is pinned to the bottom; its answer opens above it. Item page `/items/{id}` shows the full excerpt, proposal, and inline edit; the space field is a select over `TARTIB_SPACES`.
-4. Login: one password field. Shown when the session cookie is missing or invalid.
+3. All: FTS5 search over `raw_text` and `title`, filter by space, shape, and status, newest first. Empty query lists everything.  Item page `/items/{id}` shows the full excerpt, proposal, and inline edit; the space field is a select over `TARTIB_SPACES`.
+4. Ask bar: pinned to the bottom of every screen, as wide as the app column. Question in, answer above it with linked items.
+5. Login: one password field. Shown when the session cookie is missing or invalid.
 
 ## Out of scope
 

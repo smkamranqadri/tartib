@@ -2,9 +2,10 @@
 
 A personal capture system. You type anything into one box. It is stored once, verbatim, as a capture. A background Codex call turns it into one or more items, filed into your own spaces. Confident proposals are filed automatically; the rest wait for you in **Needs Attention**. A capture that is a question is answered from your notes instead of filed. Three screens, nothing else.
 
-- **Today**: open tasks due today or earlier, starred tasks, tasks whose reminder time has passed, and your most recent captures.
+- **Today**: open tasks due today or earlier, starred tasks, tasks whose reminder time has passed, and your three most recent captures.
+- **Ask bar**: pinned to the bottom of every screen. A question in, an answer drawn only from your own items out, with links.
 - **Needs Attention**: captures the AI was not sure about. Approve, edit, or reject.
-- **All**: full-text search over everything, filter by space, shape, and status. Ask a question and get an answer drawn only from your own items, with links to them.
+- **All**: full-text search over everything, filter by space, shape, and status.
 - **Item page**: the full text, the AI's proposal, and inline edit.
 
 Your text is never rewritten. Classification only proposes fields around it.
@@ -22,6 +23,8 @@ open http://localhost:8000
 
 No Codex? Set `TARTIB_AI_COMMAND=off` and every capture goes to Needs Attention for you to file by hand.
 
+**Fallback.** With `TARTIB_AI_FALLBACK_COMMAND=claude`, any Codex failure (usage limit, outage, timeout) is retried once through the Claude Code CLI with the same prompt and schema. Both CLIs are in the image. On the host the Claude login is used as is; inside Docker set `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
+
 Put it behind HTTPS (Caddy, a tunnel, a reverse proxy) before exposing it beyond your LAN. The session cookie is marked secure only when the request arrives over HTTPS.
 
 ### Environment
@@ -35,6 +38,9 @@ Put it behind HTTPS (Caddy, a tunnel, a reverse proxy) before exposing it beyond
 | `TARTIB_AI_COMMAND` | no | `codex` | Command that runs the Codex CLI. `off` disables classification. |
 | `TARTIB_AI_MODEL` | no | | Passed as `codex --model`. Unset uses Codex's default. |
 | `TARTIB_AI_TIMEOUT` | no | `120` | Seconds allowed per classification. |
+| `TARTIB_AI_FALLBACK_COMMAND` | no | | `claude` to use the Claude Code CLI when Codex fails. Same prompts and schemas. |
+| `TARTIB_AI_FALLBACK_MODEL` | no | | Passed as `claude --model`. |
+| `CLAUDE_CODE_OAUTH_TOKEN` | no | | Needed for the fallback inside Docker. Get it with `claude setup-token` on the host. |
 | `TARTIB_AUTOFILE_CONFIDENCE` | no | `0.85` | Proposals at or above this are filed without asking. |
 | `TARTIB_DB_PATH` | no | `/data/tartib.db` | SQLite file. |
 
@@ -110,7 +116,7 @@ Backend is FastAPI on stdlib `sqlite3` with FTS5 and numbered SQL migrations, no
 
 ## Not planned
 
-Projects, tags, pomodoro, push notifications, a second classifier, multi-user. Ask is a single question with a single answer; there is no chat history. Tartib is deliberately small.
+Projects, tags, pomodoro, push notifications, multi-user. Ask is a single question with a single answer; there is no chat history. The Claude CLI is a fallback for the same prompts, not a second classifier with its own behaviour. Tartib is deliberately small.
 
 ## License
 

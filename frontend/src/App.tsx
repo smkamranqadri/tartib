@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { getCapture, logout, setUnauthorizedHandler } from "./api";
+import { getCapture, getSpaces, logout, setUnauthorizedHandler } from "./api";
 import Capture from "./Capture";
 import AnswerView from "./components/AnswerView";
+import AskBar from "./components/AskBar";
 import All from "./screens/All";
 import Attention from "./screens/Attention";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
 import Today from "./screens/Today";
 import type { Answer } from "./types";
+import { useLoad } from "./useLoad";
 
 type Theme = "light" | "dark";
 
@@ -30,6 +32,7 @@ export default function App() {
   const [answer, setAnswer] = useState<Answer | null>(null);
   const pollRef = useRef(0);
   const bump = () => setVersion((v) => v + 1);
+  const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthed(false));
@@ -73,7 +76,7 @@ export default function App() {
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
 
   return (
-    <div className="app">
+    <div className="app has-askbar">
       <header className="top">
         <div className="brand">
           <img className="brand-mark" src="/icon-192.png" alt="" width={28} height={28} />
@@ -118,6 +121,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/today" replace />} />
         </Routes>
       </main>
+      <AskBar spaces={spaces} />
     </div>
   );
 }

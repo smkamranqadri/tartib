@@ -47,36 +47,13 @@ def test_today_rules(auth, settings):
     assert ids(payload)[:2] == [overdue, due_today]  # overdue first
 
 
-def test_today_recent_captures(auth, settings):
+def test_today_recent_is_newest_three(auth):
     caps = [capture(auth, f"note {i}")["id"] for i in range(5)]
-    conn = sqlite3.connect(settings.db_path)
-    # push two captures to yesterday
-    conn.execute(
-        "UPDATE captures SET created_at = ? WHERE id IN (?, ?)",
-        (
-            (datetime.now(UTC) - timedelta(days=1)).isoformat().replace("+00:00", "Z"),
-            caps[0],
-            caps[1],
-        ),
-    )
-    conn.commit()
-    conn.close()
     recent = auth.get("/api/today").json()["recent"]
-    # the three captured today, newest first; the older two are not the newest 3 so excluded
     assert [c["id"] for c in recent] == [caps[4], caps[3], caps[2]]
     assert recent[0]["raw_text"] == "note 4"
     assert recent[0]["status"] == "error" and len(recent[0]["items"]) == 1
     assert recent[0]["items"][0]["stage"] == "attention"
-
-    # nothing captured today: still the newest 3
-    conn = sqlite3.connect(settings.db_path)
-    conn.execute(
-        "UPDATE captures SET created_at = ?",
-        ((datetime.now(UTC) - timedelta(days=2)).isoformat().replace("+00:00", "Z"),),
-    )
-    conn.commit()
-    conn.close()
-    assert [c["id"] for c in auth.get("/api/today").json()["recent"]] == [caps[4], caps[3], caps[2]]
 
 
 def test_attention_oldest_first(auth):

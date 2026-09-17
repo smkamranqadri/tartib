@@ -185,17 +185,18 @@ main > .answer { margin-bottom: 16px; }
 .recent-row .item-meta { margin-left: 0; }
 .recent-answer { margin: 8px 0 0; padding: 8px 12px; background: var(--head); border-radius: 8px; font-size: 14px; }
 
-.screen.has-askbar { padding-bottom: 96px; }
+.app.has-askbar { padding-bottom: 110px; }
 .askbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  background: var(--panel); border-top: 1px solid var(--line);
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 20;
+  width: min(100% - 32px, 848px);
+  background: var(--panel); border: 1px solid var(--line); border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.08);
 }
-.askbar-inner { max-width: 880px; margin: 0 auto; }
 .askbar .answer { margin: 0 0 10px; max-height: 40vh; overflow: auto; }
 .askbar .ask { margin: 0; }
 @media (max-width: 640px) {
-  .screen.has-askbar { padding-bottom: 150px; }
+  .app.has-askbar { padding-bottom: 160px; }
   .askbar .ask select { flex: 1; }
 }

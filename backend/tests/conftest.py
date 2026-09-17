@@ -16,6 +16,9 @@ from tartib.main import create_app
 PASSWORD = "hunter2"
 SPACES = "work,home,health,finance,ideas,travel"
 FAKE = f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).parent / 'fake_codex.py'))}"
+FAKE_CLAUDE = (
+    f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).parent / 'fake_claude.py'))}"
+)
 AI_ENV = {"TARTIB_AI_COMMAND": FAKE, "TARTIB_TZ": "Asia/Karachi", "TARTIB_AI_TIMEOUT": "5"}
 FAKE_VARS = (
     "FAKE_CODEX_REPLY",
@@ -24,6 +27,12 @@ FAKE_VARS = (
     "FAKE_CODEX_EXIT",
     "FAKE_CODEX_SLEEP",
     "FAKE_CODEX_RECORD",
+    "FAKE_CLAUDE_REPLY",
+    "FAKE_CLAUDE_REPLY_CLASSIFY",
+    "FAKE_CLAUDE_REPLY_ASK",
+    "FAKE_CLAUDE_EXIT",
+    "FAKE_CLAUDE_IS_ERROR",
+    "FAKE_CLAUDE_RECORD",
 )
 
 
