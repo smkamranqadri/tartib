@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { getCapture, getSpaces, setUnauthorizedHandler } from "./api";
 import Capture from "./Capture";
 import AskBar from "./components/AskBar";
@@ -10,7 +10,9 @@ import Home from "./screens/Home";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
 import Recent from "./screens/Recent";
+import Space from "./screens/Space";
 import Spaces from "./screens/Spaces";
+import Waiting from "./screens/Waiting";
 import Settings from "./screens/Settings";
 import { ThemeContext, type Theme } from "./theme";
 import type { Answer, Capture as CaptureRecord } from "./types";
@@ -40,11 +42,6 @@ function outcome(cap: CaptureRecord): string {
   if (waiting) parts.push(`${waiting} need${waiting === 1 ? "s" : ""} your look`);
   if (cap.answer) parts.push("answered");
   return parts.join(" · ") || "Saved";
-}
-
-function SpaceRedirect() {
-  const { name = "" } = useParams();
-  return <Navigate to={`/spaces?space=${encodeURIComponent(name)}`} replace />;
 }
 
 export default function App() {
@@ -163,7 +160,8 @@ export default function App() {
             <Route path="/attention" element={<Attention version={version} onDecided={bump} />} />
             <Route path="/inbox" element={<Navigate to="/attention" replace />} />
             <Route path="/spaces" element={<Spaces version={version} onChanged={bump} />} />
-            <Route path="/spaces/:name" element={<SpaceRedirect />} />
+            <Route path="/spaces/:name" element={<Space version={version} onChanged={bump} />} />
+            <Route path="/attention/all" element={<Waiting version={version} onDecided={bump} />} />
             <Route path="/search" element={<Navigate to="/spaces" replace />} />
             <Route path="/all" element={<Navigate to="/spaces" replace />} />
             <Route path="/recent" element={<Recent version={version} />} />

@@ -67,15 +67,15 @@ GET    /api/attention -> {items, stale, stale_days}   stale = open filed tasks w
 GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence}   read-only
 GET/POST /api/spaces, PATCH /api/spaces/{name} {name} (rename cascades to items and briefs), DELETE /api/spaces/{name} (409 unless empty)   names ^[a-z0-9][a-z0-9-]{0,23}$
 PATCH  /api/items/{id} also accepts text (the item's own text)     DELETE /api/items/{id} (capture stays)
-GET    /api/recent?limit=50 -> {captures}   Today recent = 3
+GET    /api/recent?limit=50&before=<id> -> {captures, next_before}   keyset paging; Today recent = 3
 PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   POST /api/items/{id}/reject
 ```
 
 ## Frontend shell
 
-Routes: `/` Home (dashboard; DOM order Today, Needs attention, Recent = phone order; grid areas put Needs attention right on desktop), `/attention` Inbox (queue card, Waiting list, Stale, Recent), `/spaces` (`?space=&shape=&q=`; cards, New space, space detail with rename/delete; `/search`, `/all`, `/spaces/:name` redirect), `/recent` (last 50 captures), `/settings`, `/items/:id` (editable text, File it / Proposal accordions closed once filed, original capture shown when different, delete), `/today` -> `/`. Pill nav with inline SVG icons (`components/Icons.tsx`).
+Routes: `/` Home (dashboard; DOM order Today, Needs attention, Recent = phone order; grid areas put Needs attention right on desktop), `/attention` Inbox (3 `ApprovalCard`s, Stale, Recent), `/attention/all` (every waiting item as cards), `/spaces` (cards, New space in the title row, grouped search; `?space=` redirects), `/spaces/:name` (`Space` page: back, filter + manage in the title row, scoped search, `SpaceDetail`), `/recent` (paged), `/settings`, `/items/:id` (editable text, File it / Proposal accordions closed once filed, original capture shown when different, delete), `/today` -> `/`. Pill nav with inline SVG icons (`components/Icons.tsx`).
 `App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/attention` only, and keys `c` / `/`.
-Components: `PageHead` (eyebrow, h1, subtitle), `Card` (icon + uppercase label + right aside), `ItemRow` (meta line, due at right, hover/long-press actions), `SearchAsk` (search-or-ask field), `SpaceDetail` (brief, tasks, notes; collapse state in localStorage `tartib-space-<name>`).
+Components: `ApprovalCard` (one waiting item as a decision; `hotkey` binds Enter), `PageHead` (eyebrow, h1, subtitle), `Card` (icon + uppercase label + right aside), `ItemRow` (meta line, due at right, hover/long-press actions), `SearchAsk` (search-or-ask field), `SpaceDetail` (brief, tasks, notes; collapse state in localStorage `tartib-space-<name>`).
 Layout: app column max 1240px; dashboard grid 1.5fr/1fr above 900px; single column below. Tokens: teal accent, green-tinted near-black dark theme, matching light theme.
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 

@@ -95,7 +95,7 @@ export default function Home({ version, answer, onCloseAnswer }: { version: numb
           )}
           {data?.active_space && (
             <p className="side-note muted">
-              <Link to={`/spaces?space=${data.active_space}`}>{data.active_space}</Link> is the most recently touched space.
+              <Link to={`/spaces/${data.active_space}`}>{data.active_space}</Link> is the most recently touched space.
             </p>
           )}
         </Card>

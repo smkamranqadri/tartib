@@ -6,6 +6,6 @@
 - Spaces page: no chips; "+ New space" in the title row; cards link to /spaces/{name}. Space page: back button, title row with Tasks / Notes filter and "…" (rename, delete); scoped search; brief resets on space change.
 
 ## Status
-- [ ] backend paging
-- [ ] frontend
-- [ ] proof + deploy
+- [x] backend paging
+- [x] frontend
+- [x] proof + deploy (2026-09-17, see kis/state/current.md)

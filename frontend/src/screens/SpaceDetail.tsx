@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { deleteSpace, getBrief, listItems, renameSpace } from "../api";
+import { getBrief, listItems } from "../api";
 import ItemRow from "../components/ItemRow";
 import Card from "../components/Card";
 import { CheckSquareIcon, LayersIcon, NoteIcon, RefreshIcon } from "../components/Icons";
@@ -21,12 +21,9 @@ function readOpen(space: string): Record<Section, boolean> {
 }
 
 /** Brief, tasks, and notes of one space. The search field lives in the Search page. */
-export default function SpaceDetail({ space, query, version, onRenamed, onDeleted }: { space: string; query: string; version: number; onRenamed?: (name: string) => void; onDeleted?: () => void }) {
-  const [menu, setMenu] = useState(false);
-  const [renaming, setRenaming] = useState(false);
-  const [newName, setNewName] = useState(space);
-  const [manageError, setManageError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+export type ShapeFilter = "all" | "task" | "note";
+
+export default function SpaceDetail({ space, query, version, filter = "all", onCount }: { space: string; query: string; version: number; filter?: ShapeFilter; onCount?: (n: number) => void }) {
   const debounced = query;
   const [showDone, setShowDone] = useState(false);
   const [open, setOpen] = useState<Record<Section, boolean>>(() => readOpen(space));
@@ -34,7 +31,11 @@ export default function SpaceDetail({ space, query, version, onRenamed, onDelete
   const [briefState, setBriefState] = useState<"loading" | "ok" | "error">("loading");
   const [briefError, setBriefError] = useState<string | null>(null);
 
-  useEffect(() => setOpen(readOpen(space)), [space]);
+  useEffect(() => {
+    setOpen(readOpen(space));
+    setBrief(null); // never show another space's brief while this one loads
+    setBriefState("loading");
+  }, [space]);
   useEffect(() => {
     try {
       localStorage.setItem(`tartib-space-${space}`, JSON.stringify(open));
@@ -76,70 +77,12 @@ export default function SpaceDetail({ space, query, version, onRenamed, onDelete
   const toggle = (s: Section) => setOpen((o) => ({ ...o, [s]: !o[s] }));
 
   const itemCount = (tasks.data?.items.length ?? 0) + (notes.data?.items.length ?? 0);
-
-  async function doRename() {
-    setManageError(null);
-    try {
-      const r = await renameSpace(space, newName);
-      setRenaming(false);
-      onRenamed?.(r.name);
-    } catch (err) {
-      setManageError(err instanceof Error ? err.message : "failed");
-    }
-  }
-  async function doDelete() {
-    setManageError(null);
-    try {
-      await deleteSpace(space);
-      onDeleted?.();
-    } catch (err) {
-      setManageError(err instanceof Error ? err.message : "failed");
-      setConfirmDelete(false);
-    }
-  }
+  useEffect(() => {
+    if (tasks.data && notes.data) onCount?.(itemCount);
+  }, [itemCount, tasks.data, notes.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-detail">
-      <div className="manage">
-        {renaming ? (
-          <form className="new-space-form" onSubmit={(e) => { e.preventDefault(); void doRename(); }}>
-            <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="Rename space" maxLength={24} />
-            <button type="submit" className="primary" disabled={!newName.trim() || newName.trim().toLowerCase() === space}>
-              Rename
-            </button>
-            <button type="button" className="ghost" onClick={() => setRenaming(false)}>
-              Cancel
-            </button>
-          </form>
-        ) : confirmDelete ? (
-          <span className="confirm">
-            Delete <b>{space}</b>?{" "}
-            <button type="button" className="ghost danger" onClick={() => void doDelete()}>
-              Yes, delete
-            </button>{" "}
-            <button type="button" className="ghost" onClick={() => setConfirmDelete(false)}>
-              No
-            </button>
-          </span>
-        ) : (
-          <span className="more">
-            <button type="button" className="icon-btn" aria-label="Manage space" onClick={() => setMenu((m) => !m)}>
-              …
-            </button>
-            {menu && (
-              <span className="menu">
-                <a href="#rename" onClick={(e) => { e.preventDefault(); setMenu(false); setNewName(space); setRenaming(true); }}>
-                  Rename
-                </a>
-                <button type="button" disabled={itemCount > 0} title={itemCount > 0 ? `${itemCount} items still here` : undefined} onClick={() => { setMenu(false); setConfirmDelete(true); }}>
-                  Delete{itemCount > 0 ? ` (${itemCount} items)` : ""}
-                </button>
-              </span>
-            )}
-          </span>
-        )}
-        {manageError && <span className="error">{manageError}</span>}
-      </div>
       <Card
         icon={<LayersIcon />}
         label={`Brief · ${space}`}
@@ -167,6 +110,7 @@ export default function SpaceDetail({ space, query, version, onRenamed, onDelete
         )}
       </Card>
 
+      {filter !== "note" && (
       <Card
         icon={<CheckSquareIcon />}
         label={
@@ -193,7 +137,9 @@ export default function SpaceDetail({ space, query, version, onRenamed, onDelete
           </>
         )}
       </Card>
+      )}
 
+      {filter !== "task" && (
       <Card
         icon={<NoteIcon />}
         label={
@@ -217,6 +163,7 @@ export default function SpaceDetail({ space, query, version, onRenamed, onDelete
           </>
         )}
       </Card>
+      )}
     </div>
   );
 }

@@ -46,14 +46,14 @@ Any filed item's `space`, `shape`, `title`, `due`, `remind_at`, `starred`, and `
 Shell: brand "Tartib ترتیب", pill nav Home · Inbox · Spaces · Settings with icons, and a capture bar under the header on every screen (auto-growing box, mic when the browser supports on-device speech, Add). Enter or Add saves, Shift+Enter adds a line; the box clears at once, a toast says "Saved" then the outcome; a question capture navigates to Home and shows its answer. Chat bar on Home and Inbox only. `c` focuses capture anywhere; `/` focuses search on Search.
 
 1. Home `/`: eyebrow DASHBOARD, title = today's date. Two columns from 900px, one below. Left: Today (open tasks due today or overdue, starred, passed reminders; starred first; count) and Recent (last 3 captures, "View all" -> `/recent`). Right: Needs attention (top 3 of queue then stale, "View all", and a line naming the most recently touched space). On phone the order is Today, Needs attention, Recent.
-2. Inbox `/attention`: title "Needs attention", "N things to decide". Awaiting approval = the one-card queue ("k of n"; Enter approves, Not now rotates, "…" holds Reject and Open). Waiting = every queued item, tap to bring it forward. Stale tasks = open filed tasks untouched 14+ days. Recent = last 3, "View all".
+2. Inbox `/attention`: title "Needs attention", "N things to decide". Needs attention = the 3 newest waiting items as decision cards (text, proposal sentence with tappable words, Approve, Not now, "…" with Reject and Open); Enter approves the first; "View all N" -> `/attention/all` with every waiting item as the same cards. Stale tasks = open filed tasks untouched 14+ days. Recent = last 3, "View all".
 3. Spaces `/spaces`: title "Spaces" (or the selected space). Search-or-ask field (Ask button once there is text; trailing "?" or Cmd/Ctrl+Enter). Chips: All spaces + each space; Any shape / Tasks / Notes; state in the URL. No query + All spaces -> space cards (name, "4 open · 12 notes", last activity, overdue dot; Unfiled muted, links to Inbox). No query + a space -> that space's Brief (cached, refresh), Tasks (Show done), Notes, collapsible and remembered per space. Query -> results grouped by space. `/spaces`, `/spaces/{name}`, `/all` redirect here.
 4. Settings `/settings`: Appearance (theme), Classifier (Codex on/off, fallback, threshold), Device (voice capture, timezone, installed), Spaces (configured list), Account (sign out). Read-only except theme and sign out.
 5. Item page `/items/{id}`: the item's text (editable via "…" > Edit text or double-click), status chips, "File it" (while waiting) or "Edit" (filed) and "Proposal" as accordions, open while waiting and closed once filed; the Proposal shows the original capture text when it differs. "…" also holds Delete with an inline confirm.
-6. Recent `/recent`: the last 50 captures, newest first.
+6. Recent `/recent`: captures newest first, 50 at a time with "Load more".
 7. Login: one password field.
 
-Rows everywhere: leading checkbox (filed tasks) or icon, title (links to the item page for tasks and notes), muted meta "space · 2h ago" (or "needs attention · 70%"), "due Fri, Sep 18" at the right for dated tasks, overdue rows tinted, hover or long-press reveals star and edit.
+Rows everywhere: leading checkbox (filed tasks) or icon, title (links to the item page for tasks and notes), muted meta "space · 2h ago" (or "needs attention · 70%"), "due Fri, Sep 18" at the right for dated tasks, overdue rows tinted, the star always visible on tasks, hover or long-press reveals edit.
 
 ## Out of scope
 

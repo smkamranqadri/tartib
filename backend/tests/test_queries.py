@@ -51,9 +51,19 @@ def test_today_recent_is_newest_three_and_recent_page_is_fifty(auth):
     caps = [capture(auth, f"note {i}")["id"] for i in range(12)]
     recent = auth.get("/api/today").json()["recent"]
     assert [c["id"] for c in recent] == list(reversed(caps))[:3]
-    page = auth.get("/api/recent").json()["captures"]
-    assert [c["id"] for c in page] == list(reversed(caps))
-    assert len(auth.get("/api/recent", params={"limit": 5}).json()["captures"]) == 5
+    page = auth.get("/api/recent").json()
+    assert [c["id"] for c in page["captures"]] == list(reversed(caps)) and page[
+        "next_before"
+    ] is None
+    first = auth.get("/api/recent", params={"limit": 5}).json()
+    assert [c["id"] for c in first["captures"]] == list(reversed(caps))[:5]
+    assert first["next_before"] == list(reversed(caps))[4]
+    second = auth.get("/api/recent", params={"limit": 5, "before": first["next_before"]}).json()
+    assert [c["id"] for c in second["captures"]] == list(reversed(caps))[5:10]
+    third = auth.get("/api/recent", params={"limit": 5, "before": second["next_before"]}).json()
+    assert [c["id"] for c in third["captures"]] == list(reversed(caps))[10:] and third[
+        "next_before"
+    ] is None
     assert recent[0]["raw_text"] == "note 11"
     assert recent[0]["status"] == "error" and len(recent[0]["items"]) == 1
     assert recent[0]["items"][0]["stage"] == "attention"

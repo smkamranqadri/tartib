@@ -87,10 +87,24 @@ def config(
 @router.get("/recent")
 def recent_captures(
     limit: int = Query(default=RECENT_PAGE, ge=1, le=200),
+    before: int | None = None,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> dict:
-    rows = conn.execute("SELECT * FROM captures ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-    return {"captures": [serialize_capture(conn, r) for r in rows]}
+    """Captures newest first, keyset-paged by id: pass next_before back as before."""
+    if before is None:
+        rows = conn.execute(
+            "SELECT * FROM captures ORDER BY id DESC LIMIT ?", (limit + 1,)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM captures WHERE id < ? ORDER BY id DESC LIMIT ?", (before, limit + 1)
+        ).fetchall()
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    return {
+        "captures": [serialize_capture(conn, r) for r in rows],
+        "next_before": rows[-1]["id"] if has_more and rows else None,
+    }
 
 
 def fts_query(q: str) -> str:

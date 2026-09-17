@@ -78,17 +78,17 @@ export default function ItemRow({ item, onChange }: Props) {
         </div>
         {isTask && item.due && <span className={`row-due ${overdue ? "overdue" : "muted"}`}>{formatDueLong(item.due)}</span>}
         {isTask && !item.due && item.remind_at && <span className="row-due muted">⏰ {formatRemind(item.remind_at)}</span>}
+        {isTask && editable && (
+          <button
+            type="button"
+            className={`star always ${item.starred ? "on" : ""}`}
+            onClick={() => void patch({ starred: !item.starred })}
+            aria-label={item.starred ? "Unstar" : "Star"}
+          >
+            {item.starred ? "★" : "☆"}
+          </button>
+        )}
         <span className="row-actions">
-          {isTask && editable && (
-            <button
-              type="button"
-              className={`star ${item.starred ? "on" : ""}`}
-              onClick={() => void patch({ starred: !item.starred })}
-              aria-label={item.starred ? "Unstar" : "Star"}
-            >
-              {item.starred ? "★" : "☆"}
-            </button>
-          )}
           <Link to={`/items/${item.id}`} className="icon-btn" aria-label="Edit">
             ✎
           </Link>

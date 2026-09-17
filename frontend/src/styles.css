@@ -317,3 +317,16 @@ button:disabled { opacity: .5; cursor: default; }
 .original .raw { white-space: pre-wrap; }
 .original .section-label { margin: 0 0 4px; }
 .menu button:disabled { color: var(--muted); cursor: default; }
+
+/* slice 9 */
+.star.always { display: inline-flex; flex: none; margin-top: 1px; }
+.star.always:not(.on) { opacity: .45; }
+.star.always:not(.on):hover { opacity: 1; }
+.cards { display: flex; flex-direction: column; }
+.cards .one { border-bottom: 1px solid var(--line); }
+.cards .one:last-child { border-bottom: 0; }
+.cards .one.hot { background: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
+.title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
+.title-actions .more { margin-left: 0; }
+@media (max-width: 640px) { .title-actions { margin-top: 0; } }

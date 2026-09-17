@@ -72,7 +72,7 @@ export default function ItemPage({ version }: { version: number }) {
         {item.space && (
           <>
             {" "}
-            / <Link to={`/spaces?space=${item.space}`}>{item.space}</Link>
+            / <Link to={`/spaces/${item.space}`}>{item.space}</Link>
           </>
         )}{" "}
         <span className="muted">/ #{item.id}</span>
