@@ -60,7 +60,9 @@ def test_reclassify_all_rebuilds_items_and_carries_flags(tmp_path, monkeypatch):
         assert [i["title"] for i in rent["items"]] == ["Pay", None]
         assert rent["items"][0]["status"] == "open"  # split into two: flags not carried
         assert report.carried == 0
-        assert client.get(f"/api/items/{task['id']}").status_code == 404  # old item gone
+        # the old item is gone (SQLite may reuse its id for a rebuilt one)
+        titles = [i["title"] for i in client.get("/api/items").json()["items"]]
+        assert "Rent!" not in titles
         hmm = client.get(f"/api/captures/{waiting['id']}").json()
         assert len(hmm["items"]) == 2 and hmm["status"] == "done"
         q = client.get(f"/api/captures/{question['id']}").json()
