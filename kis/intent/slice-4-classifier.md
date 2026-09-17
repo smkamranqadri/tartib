@@ -33,3 +33,7 @@ Absorbs slice 3 (Today recent, ask bar, space select). No new screens. No new it
 - [x] Phase 1 backend
 - [x] Phase 2 frontend
 - [x] Phase 3 eval, docs, live migration (2026-09-17)
+
+## Follow-up (2026-09-17, same day)
+
+User feedback after deploy: Recent capped at the newest 3 captures; ask bar on every screen, same width as the app column; Claude Code CLI as fallback when Codex fails. All done and deployed.

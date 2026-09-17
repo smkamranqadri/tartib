@@ -1,21 +1,19 @@
 # Current
 
 - Branch: `main`, local only.
-- Task: none. Slice 4 (classifier fixes, absorbing slice 3) complete 2026-09-17. Plan: `kis/intent/slice-4-classifier.md`.
+- Task: none. Slice 4 plus its same-day follow-up (Recent = 3, global ask bar, Claude CLI fallback) complete and deployed 2026-09-17.
 - Command: `cd backend && uv run pytest -q` / `uv run pytest -m eval` / `cd frontend && npm run build` / `docker compose up -d --build`.
-- Blocker: none in code. Codex usage limit on the ChatGPT account was exhausted at the end of the deploy; captures made until it resets land in Needs Attention with the error.
-- Next: user decides. Live container on http://localhost:8000 runs the new image on the migrated volume. Backup of the pre-migration DB: scratchpad `backup/tartib-pre-slice4.db` (session-local; copy it out if wanted).
+- Blocker: none in code. Inside Docker the Claude fallback needs `CLAUDE_CODE_OAUTH_TOKEN` in `.env` (from `claude setup-token` on the host); until then a Codex failure in the container still ends in Needs Attention.
+- Next: user decides. Live container on http://localhost:8000. Pre-slice-4 DB backup in the session scratchpad `backup/tartib-pre-slice4.db`.
 
-## Proof (2026-09-17, slice 4)
+## Proof (2026-09-17, follow-up)
 
-- `uv run pytest -q`: 67 passed (fake Codex subprocess; includes v1 -> v2 migration and space reconciliation). `ruff`: clean. `npm run typecheck` and `build`: clean.
-- `uv run pytest -m eval`: 15 of 15 fixtures pass against real Codex (3 multi-item, 2 questions, 2 no-space, 2 verb-less tasks, 1 timed reminder, 5 plain), 19s.
-- Host smoke with real Codex: "A, B, and C" -> 3 tasks with own excerpts; two-fact sentence -> 2 notes; "Ping Sara re: Thursday" -> task, parked; question -> answered citing the right item; "remind me at 6pm" -> 13:00Z.
-- Headless Chrome at 390px and 1280px: split capture shows 3 chips in Recent within the filing poll; question capture shows the answer panel under the box with a link to the item; space select lists all configured spaces; no-space item shows File… with Approve disabled until a space is picked; Reject keeps the item; ask bar in viewport over 36 rows with the last row reachable; answer opens and closes above it; status filter present.
-- Live migration: backup taken, dry run on a copy (22 items -> 22 captures + 22 items, 7 inbox -> attention, integrity ok), then `docker compose up -d --build` on the real volume. `.env` TARTIB_SPACES set to the 7 spaces actually in use so nothing filed was disturbed. Health ok, spaces from config, 7 waiting, search works.
-- Live capture after deploy: Codex returned "usage limit" -> capture status error, one note in Needs Attention with the message. Fallback path verified in production.
+- `uv run pytest -q`: 72 passed (fake Codex and fake Claude as real subprocesses; fallback used only when the primary fails; both-fail error names both; questions and /api/ask go through the fallback too; CLAUDECODE stripped).
+- Host, Codex deliberately missing, real Claude CLI (haiku): "A, B, and C" -> 3 tasks with excerpts in 31s including a question capture answered with the right citation and correct open status.
+- Headless Chrome, phone 390 and desktop 1280: ask bar present on Today, Needs Attention, All, and an item page; bar x/width equals the app column on both sizes; Recent shows only the newest captures; no page errors.
+- `docker compose up -d --build`: health `{"ok":true,"ai":true,"fallback":true}`, codex 0.153.2 and Claude Code 2.1.274 present in the container, image 1.46GB, live data intact.
 
 ## Known gaps
 
-- No retry for captures that failed on a Codex outage or usage limit; they wait for a human.
-- Container memory read 300MiB right after a Codex call (node process + page cache); idle baseline earlier was 42MiB.
+- No retry for captures that failed while both CLIs were unavailable; they wait for a human.
+- Claude fallback in Docker is unauthenticated until the token is set.
