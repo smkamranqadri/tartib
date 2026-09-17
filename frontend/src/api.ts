@@ -1,4 +1,4 @@
-import type { Answer, Capture, Edit, Item } from "./types";
+import type { Answer, Brief, Capture, Edit, Item, SpaceSummary } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -43,7 +43,11 @@ export const login = (password: string) => send<{ ok: true }>("POST", "/api/logi
 export const logout = () => send<{ ok: true }>("POST", "/api/logout");
 export const capture = (text: string) => send<{ id: number }>("POST", "/api/capture", { text });
 
-export const getToday = () => api<{ date: string; items: Item[]; recent: Capture[] }>("/api/today");
+export const getToday = () =>
+  api<{ date: string; items: Item[]; recent: Capture[]; active_space: string | null }>("/api/today");
+export const getSpacesSummary = () => api<{ spaces: SpaceSummary[]; unfiled: SpaceSummary }>("/api/spaces/summary");
+export const getBrief = (space: string, refresh = false) =>
+  api<Brief>(`/api/spaces/${encodeURIComponent(space)}/brief${refresh ? "?refresh=true" : ""}`);
 export const getCapture = (id: number) => api<Capture>(`/api/captures/${id}`);
 export const getAttention = () => api<{ items: Item[] }>("/api/attention");
 export const getSpaces = () => api<{ spaces: string[] }>("/api/spaces");

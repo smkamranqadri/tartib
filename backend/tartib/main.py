@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from tartib import ask, auth, captures, db, items, queries
+from tartib import ask, auth, briefs, captures, db, items, queries
 from tartib.config import Settings, load_settings
 from tartib.runner import Runner
 from tartib.store import reconcile_spaces
@@ -46,6 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(queries.router)
     app.include_router(ask.router)
     app.include_router(captures.router)
+    app.include_router(briefs.router)
 
     @app.get("/api/health")
     def health() -> dict:

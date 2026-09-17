@@ -49,6 +49,14 @@ export default function Home({
       {answer && <AnswerView result={answer} onClose={onCloseAnswer} />}
       <p className="home-line muted">
         <Link to="/attention">{attention ?? "…"} need attention</Link>
+        <span className="sep"> · </span>
+        <span>{data ? data.items.filter((i) => i.due && i.status === "open").length : "…"} due today</span>
+        {data?.active_space && (
+          <>
+            <span className="sep"> · </span>
+            <Link to={`/spaces/${data.active_space}`}>{data.active_space} active</Link>
+          </>
+        )}
       </p>
       <section className="today">
         {error && <p className="error">{error}</p>}
@@ -71,7 +79,7 @@ export default function Home({
             ))}
           </ul>
           <p className="view-all">
-            <Link to="/all">View all →</Link>
+            <Link to="/spaces">View all →</Link>
           </p>
         </section>
       )}

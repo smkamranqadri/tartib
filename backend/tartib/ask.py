@@ -129,13 +129,8 @@ EMPTY = {
 }
 
 
-async def answer_question(
-    conn: sqlite3.Connection, question: str, space: str | None, settings: Settings
-) -> dict:
-    """Retrieve, ask Codex, and shape the reply. Raises AskError when Codex fails."""
-    rows, matched = await asyncio.to_thread(retrieve, conn, question, space)
-    if not rows:
-        return dict(EMPTY)
+async def answer_from_rows(question: str, rows: list, settings: Settings) -> dict:
+    """Ask Codex about exactly these rows and shape the reply. Raises AskError on failure."""
     try:
         data = await run_json(
             build_prompt(question, rows, settings), ANSWER_SCHEMA, settings.codex()
@@ -150,8 +145,18 @@ async def answer_question(
         "answer": answer,
         "item_ids": item_ids,
         "items": [serialize_item(by_id[i]) for i in item_ids],
-        "matched": matched,
     }
+
+
+async def answer_question(
+    conn: sqlite3.Connection, question: str, space: str | None, settings: Settings
+) -> dict:
+    """Retrieve, ask Codex, and shape the reply. Raises AskError when Codex fails."""
+    rows, matched = await asyncio.to_thread(retrieve, conn, question, space)
+    if not rows:
+        return dict(EMPTY)
+    result = await answer_from_rows(question, rows, settings)
+    return {**result, "matched": matched}
 
 
 class AskBody(BaseModel):

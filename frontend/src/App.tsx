@@ -3,11 +3,12 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "reac
 import { getCapture, getSpaces, logout, setUnauthorizedHandler } from "./api";
 import AskBar from "./components/AskBar";
 import Toast, { type ToastState } from "./components/Toast";
-import All from "./screens/All";
 import Attention from "./screens/Attention";
 import Home from "./screens/Home";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
+import Space from "./screens/Space";
+import Spaces from "./screens/Spaces";
 import type { Answer, Capture } from "./types";
 import { useLoad } from "./useLoad";
 
@@ -75,7 +76,7 @@ export default function App() {
         e.preventDefault();
         if (location.pathname !== "/") navigate("/");
         setTimeout(() => window.dispatchEvent(new Event("tartib:focus-capture")), 0);
-      } else if (e.key === "/" && location.pathname === "/all") {
+      } else if (e.key === "/" && location.pathname.startsWith("/spaces")) {
         e.preventDefault();
         window.dispatchEvent(new Event("tartib:focus-search"));
       }
@@ -119,7 +120,7 @@ export default function App() {
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
 
   return (
-    <div className={`app ${location.pathname === "/all" ? "" : "has-askbar"}`}>
+    <div className={`app ${location.pathname.startsWith("/spaces") ? "" : "has-askbar"}`}>
       <header className="top">
         <NavLink to="/" className="brand" end>
           <img className="brand-mark" src="/icon-192.png" alt="" width={28} height={28} />
@@ -129,8 +130,8 @@ export default function App() {
           <NavLink to="/" end>
             Today
           </NavLink>
-          <NavLink to="/attention">Needs Attention</NavLink>
-          <NavLink to="/all">All</NavLink>
+          <NavLink to="/attention">Attention</NavLink>
+          <NavLink to="/spaces">Spaces</NavLink>
         </nav>
         <div className="top-actions">
           <button
@@ -152,12 +153,14 @@ export default function App() {
           <Route path="/" element={<Home version={version} answer={answer} onCaptured={onCaptured} onCloseAnswer={() => setAnswer(null)} />} />
           <Route path="/today" element={<Navigate to="/" replace />} />
           <Route path="/attention" element={<Attention version={version} onDecided={bump} />} />
-          <Route path="/all" element={<All version={version} />} />
+          <Route path="/all" element={<Navigate to="/spaces" replace />} />
+          <Route path="/spaces" element={<Spaces version={version} />} />
+          <Route path="/spaces/:name" element={<Space version={version} />} />
           <Route path="/items/:id" element={<ItemPage version={version} />} />
           <Route path="*" element={<Home version={version} answer={answer} onCaptured={onCaptured} onCloseAnswer={() => setAnswer(null)} />} />
         </Routes>
       </main>
-      {location.pathname !== "/all" && <AskBar spaces={spaces} />}
+      {!location.pathname.startsWith("/spaces") && <AskBar spaces={spaces} />}
       <Toast toast={toast} />
     </div>
   );

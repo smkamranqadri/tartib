@@ -37,10 +37,14 @@ def today(
         (day, utcnow_iso()),
     ).fetchall()
     recent = conn.execute("SELECT * FROM captures ORDER BY id DESC LIMIT ?", (RECENT,)).fetchall()
+    active = conn.execute(
+        "SELECT space FROM items WHERE space IS NOT NULL ORDER BY updated_at DESC, id DESC LIMIT 1"
+    ).fetchone()
     return {
         "date": day,
         "items": [serialize_item(r) for r in rows],
         "recent": [serialize_capture(conn, r) for r in recent],
+        "active_space": active["space"] if active else None,
     }
 
 

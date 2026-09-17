@@ -51,8 +51,8 @@ def test_v1_to_v2(tmp_path):
     path = str(tmp_path / "v1.db")
     build_v1(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == 2
-    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 2
+    assert db.migrate(conn) == 3
+    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 3
 
     caps = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM captures ORDER BY id")}
     assert len(caps) == 5
@@ -123,5 +123,5 @@ def test_migrate_is_idempotent(tmp_path):
     build_v1(path)
     conn = db.connect(path)
     db.migrate(conn)
-    assert db.migrate(conn) == 2
+    assert db.migrate(conn) == 3
     assert conn.execute("SELECT COUNT(*) FROM captures").fetchone()[0] == 5

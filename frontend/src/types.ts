@@ -27,6 +27,7 @@ export interface Item {
   proposal: Proposal | null;
   proposal_error: string | null;
   classified_at: string | null;
+  updated_at: string | null;
 }
 
 export interface Answer {
@@ -57,4 +58,23 @@ export interface Edit {
   remind_at?: string | null;
   starred?: boolean;
   status?: Status;
+}
+
+export interface SpaceSummary {
+  name: string;
+  unfiled: boolean;
+  open: number;
+  notes: number;
+  overdue: number;
+  total: number;
+  last_activity: string | null;
+}
+
+export interface Brief {
+  space: string;
+  text: string;
+  item_ids: number[];
+  items: Item[];
+  updated_at: string;
+  fresh: boolean;
 }
