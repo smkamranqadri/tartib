@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getRecent } from "../api";
+import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import { ClockIcon } from "../components/Icons";
 import PageHead from "../components/PageHead";
@@ -29,6 +30,7 @@ export default function Recent({ version }: { version: number }) {
 
   return (
     <div className="screen">
+      <BackLink fallback="/" />
       <PageHead eyebrow="Recent" title="Everything you captured" subtitle="Newest first." />
       <Card icon={<ClockIcon />} label="Captures" aside={data ? `${captures.length}${next !== null ? "+" : ""}` : "…"}>
         {error && <p className="error">{error}</p>}

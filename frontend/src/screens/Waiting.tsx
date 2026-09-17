@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { getAttention, getSpaces } from "../api";
 import ApprovalCard from "../components/ApprovalCard";
+import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import { AlertIcon } from "../components/Icons";
 import PageHead from "../components/PageHead";
@@ -26,11 +26,9 @@ export default function Waiting({ version, onDecided }: { version: number; onDec
 
   return (
     <div className="screen">
-      <p className="crumbs">
-        <Link to="/attention">← Inbox</Link>
-      </p>
-      <PageHead eyebrow="Inbox" title="Everything waiting" subtitle={items.length ? `${items.length} to decide` : "All caught up."} />
-      <Card icon={<AlertIcon />} label="Needs attention" aside={items.length}>
+      <BackLink fallback="/attention" />
+      <PageHead eyebrow="Inbox" title="Everything waiting" />
+      <Card icon={<AlertIcon />} label="Needs attention" aside={items.length === 0 ? "All caught up" : `${items.length} ${items.length === 1 ? "thing" : "things"} to decide`}>
         {error && <p className="error">{error}</p>}
         {loading && !data && <p className="muted">Loading…</p>}
         {data && items.length === 0 && <p className="empty muted">All caught up.</p>}

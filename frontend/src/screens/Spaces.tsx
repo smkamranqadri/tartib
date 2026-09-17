@@ -40,7 +40,7 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
   return (
     <div className="screen">
       <div className="title-row">
-        <PageHead eyebrow="Spaces" title="Spaces" subtitle="Where things live. Search across all of them, or end with ? to ask." />
+        <PageHead title="Spaces" subtitle="Where things live. Search across all of them, or end with ? to ask." />
         <div className="title-actions">
           {!creating ? (
             <button type="button" className="ghost" onClick={() => setCreating(true)}>

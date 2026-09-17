@@ -46,13 +46,12 @@ export default function Attention({ version, onDecided }: { version: number; onD
   if (error) return <p className="error">{error}</p>;
   if (loading && !data) return <p className="muted">Loading…</p>;
 
-  const total = items.length + stale.length;
   const shown = order.slice(0, SHOW).map((id) => items.find((i) => i.id === id)).filter((i): i is Item => !!i);
 
   return (
     <div className="screen">
-      <PageHead eyebrow="Inbox" title="Needs attention" subtitle={total === 0 ? "All caught up." : `${total} ${total === 1 ? "thing" : "things"} to decide`} />
-      <Card icon={<AlertIcon />} label="Needs attention" aside={items.length}>
+      <PageHead title="Inbox" />
+      <Card icon={<AlertIcon />} label="Needs attention" aside={items.length === 0 ? "All caught up" : `${items.length} ${items.length === 1 ? "thing" : "things"} to decide`}>
         {items.length === 0 && <p className="empty muted">All caught up.</p>}
         <div className="cards">
           {shown.map((item, i) => (
