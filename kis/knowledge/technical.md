@@ -5,10 +5,10 @@ How Tartib is built. Proven by the Phase 1 to 4 scaffold on 2026-09-17.
 ## Layout
 
 ```text
-backend/tartib/     FastAPI app. config, db, auth, captures, items, queries, ask, store, codex, classify, runner, main
+backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces, queries, ask, briefs, classify, codex, runner, store, clock, reclassify, main
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
-backend/tests/      pytest + TestClient; AI endpoint mocked with respx
-frontend/src/       React + Vite + TS. api.ts, screens/ (Today, Attention, All, ItemPage, Login), components/ (Card, ItemRow, ItemEditor), format.ts, useLoad.ts
+backend/tests/      pytest + TestClient; the AI runs as a real subprocess pointed at fake_codex.py (fake_claude.py for the fallback)
+frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Waiting, Recent, Spaces, Space, SpaceDetail, Settings, ItemPage, Login), components/ (one per pattern, listed under Frontend shell)
 frontend/public/    manifest.webmanifest, sw.js, icons
 Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex + @anthropic-ai/claude-code runs uvicorn
 docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
@@ -29,7 +29,7 @@ SQLite, WAL, stdlib `sqlite3`, one connection per request opened in a threadpool
 `spaces(name PK, position, created_at)` (migration 0004) is the list of spaces; `spaces.seed_spaces` fills it from `TARTIB_SPACES` once when empty; `store.list_spaces(conn)` is what the classifier, validation, summary, and reconcile read. Migration 0004 also dropped the item text immutability trigger and made the FTS update trigger fire on `raw_text` too.
 At startup, after migrations, `store.reconcile_spaces` moves items whose space is no longer in the `spaces` table to attention with no space. Migration 0002 (2026-09-17) created captures, backfilled one per item, rebuilt items, mapped `space='inbox'` to null + attention, dropped stage=inbox placeholders (their captures stay pending).
 `items_fts` is an FTS5 external-content table over `raw_text` and `title`, synced by triggers.
-A BEFORE UPDATE trigger aborts any write to `raw_text`.
+A BEFORE UPDATE trigger aborts any write to a capture's `raw_text`; the matching trigger on items was dropped in migration 0004, so a filed item's text is editable.
 All timestamps stored as UTC ISO 8601 with `Z`; `due` is `YYYY-MM-DD`.
 
 ## Auth
@@ -100,7 +100,7 @@ Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (
 
 ```sh
 cd backend && uv run pytest -q && uv run ruff check .
-cd backend && uv run pytest -m eval        # 15 fixtures through real Codex, ~3 min
+cd backend && uv run pytest -m eval        # 16 fixtures through real Codex, ~3 min
 cd frontend && npm run typecheck && npm run build
 docker compose build && docker compose up -d && curl localhost:8000/api/health && docker stats --no-stream
 ```
