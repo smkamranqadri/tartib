@@ -50,25 +50,30 @@ Tests point `TARTIB_AI_COMMAND` at `tests/fake_codex.py`, driven by `FAKE_CODEX_
 
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (required, comma-separated), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 
 ```text
-POST   /api/login {password}        POST /api/logout        GET /api/health (public)
-POST   /api/capture {text} -> 201 {id}   (capture id)     GET /api/captures/{id}
-GET    /api/today                    GET /api/attention      GET /api/spaces
-GET    /api/items?q=&space=&shape=&status=&limit=&before=     GET /api/items/{id}
-POST   /api/ask {question, space?} -> {answer, item_ids, items, matched}
-GET    /api/spaces/summary -> {spaces:[{name, open, notes, overdue, total, last_activity}], unfiled}
-GET    /api/spaces/{space}/brief[?refresh=true] -> {space, text, item_ids, items, updated_at, fresh}   (briefs.py; feeds open tasks + 15 newest notes, cap 30, fixed question; 404 unknown space, 503 AI off, 502 Codex failure; empty space -> "Nothing here yet." with no call)
-GET    /api/today also returns active_space; recent = newest 10 captures
+POST   /api/login {password}     POST /api/logout     GET /api/health (public)
+POST   /api/capture {text} -> 201 {id}   (a capture id)
+GET    /api/captures/{id} -> capture, its items, and the answer if it was a question
+GET    /api/today -> {date, items, recent (newest 3 captures), active_space}
 GET    /api/attention -> {items, stale, stale_days}   stale = open filed tasks with updated_at older than 14 days
+GET    /api/recent?limit=50&before=<id> -> {captures, next_before}   keyset paging
+GET    /api/items?q=&space=&shape=&status=&limit=&before=     GET /api/items/{id}
+PATCH  /api/items/{id}   any editable field, including `text` (the item's own text)
+DELETE /api/items/{id}   removes the item; its capture stays
+POST   /api/items/{id}/approve [overrides]      POST /api/items/{id}/reject
+POST   /api/ask {question, space?} -> {answer, item_ids, items, matched}
+GET    /api/spaces      POST /api/spaces {name}      names ^[a-z0-9][a-z0-9-]{0,23}$
+PATCH  /api/spaces/{name} {name}   rename, cascading to items and briefs
+DELETE /api/spaces/{name}          409 unless the space is empty
+GET    /api/spaces/summary -> {spaces:[{name, open, notes, overdue, total, last_activity}], unfiled}
+GET    /api/spaces/{space}/brief[?refresh=true] -> {space, text, item_ids, items, updated_at, fresh}
+       briefs.py; feeds open tasks + 15 newest notes, cap 30, fixed question;
+       404 unknown space, 503 AI off, 502 Codex failure; empty space -> "Nothing here yet." with no call
 GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence}   read-only
-GET/POST /api/spaces, PATCH /api/spaces/{name} {name} (rename cascades to items and briefs), DELETE /api/spaces/{name} (409 unless empty)   names ^[a-z0-9][a-z0-9-]{0,23}$
-PATCH  /api/items/{id} also accepts text (the item's own text)     DELETE /api/items/{id} (capture stays)
-GET    /api/recent?limit=50&before=<id> -> {captures, next_before}   keyset paging; Today recent = 3
-PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   POST /api/items/{id}/reject
 ```
 
 ## Frontend shell

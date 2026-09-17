@@ -1,19 +1,18 @@
 # Current
 
-- Branch: `main`, local only.
-- Task: none. Slice 10 consistency pass complete and deployed 2026-09-17.
-- Command: `cd backend && uv run pytest -q` / `cd frontend && npm run typecheck && npm run build` / `docker compose up -d --build`.
-- Blocker: none. Claude fallback inside Docker still needs `CLAUDE_CODE_OAUTH_TOKEN`.
-- Next: user decides. Live container on http://localhost:8000.
+- Branch: `main`, local only, working tree clean.
+- Task: none. Slice 10 was the last one, deployed 2026-09-17.
+- Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
+- Verify: `cd backend && uv run pytest -q` (92 passed) and `uv run pytest -m eval` (16 real-Codex fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
+- Blocker: none.
+- Next: user decides. `kis/intent/backlog.md` holds the unscheduled candidates.
 
-## Proof (2026-09-17, slice 10)
+## Proof (2026-09-17)
 
-- `npm run typecheck`, `npm run build`: clean. Backend untouched.
-- Single ownership, by grep, all zero outside their component: row markup, menu markup, "Yes, delete", the name form, `section-toggle`, `.ask-btn`, `formatCreated`, hand-rolled `crumbs`.
-- Headless Chrome, desktop 1280 dark and phone 390: all eight routes render exactly the eyebrow, title, and subtitle in the SPEC table; `/attention`, `/attention/all`, `/recent`, `/today`, `/search` redirect; the Inbox pill stays active on all three inbox routes; the "…" menu on Inbox, the space page, and the item page opens and closes on both outside click and Escape; the item page's space name opens that space; Home's Today rows carry stars and its Needs attention rows are ItemRows. No page errors.
-- Deployed with `docker compose up -d --build`, health ok.
+Backend 92 tests pass; frontend typechecks and builds. Every route was driven headlessly at 390px and 1280px with the fake classifier, and the live container was rebuilt and answered `/api/health`. Real Codex was exercised on the host for classification, briefs, and ask.
 
 ## Known gaps
 
-- Real dictation still depends on the browser.
-- Brief only refreshes when an item is added or removed, or on the refresh icon.
+- The Claude fallback inside Docker needs `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`; without it a Codex outage still parks captures in the Inbox.
+- A brief refreshes only when an item is added or removed, or on its refresh icon.
+- Voice capture depends on the browser; it was proved with an injected engine, not real dictation.

@@ -1,10 +1,8 @@
-# Tartib ARCHITECTURE
+# Backlog
 
-The architecture decided on 2026-09-17 is built and lives in `kis/knowledge/technical.md`. This file keeps only what is still intent.
+Nothing here is required. How Tartib is built lives in `../knowledge/technical.md`.
 
-## Open follow-ups
-
-None required for v0.1. Candidates, unscheduled:
+Unscheduled candidates:
 
 - Image is 1.46GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras). Not a stated constraint (memory is, and runtime is 42MiB). A slimmer route: download the Codex release binary instead of npm.
 - Automatic retry for `proposal_error` items after a Codex outage or usage-limit block. Today they wait for a human. Seen for real on 2026-09-17 when the ChatGPT usage limit hit mid-deploy.
