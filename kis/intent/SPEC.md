@@ -40,17 +40,18 @@ A background call to `classify(text, context)` returns a list of proposals `{tex
 
 Any filed item's `space`, `shape`, `title`, `due`, `remind_at`, `starred`, and `status` can be changed. `raw_text` cannot.
 
-## Screens
+## Screens (dashboard layout, 2026-09-17)
 
-1. Today `/` (one page, changed 2026-09-17): the capture box, focused on load, placeholder "What's on your mind?"; a line "N need attention · M due today · {space} active" (the last links to the most recently touched space); then today's flat list from the Today endpoint (due today or overdue, starred, passed reminders), ordered starred, overdue, due today, reminders. Row = checkbox, title, at most one chip (overdue or a time). Overdue rows tinted. Hover or long-press reveals star, edit, and the relative time. Empty list: "Nothing due today." Under the list, Recent: the newest 3 captures with a "View all" link to All. Saving clears the box at once and shows a toast: "Saved", then the outcome ("Filed as task in namazee", "Needs your look", "Filed 2 tasks · 1 needs your look", "Answered"). A question capture shows its answer under the box. `/today` redirects here.
-2. Chat bar: pinned to the bottom of every screen except All, as wide as the app column, translucent over the content. Question in, answer above it with linked items. On All the search field is search-or-ask: an Ask button appears once there is text; Enter with a trailing "?" or Cmd/Ctrl+Enter also asks.
-3. Needs Attention: one card at a time, header "k of n". Raw text, then the proposal as a sentence with tappable shape, title, space, and due. Approve (Enter) files it; Not now sends it to the back of the queue; "…" holds Reject (discard proposal) and Open. Empty: "All caught up."
-4. Spaces `/spaces` (replaced All, 2026-09-17): a search-or-ask field across all spaces (results grouped by space, Unfiled last), then one card per configured space plus a muted Unfiled card: name, "4 open · 12 notes", last activity, a red dot when an open task is overdue. Sorted by last activity; spaces with none keep config order at the end. Unfiled links to Attention.
-   Space page `/spaces/{name}`: scoped search-or-ask; Brief (AI, read-only, cached until an item in the space changes, "Updated 2h ago", refresh icon); Tasks (open, starred then due, Show done at the bottom); Notes (newest, first line, expand). Tasks and Notes collapse, remembered per space. `/all` redirects here.
+Shell: brand "Tartib ترتیب", pill nav Home · Inbox · Search · Settings with icons, and a capture bar under the header on every screen (input, mic when the browser supports on-device speech, Add). Enter or Add saves; the box clears at once, a toast says "Saved" then the outcome; a question capture navigates to Home and shows its answer. Chat bar on Home and Inbox only. `c` focuses capture anywhere; `/` focuses search on Search.
+
+1. Home `/`: eyebrow DASHBOARD, title = today's date. Two columns from 900px, one below. Left: Today (open tasks due today or overdue, starred, passed reminders; starred first; count) and Recent (last 10 captures). Right: Needs attention (top 3 of queue then stale, "View all") and a line naming the most recently touched space.
+2. Inbox `/attention`: title "Needs attention", "N things to decide". Awaiting approval = the one-card queue ("k of n"; Enter approves, Not now rotates, "…" holds Reject and Open). Stale tasks = open filed tasks untouched 14+ days.
+3. Search `/search`: title "Find anything". Search-or-ask field (Ask button once there is text; trailing "?" or Cmd/Ctrl+Enter). Chips: All spaces + each space; Any shape / Tasks / Notes; state in the URL. No query + All spaces -> space cards (name, "4 open · 12 notes", last activity, overdue dot; Unfiled muted, links to Inbox). No query + a space -> that space's Brief (cached, refresh), Tasks (Show done), Notes, collapsible and remembered per space. Query -> results grouped by space. `/spaces`, `/spaces/{name}`, `/all` redirect here.
+4. Settings `/settings`: Appearance (theme), Classifier (Codex on/off, fallback, threshold), Device (voice capture, timezone, installed), Spaces (configured list), Account (sign out). Read-only except theme and sign out.
 5. Item page `/items/{id}`: full text, proposal, inline edit; space is a select over `TARTIB_SPACES`.
 6. Login: one password field.
 
-Global: the capture box lives only on Today; the chat bar is everywhere except the Spaces screens, where the search field asks. Nav: Today · Attention · Spaces. Timestamps are relative and hover-only. One chip per row. `c` anywhere goes to Home with the box focused.
+Rows everywhere: leading checkbox (filed tasks) or icon, title, muted meta "space · 2h ago" (or "needs attention · 70%"), "due Fri, Sep 18" at the right for dated tasks, overdue rows tinted, hover or long-press reveals star and edit, notes expand on tap.
 
 ## Out of scope
 

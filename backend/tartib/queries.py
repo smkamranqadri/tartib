@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -13,7 +14,8 @@ from tartib.config import Settings
 from tartib.deps import get_db, get_settings
 from tartib.store import serialize_capture, serialize_item
 
-RECENT = 3
+RECENT = 10
+STALE_DAYS = 14
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -50,10 +52,33 @@ def today(
 
 @router.get("/attention")
 def attention(conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """The decision queue, plus open tasks nobody has touched for STALE_DAYS."""
     rows = conn.execute(
         "SELECT * FROM items WHERE stage = 'attention' ORDER BY created_at, id"
     ).fetchall()
-    return {"items": [serialize_item(r) for r in rows]}
+    cutoff = (utcnow() - timedelta(days=STALE_DAYS)).isoformat().replace("+00:00", "Z")
+    stale = conn.execute(
+        "SELECT * FROM items WHERE stage = 'filed' AND shape = 'task' AND status = 'open'"
+        " AND updated_at < ? ORDER BY updated_at, id",
+        (cutoff,),
+    ).fetchall()
+    return {
+        "items": [serialize_item(r) for r in rows],
+        "stale": [serialize_item(r) for r in stale],
+        "stale_days": STALE_DAYS,
+    }
+
+
+@router.get("/config")
+def config(settings: Settings = Depends(get_settings)) -> dict:
+    """What the UI may show about this install. Nothing here is editable from the app."""
+    return {
+        "tz": settings.tz,
+        "spaces": list(settings.spaces),
+        "ai": settings.ai_enabled,
+        "fallback": bool(settings.ai_fallback_command),
+        "autofile_confidence": settings.autofile_confidence,
+    }
 
 
 @router.get("/spaces")

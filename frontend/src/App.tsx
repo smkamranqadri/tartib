@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { getCapture, getSpaces, logout, setUnauthorizedHandler } from "./api";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { getCapture, getSpaces, setUnauthorizedHandler } from "./api";
+import Capture from "./Capture";
 import AskBar from "./components/AskBar";
+import { HomeIcon, InboxIcon, SearchIcon, SettingsIcon } from "./components/Icons";
 import Toast, { type ToastState } from "./components/Toast";
 import Attention from "./screens/Attention";
 import Home from "./screens/Home";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
-import Space from "./screens/Space";
-import Spaces from "./screens/Spaces";
-import type { Answer, Capture } from "./types";
+import Search from "./screens/Search";
+import Settings from "./screens/Settings";
+import { ThemeContext, type Theme } from "./theme";
+import type { Answer, Capture as CaptureRecord } from "./types";
 import { useLoad } from "./useLoad";
-
-type Theme = "light" | "dark";
 
 function readTheme(): Theme {
   try {
@@ -25,7 +26,7 @@ function readTheme(): Theme {
 }
 
 /** "Filed as task in namazee", "Needs your look", "Filed 2 tasks · 1 needs your look", "Answered". */
-function outcome(cap: Capture): string {
+function outcome(cap: CaptureRecord): string {
   if (cap.answer && cap.items.length === 0) return "Answered";
   const filed = cap.items.filter((i) => i.stage === "filed");
   const waiting = cap.items.length - filed.length;
@@ -40,6 +41,11 @@ function outcome(cap: Capture): string {
   return parts.join(" · ") || "Saved";
 }
 
+function SpaceRedirect() {
+  const { name = "" } = useParams();
+  return <Navigate to={`/search?space=${encodeURIComponent(name)}`} replace />;
+}
+
 export default function App() {
   const [authed, setAuthed] = useState(true);
   const [version, setVersion] = useState(0);
@@ -52,6 +58,8 @@ export default function App() {
   const location = useLocation();
   const bump = () => setVersion((v) => v + 1);
   const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];
+  const onSearchPage = location.pathname.startsWith("/search") || location.pathname.startsWith("/spaces");
+  const showChat = location.pathname === "/" || location.pathname === "/attention";
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthed(false));
@@ -66,7 +74,7 @@ export default function App() {
     }
   }, [theme]);
 
-  // keyboard: c -> capture, / -> search on All
+  // keyboard: c -> capture bar, / -> search field on Search
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement | null;
@@ -74,16 +82,15 @@ export default function App() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "c") {
         e.preventDefault();
-        if (location.pathname !== "/") navigate("/");
-        setTimeout(() => window.dispatchEvent(new Event("tartib:focus-capture")), 0);
-      } else if (e.key === "/" && location.pathname.startsWith("/spaces")) {
+        window.dispatchEvent(new Event("tartib:focus-capture"));
+      } else if (e.key === "/" && onSearchPage) {
         e.preventDefault();
         window.dispatchEvent(new Event("tartib:focus-search"));
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [location.pathname, navigate]);
+  }, [onSearchPage, navigate]);
 
   function showToast(next: ToastState) {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -104,7 +111,10 @@ export default function App() {
         const cap = await getCapture(id);
         if (cap.status !== "pending") {
           bump();
-          if (cap.answer) setAnswer(cap.answer);
+          if (cap.answer) {
+            setAnswer(cap.answer);
+            if (location.pathname !== "/") navigate("/");
+          }
           showToast({ text: cap.status === "error" ? "Needs your look" : outcome(cap), phase: "final" });
           return;
         }
@@ -120,48 +130,49 @@ export default function App() {
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
 
   return (
-    <div className={`app ${location.pathname.startsWith("/spaces") ? "" : "has-askbar"}`}>
-      <header className="top">
-        <NavLink to="/" className="brand" end>
-          <img className="brand-mark" src="/icon-192.png" alt="" width={28} height={28} />
-          <span className="brand-name">Tartib</span>
-        </NavLink>
-        <nav className="pills">
-          <NavLink to="/" end>
-            Today
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <div className={`app ${showChat ? "has-askbar" : ""}`}>
+        <header className="top">
+          <NavLink to="/" className="brand" end>
+            <img className="brand-mark" src="/icon-192.png" alt="" width={28} height={28} />
+            <span className="brand-name">Tartib</span>
+            <span className="brand-ar" lang="ur">ترتیب</span>
           </NavLink>
-          <NavLink to="/attention">Attention</NavLink>
-          <NavLink to="/spaces">Spaces</NavLink>
-        </nav>
-        <div className="top-actions">
-          <button
-            className="icon-btn"
-            type="button"
-            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            title="Theme"
-          >
-            {theme === "dark" ? "☀" : "☾"}
-          </button>
-          <button className="link" onClick={() => logout().then(() => setAuthed(false))} type="button">
-            Log out
-          </button>
-        </div>
-      </header>
-      <main>
-        <Routes>
-          <Route path="/" element={<Home version={version} answer={answer} onCaptured={onCaptured} onCloseAnswer={() => setAnswer(null)} />} />
-          <Route path="/today" element={<Navigate to="/" replace />} />
-          <Route path="/attention" element={<Attention version={version} onDecided={bump} />} />
-          <Route path="/all" element={<Navigate to="/spaces" replace />} />
-          <Route path="/spaces" element={<Spaces version={version} />} />
-          <Route path="/spaces/:name" element={<Space version={version} />} />
-          <Route path="/items/:id" element={<ItemPage version={version} />} />
-          <Route path="*" element={<Home version={version} answer={answer} onCaptured={onCaptured} onCloseAnswer={() => setAnswer(null)} />} />
-        </Routes>
-      </main>
-      {!location.pathname.startsWith("/spaces") && <AskBar spaces={spaces} />}
-      <Toast toast={toast} />
-    </div>
+          <nav className="pills">
+            <NavLink to="/" end>
+              <HomeIcon /> Home
+            </NavLink>
+            <NavLink to="/attention">
+              <InboxIcon /> Inbox
+            </NavLink>
+            <NavLink to="/search" className={onSearchPage ? "active" : undefined}>
+              <SearchIcon /> Search
+            </NavLink>
+            <NavLink to="/settings">
+              <SettingsIcon /> Settings
+            </NavLink>
+          </nav>
+          <div className="top-actions" />
+        </header>
+        <Capture onCaptured={onCaptured} />
+        <main>
+          <Routes>
+            <Route path="/" element={<Home version={version} answer={answer} onCloseAnswer={() => setAnswer(null)} />} />
+            <Route path="/today" element={<Navigate to="/" replace />} />
+            <Route path="/attention" element={<Attention version={version} onDecided={bump} />} />
+            <Route path="/inbox" element={<Navigate to="/attention" replace />} />
+            <Route path="/search" element={<Search version={version} />} />
+            <Route path="/spaces" element={<Navigate to="/search" replace />} />
+            <Route path="/spaces/:name" element={<SpaceRedirect />} />
+            <Route path="/all" element={<Navigate to="/search" replace />} />
+            <Route path="/settings" element={<Settings onSignedOut={() => setAuthed(false)} />} />
+            <Route path="/items/:id" element={<ItemPage version={version} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        {showChat && <AskBar spaces={spaces} />}
+        <Toast toast={toast} />
+      </div>
+    </ThemeContext.Provider>
   );
 }

@@ -70,3 +70,21 @@ export function formatRelative(iso: string): string {
 export function formatDueShort(due: string): string {
   return formatDue(due);
 }
+
+/** "due today", "due yesterday", "3d overdue", "due Fri, Sep 18". */
+export function formatDueLong(due: string): string {
+  const [y, m, d] = due.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.round((target.getTime() - today.getTime()) / DAY);
+  if (diff === 0) return "due today";
+  if (diff === -1) return "due yesterday";
+  if (diff < 0) return `${-diff}d overdue`;
+  if (diff === 1) return "due tomorrow";
+  return "due " + target.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+export function formatLongDate(d: Date = new Date()): string {
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}

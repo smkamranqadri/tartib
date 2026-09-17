@@ -19,7 +19,7 @@ Inspiration: user's screenshots of another Tartib prototype. Take the structure 
 - Mic button present in Chrome only; dictated text lands in the box.
 
 ## Status
-- [ ] phase 1 backend + tokens + shell + header capture
-- [ ] phase 2 home + rows + inbox
-- [ ] phase 3 search + settings + voice
-- [ ] phase 4 proof + deploy
+- [x] phase 1 backend + tokens + shell + header capture
+- [x] phase 2 home + rows + inbox
+- [x] phase 3 search + settings + voice
+- [x] phase 4 proof + deploy (2026-09-17, see kis/state/current.md)

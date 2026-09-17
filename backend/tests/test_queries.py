@@ -47,11 +47,11 @@ def test_today_rules(auth, settings):
     assert ids(payload)[:2] == [overdue, due_today]  # overdue first
 
 
-def test_today_recent_is_newest_three(auth):
-    caps = [capture(auth, f"note {i}")["id"] for i in range(5)]
+def test_today_recent_is_newest_ten(auth):
+    caps = [capture(auth, f"note {i}")["id"] for i in range(12)]
     recent = auth.get("/api/today").json()["recent"]
-    assert [c["id"] for c in recent] == [caps[4], caps[3], caps[2]]
-    assert recent[0]["raw_text"] == "note 4"
+    assert [c["id"] for c in recent] == list(reversed(caps))[:10]
+    assert recent[0]["raw_text"] == "note 11"
     assert recent[0]["status"] == "error" and len(recent[0]["items"]) == 1
     assert recent[0]["items"][0]["stage"] == "attention"
 
@@ -126,3 +126,31 @@ def test_search_survives_title_edits_and_deletes(auth, settings):
 )
 def test_fts_query(q, expected):
     assert fts_query(q) == expected
+
+
+def test_attention_lists_stale_open_tasks(auth, settings):
+    fresh = add(auth, "fresh", shape="task", title="fresh")
+    old = add(auth, "old", shape="task", title="old")
+    done_old = add(auth, "done old", shape="task", title="done old", status="done")
+    note_old = add(auth, "note old", shape="note")
+    waiting = one_item(auth, "waiting")["id"]
+    conn = sqlite3.connect(settings.db_path)
+    conn.execute(
+        "UPDATE items SET updated_at = '2026-08-01T00:00:00.000Z' WHERE id IN (?, ?, ?)",
+        (old, done_old, note_old),
+    )
+    conn.commit()
+    conn.close()
+    body = auth.get("/api/attention").json()
+    assert [i["id"] for i in body["items"]] == [waiting]
+    assert [i["id"] for i in body["stale"]] == [old]
+    assert body["stale_days"] == 14
+    assert fresh not in [i["id"] for i in body["stale"]]
+
+
+def test_config_is_read_only_view_of_settings(auth):
+    body = auth.get("/api/config").json()
+    assert body["tz"] == "UTC" and body["spaces"] == SPACES.split(",")
+    assert body["ai"] is False and body["fallback"] is False
+    assert body["autofile_confidence"] == 0.85
+    assert auth.patch("/api/config", json={"tz": "x"}).status_code == 405

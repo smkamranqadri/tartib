@@ -49,7 +49,9 @@ export const getSpacesSummary = () => api<{ spaces: SpaceSummary[]; unfiled: Spa
 export const getBrief = (space: string, refresh = false) =>
   api<Brief>(`/api/spaces/${encodeURIComponent(space)}/brief${refresh ? "?refresh=true" : ""}`);
 export const getCapture = (id: number) => api<Capture>(`/api/captures/${id}`);
-export const getAttention = () => api<{ items: Item[] }>("/api/attention");
+export const getAttention = () => api<{ items: Item[]; stale: Item[]; stale_days: number }>("/api/attention");
+export const getConfig = () =>
+  api<{ tz: string; spaces: string[]; ai: boolean; fallback: boolean; autofile_confidence: number }>("/api/config");
 export const getSpaces = () => api<{ spaces: string[] }>("/api/spaces");
 
 export interface ListParams {

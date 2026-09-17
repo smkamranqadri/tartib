@@ -1,16 +1,17 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { editItem } from "../api";
-import { formatDue, formatRelative, formatRemind, todayLocal } from "../format";
+import { formatDueLong, formatRelative, formatRemind, todayLocal } from "../format";
 import type { Edit, Item } from "../types";
+import { ClockIcon, NoteIcon } from "./Icons";
 
 interface Props {
   item: Item;
   onChange: (item: Item) => void;
 }
 
-/** One minimal row: checkbox (tasks), title or first line, at most one chip.
- *  Hover or long-press reveals star, edit, and the relative time. Notes expand on tap. */
+/** One row: leading control, title, muted meta "space · 2h ago", due at the right.
+ *  Hover or long-press reveals star and edit. Notes expand on tap. */
 export default function ItemRow({ item, onChange }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -18,6 +19,7 @@ export default function ItemRow({ item, onChange }: Props) {
   const holdTimer = useRef<number | null>(null);
   const isTask = item.shape === "task";
   const editable = item.stage === "filed";
+  const waiting = item.stage === "attention";
   const overdue = isTask && item.status === "open" && !!item.due && item.due < todayLocal();
 
   async function patch(edit: Edit) {
@@ -28,12 +30,6 @@ export default function ItemRow({ item, onChange }: Props) {
       setError(err instanceof Error ? err.message : "failed");
     }
   }
-
-  const chip = overdue
-    ? { text: formatDue(item.due!), cls: "overdue" }
-    : item.remind_at
-      ? { text: formatRemind(item.remind_at), cls: "" }
-      : null;
 
   const firstLine = item.raw_text.split("\n")[0];
   const headline = isTask ? item.title || firstLine : firstLine;
@@ -47,9 +43,12 @@ export default function ItemRow({ item, onChange }: Props) {
     holdTimer.current = null;
   }
 
+  const meta = [waiting ? "needs attention" : item.space ?? "no space", formatRelative(item.updated_at ?? item.created_at)];
+  if (waiting && item.proposal) meta.push(`${Math.round(item.proposal.confidence * 100)}%`);
+
   return (
     <li
-      className={`row ${item.status === "done" ? "done" : ""} ${overdue ? "overdue" : ""} ${revealed ? "revealed" : ""} ${item.stage !== "filed" ? "waiting" : ""}`}
+      className={`row ${item.status === "done" ? "done" : ""} ${overdue ? "overdue" : ""} ${revealed ? "revealed" : ""} ${waiting ? "waiting" : ""}`}
       onTouchStart={startHold}
       onTouchEnd={endHold}
       onTouchMove={endHold}
@@ -64,22 +63,36 @@ export default function ItemRow({ item, onChange }: Props) {
             aria-label="Done"
           />
         ) : (
-          <span className={`dot ${item.shape}`} aria-hidden />
+          <span className="row-icon muted">{waiting ? <ClockIcon /> : <NoteIcon />}</span>
         )}
-        {isTask ? (
-          <Link to={`/items/${item.id}`} className="row-text">
-            {headline}
-          </Link>
-        ) : (
-          <button type="button" className={`row-text ${hasMore && !expanded ? "expandable" : ""}`} onClick={() => setExpanded((e) => !e)}>
-            {expanded ? item.raw_text : headline}
-          </button>
-        )}
-        {chip && <span className={`chip ${chip.cls}`}>{chip.text}</span>}
-        <span className="row-actions">
-          <span className="when muted" title={new Date(item.created_at).toLocaleString()}>
-            {formatRelative(item.created_at)}
+        <div className="row-body">
+          {isTask ? (
+            <Link to={`/items/${item.id}`} className="row-text">
+              {headline}
+            </Link>
+          ) : (
+            <button type="button" className={`row-text ${hasMore && !expanded ? "expandable" : ""}`} onClick={() => setExpanded((e) => !e)}>
+              {expanded ? item.raw_text : headline}
+            </button>
+          )}
+          <span className="row-meta muted">
+            {meta.map((m, i) => (
+              <span key={i}>
+                {i > 0 && <span className="sep"> · </span>}
+                {m}
+              </span>
+            ))}
+            {expanded && !isTask && (
+              <>
+                <span className="sep"> · </span>
+                <Link to={`/items/${item.id}`}>open</Link>
+              </>
+            )}
           </span>
+        </div>
+        {isTask && item.due && <span className={`row-due ${overdue ? "overdue" : "muted"}`}>{formatDueLong(item.due)}</span>}
+        {isTask && !item.due && item.remind_at && <span className="row-due muted">⏰ {formatRemind(item.remind_at)}</span>}
+        <span className="row-actions">
           {isTask && editable && (
             <button
               type="button"
@@ -95,13 +108,6 @@ export default function ItemRow({ item, onChange }: Props) {
           </Link>
         </span>
       </div>
-      {expanded && !isTask && (
-        <div className="row-more">
-          <Link to={`/items/${item.id}`} className="muted small">
-            open
-          </Link>
-        </div>
-      )}
       {error && <span className="error">{error}</span>}
     </li>
   );

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { getBrief, listItems } from "../api";
 import ItemRow from "../components/ItemRow";
-import SearchAsk from "../components/SearchAsk";
+import Card from "../components/Card";
+import { CheckSquareIcon, LayersIcon, NoteIcon, RefreshIcon } from "../components/Icons";
 import { formatRelative } from "../format";
 import type { Brief, Item } from "../types";
 import { useLoad } from "../useLoad";
@@ -19,21 +20,15 @@ function readOpen(space: string): Record<Section, boolean> {
   return { tasks: true, notes: true };
 }
 
-export default function Space({ version }: { version: number }) {
-  const { name = "" } = useParams();
-  const space = name.toLowerCase();
-  const [q, setQ] = useState("");
-  const [debounced, setDebounced] = useState("");
+/** Brief, tasks, and notes of one space. The search field lives in the Search page. */
+export default function SpaceDetail({ space, query, version }: { space: string; query: string; version: number }) {
+  const debounced = query;
   const [showDone, setShowDone] = useState(false);
   const [open, setOpen] = useState<Record<Section, boolean>>(() => readOpen(space));
   const [brief, setBrief] = useState<Brief | null>(null);
   const [briefState, setBriefState] = useState<"loading" | "ok" | "error">("loading");
   const [briefError, setBriefError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(q.trim()), 200);
-    return () => clearTimeout(t);
-  }, [q]);
   useEffect(() => setOpen(readOpen(space)), [space]);
   useEffect(() => {
     try {
@@ -71,23 +66,20 @@ export default function Space({ version }: { version: number }) {
   const toggle = (s: Section) => setOpen((o) => ({ ...o, [s]: !o[s] }));
 
   return (
-    <div className="screen space-page">
-      <p className="crumbs">
-        <Link to="/spaces">Spaces</Link> <span className="muted">/ {space}</span>
-      </p>
-      <SearchAsk value={q} onChange={setQ} space={space} placeholder={`Search ${space}, or ask`} />
-
-      <section className="brief">
-        <div className="brief-head">
-          <span className="section-label muted">Brief</span>
+    <div className="space-detail">
+      <Card
+        icon={<LayersIcon />}
+        label={`Brief · ${space}`}
+        aside={
           <span className="brief-meta muted">
             {brief && briefState !== "loading" && <>Updated {formatRelative(brief.updated_at)}</>}
             {briefState === "loading" && "Writing…"}
             <button type="button" className="icon-btn" onClick={() => void loadBrief(true)} aria-label="Refresh brief" disabled={briefState === "loading"}>
-              ↻
+              <RefreshIcon />
             </button>
           </span>
-        </div>
+        }
+      >
         {briefState === "error" && <p className="error">{briefError}</p>}
         {brief && <p className={`brief-text ${briefState === "loading" ? "dim" : ""}`}>{brief.text}</p>}
         {!brief && briefState === "loading" && <p className="brief-text dim">Reading the space…</p>}
@@ -100,19 +92,23 @@ export default function Space({ version }: { version: number }) {
             ))}
           </p>
         )}
-      </section>
+      </Card>
 
-      <section className="group">
-        <button type="button" className="section-toggle" onClick={() => toggle("tasks")} aria-expanded={open.tasks}>
-          <span className="section-label muted">Tasks</span>
-          <span className="muted small">{taskRows.length}{open.tasks ? " ▾" : " ▸"}</span>
-        </button>
+      <Card
+        icon={<CheckSquareIcon />}
+        label={
+          <button type="button" className="section-toggle" onClick={() => toggle("tasks")} aria-expanded={open.tasks}>
+            Tasks {open.tasks ? "▾" : "▸"}
+          </button>
+        }
+        aside={taskRows.length}
+      >
         {open.tasks && (
           <>
             {tasks.error && <p className="error">{tasks.error}</p>}
             {tasks.data && taskRows.length === 0 && <p className="empty muted">No open tasks.</p>}
             {taskRows.length > 0 && (
-              <ul className="rows">
+              <ul className="rows flat">
                 {taskRows.map((item) => (
                   <ItemRow key={item.id} item={item} onChange={updateTask} />
                 ))}
@@ -123,19 +119,23 @@ export default function Space({ version }: { version: number }) {
             </label>
           </>
         )}
-      </section>
+      </Card>
 
-      <section className="group">
-        <button type="button" className="section-toggle" onClick={() => toggle("notes")} aria-expanded={open.notes}>
-          <span className="section-label muted">Notes</span>
-          <span className="muted small">{noteRows.length}{open.notes ? " ▾" : " ▸"}</span>
-        </button>
+      <Card
+        icon={<NoteIcon />}
+        label={
+          <button type="button" className="section-toggle" onClick={() => toggle("notes")} aria-expanded={open.notes}>
+            Notes {open.notes ? "▾" : "▸"}
+          </button>
+        }
+        aside={noteRows.length}
+      >
         {open.notes && (
           <>
             {notes.error && <p className="error">{notes.error}</p>}
             {notes.data && noteRows.length === 0 && <p className="empty muted">No notes.</p>}
             {noteRows.length > 0 && (
-              <ul className="rows">
+              <ul className="rows flat">
                 {noteRows.map((item) => (
                   <ItemRow key={item.id} item={item} onChange={() => {}} />
                 ))}
@@ -143,7 +143,7 @@ export default function Space({ version }: { version: number }) {
             )}
           </>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

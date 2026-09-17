@@ -61,18 +61,19 @@ GET    /api/items?q=&space=&shape=&status=&limit=&before=     GET /api/items/{id
 POST   /api/ask {question, space?} -> {answer, item_ids, items, matched}
 GET    /api/spaces/summary -> {spaces:[{name, open, notes, overdue, total, last_activity}], unfiled}
 GET    /api/spaces/{space}/brief[?refresh=true] -> {space, text, item_ids, items, updated_at, fresh}   (briefs.py; feeds open tasks + 15 newest notes, cap 30, fixed question; 404 unknown space, 503 AI off, 502 Codex failure; empty space -> "Nothing here yet." with no call)
-GET    /api/today also returns active_space
+GET    /api/today also returns active_space; recent = newest 10 captures
+GET    /api/attention -> {items, stale, stale_days}   stale = open filed tasks with updated_at older than 14 days
+GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence}   read-only
 PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   POST /api/items/{id}/reject
 ```
 
 ## Frontend shell
 
-Routes: `/` Home (Capture + today's list + recent + toast + question answers), `/today` -> `/`, `/attention`, `/spaces`, `/spaces/:name`, `/all` -> `/spaces`, `/items/:id`. Pill nav: Today, Attention, Spaces. `SearchAsk` is the shared search-or-ask field (Ask button once there is text; trailing `?` or Cmd/Ctrl+Enter). Space page collapse state lives in localStorage `tartib-space-<name>`. `AskBar` (chat bar) is rendered by App under every route except `/spaces*`, fixed to the bottom at the app column width, translucent with backdrop blur. On All the search field carries an Ask button instead. Theme toggle in localStorage `tartib-theme` via `data-theme` on `<html>`.
-`App` owns capture polling (`/api/captures/{id}` every 1s until done), the toast (`Toast`, "busy" stays, "final" fades after 4s), the question answer, and global keys: `c` navigates to `/` and dispatches `tartib:focus-capture`; `/` on All dispatches `tartib:focus-search`. Both are window events the screens listen for.
-`ItemRow` is the one row component: checkbox for filed tasks, title or first line, at most one chip (overdue, else reminder time), actions (relative time, star, edit link) shown on hover, focus-within, or a 500ms touch hold. Notes expand on tap.
-`Attention` keeps a local queue order; Enter approves via a window keydown listener re-bound each render; "Not now" rotates the queue.
-`All` hides done tasks client-side unless "Show done"; ask fires only on Enter with a trailing `?` or Cmd/Ctrl+Enter.
-Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`), which is how the headless UI proof seeds different outcomes against one server.
+Routes: `/` Home (dashboard), `/attention` Inbox (`/inbox` -> it), `/search` (absorbs Spaces; `?space=&shape=&q=` in the URL; `/spaces`, `/spaces/:name`, `/all` redirect), `/settings`, `/items/:id`, `/today` -> `/`. Pill nav with inline SVG icons (`components/Icons.tsx`).
+`App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (single-line input, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/attention` only, and keys `c` / `/`.
+Components: `PageHead` (eyebrow, h1, subtitle), `Card` (icon + uppercase label + right aside), `ItemRow` (meta line, due at right, hover/long-press actions), `SearchAsk` (search-or-ask field), `SpaceDetail` (brief, tasks, notes; collapse state in localStorage `tartib-space-<name>`).
+Layout: app column max 1240px; dashboard grid 1.5fr/1fr above 900px; single column below. Tokens: teal accent, green-tinted near-black dark theme, matching light theme.
+Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 
 ## Maintenance
 

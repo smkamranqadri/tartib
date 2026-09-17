@@ -9,11 +9,13 @@ export default function SearchAsk({
   onChange,
   space,
   placeholder,
+  large,
 }: {
   value: string;
   onChange: (q: string) => void;
   space?: string;
   placeholder: string;
+  large?: boolean;
 }) {
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [asking, setAsking] = useState(false);
@@ -57,7 +59,7 @@ export default function SearchAsk({
 
   return (
     <>
-      <div className="search-row">
+      <div className={`search-row ${large ? "large" : ""}`}>
         <input
           ref={ref}
           type="search"
