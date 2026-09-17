@@ -10,7 +10,7 @@ A capture is what the user typed, stored once: `id`, `raw_text` (immutable), `so
 
 An item is classifier output. One capture produces zero or more items.
 
-- Shared: `id`, `capture_id`, `raw_text` (starts as the verbatim excerpt this item came from; editable by the user once filed), `space` (one of `TARTIB_SPACES`, or null while waiting), `shape` (`task` | `note`), `stage` (`attention` | `filed`), `created_at`.
+- Shared: `id`, `capture_id`, `raw_text` (starts as the verbatim excerpt this item came from; editable by the user once filed), `space` (one of the configured spaces, or null while waiting), `shape` (`task` | `note`), `stage` (`attention` | `filed`), `created_at`.
 - Task fields: `title`, `due?` (date), `remind_at?` (datetime), `starred` (bool), `status` (`open` | `done`).
 - Note: no extra fields. Display uses `raw_text`.
 - Each item keeps its `proposal` and `proposal_error`, even after filing, so auto-filed decisions stay inspectable.
@@ -67,7 +67,7 @@ Route              Back    Eyebrow    Title                    Subtitle
 6. Recent `/inbox/recent`: captures newest first, 50 at a time with "Load more".
 7. Login: one password field.
 
-Old paths redirect: `/attention` -> `/inbox`, `/attention/all` -> `/inbox/attention`, `/recent` -> `/inbox/recent`, `/today` -> `/`, `/search` and `/all` -> `/spaces`.
+Routes from earlier versions still resolve; the redirect map is in `../knowledge/technical.md`.
 
 Rows everywhere come from one component: leading glyph (checkbox for a filed task, alert for something awaiting a decision, note for a note), title linking to the item page, muted meta "space · 2h ago" (or "needs attention · 70%"), "due Fri, Sep 18" at the right for dated tasks, overdue rows tinted, the star always visible on tasks, hover or long-press reveals edit.
 
