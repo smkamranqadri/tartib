@@ -42,11 +42,14 @@ Any filed item's `space`, `shape`, `title`, `due`, `remind_at`, `starred`, and `
 
 ## Screens
 
-1. Today: open tasks due today in `TARTIB_TZ`, plus starred open tasks, plus open tasks whose `remind_at` has passed. Overdue tasks count as due today. Below them, Recent: the newest 3 captures, each with its status, items, or answer.
-2. Needs Attention: items in `stage=attention`, oldest first, with approve / edit / reject.
-3. All: FTS5 search over `raw_text` and `title`, filter by space, shape, and status, newest first. Empty query lists everything.  Item page `/items/{id}` shows the full excerpt, proposal, and inline edit; the space field is a select over `TARTIB_SPACES`.
-4. Ask bar: pinned to the bottom of every screen, as wide as the app column. Question in, answer above it with linked items.
-5. Login: one password field. Shown when the session cookie is missing or invalid.
+1. Home `/`: one large capture box, focused on load, placeholder "What's on your mind?". One line under it: "N need attention · M due today" as links. Saving clears the box at once and shows a toast: "Saved", then the outcome ("Filed as task in namazee", "Needs your look", "Filed 2 tasks · 1 needs your look", "Answered"). A question capture shows its answer under the box.
+2. Today: one flat list from the Today endpoint (due today or overdue, starred, passed reminders), ordered starred, overdue, due today, reminders. Row = checkbox, title, at most one chip (overdue or a time). Overdue rows tinted. Hover or long-press reveals star, edit, and the relative time. Empty: "Nothing due. Capture something?" linking to `/`.
+3. Needs Attention: one card at a time, header "k of n". Raw text, then the proposal as a sentence with tappable shape, title, space, and due. Approve (Enter) files it; Not now sends it to the back of the queue; "…" holds Reject (discard proposal) and Open. Empty: "All caught up."
+4. All: search box, space dropdown, "Show done" toggle (client-side). Minimal rows; notes show their first line and expand on tap. Enter with a trailing "?" or Cmd/Ctrl+Enter asks in the selected space; the answer shows above the results and clears on the next search. `/` focuses the search.
+5. Item page `/items/{id}`: full text, proposal, inline edit; space is a select over `TARTIB_SPACES`.
+6. Login: one password field.
+
+Global: no capture box or ask panel outside Home and All. Timestamps are relative and hover-only. One chip per row. `c` anywhere goes to Home with the box focused.
 
 ## Out of scope
 

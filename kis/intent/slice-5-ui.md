@@ -22,6 +22,6 @@ No backend changes except the eval fixture. Capture box lives only on Home; `c` 
 
 ## Status
 
-- [ ] frontend
-- [ ] eval fixture
-- [ ] proof
+- [x] frontend
+- [x] eval fixture
+- [x] proof (2026-09-17, see kis/state/current.md)

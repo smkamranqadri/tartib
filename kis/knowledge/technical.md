@@ -63,7 +63,12 @@ PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   
 
 ## Frontend shell
 
-Centered pill nav with three routes, capture box on every screen (polls `/api/captures/{id}` until done, shows "Filing…", then the answer panel for questions), Today has a Recent card of the newest 3 captures, every screen has a fixed bottom Ask bar (`AskBar`, rendered by App, width = app column) with the answer above it, the editor's space field is `SpaceSelect` over `TARTIB_SPACES`, section cards with uppercase labels (`Card` component), theme toggle stored in localStorage as `tartib-theme` and applied via `data-theme` on `<html>`. Routes: `/today`, `/attention`, `/all`, `/items/:id`.
+Routes: `/` Home (Capture + toast + question answers), `/today`, `/attention`, `/all`, `/items/:id`. Pill nav: Capture, Today, Needs Attention, All. Theme toggle in localStorage `tartib-theme` via `data-theme` on `<html>`.
+`App` owns capture polling (`/api/captures/{id}` every 1s until done), the toast (`Toast`, "busy" stays, "final" fades after 4s), the question answer, and global keys: `c` navigates to `/` and dispatches `tartib:focus-capture`; `/` on All dispatches `tartib:focus-search`. Both are window events the screens listen for.
+`ItemRow` is the one row component: checkbox for filed tasks, title or first line, at most one chip (overdue, else reminder time), actions (relative time, star, edit link) shown on hover, focus-within, or a 500ms touch hold. Notes expand on tap.
+`Attention` keeps a local queue order; Enter approves via a window keydown listener re-bound each render; "Not now" rotates the queue.
+`All` hides done tasks client-side unless "Show done"; ask fires only on Enter with a trailing `?` or Cmd/Ctrl+Enter.
+Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`), which is how the headless UI proof seeds different outcomes against one server.
 
 ## Maintenance
 

@@ -71,7 +71,7 @@ export default function ItemRow({ item, onChange }: Props) {
             {headline}
           </Link>
         ) : (
-          <button type="button" className={`row-text ${hasMore ? "expandable" : ""}`} onClick={() => setExpanded((e) => !e)}>
+          <button type="button" className={`row-text ${hasMore && !expanded ? "expandable" : ""}`} onClick={() => setExpanded((e) => !e)}>
             {expanded ? item.raw_text : headline}
           </button>
         )}
