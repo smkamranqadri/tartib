@@ -65,6 +65,10 @@ PATCH  /api/items/{id}               POST /api/items/{id}/approve [overrides]   
 
 Centered pill nav with three routes, capture box on every screen (polls `/api/captures/{id}` until done, shows "Filing…", then the answer panel for questions), Today has a Recent card of the newest 3 captures, every screen has a fixed bottom Ask bar (`AskBar`, rendered by App, width = app column) with the answer above it, the editor's space field is `SpaceSelect` over `TARTIB_SPACES`, section cards with uppercase labels (`Card` component), theme toggle stored in localStorage as `tartib-theme` and applied via `data-theme` on `<html>`. Routes: `/today`, `/attention`, `/all`, `/items/:id`.
 
+## Maintenance
+
+`python -m tartib.reclassify --all | --attention [--dry-run]` (in Docker: `docker compose exec tartib python -m tartib.reclassify --all`). Deletes the selected captures' items, marks the captures pending, runs the Runner in-process until drained, then carries `starred`/`status` over where a capture still yields one task. Safe with the server up; do not restart the server mid-run. Back up `/data/tartib.db` first (`docker cp tartib-tartib-1:/data/tartib.db …`).
+
 ## Verification commands
 
 ```sh

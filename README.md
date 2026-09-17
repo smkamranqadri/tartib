@@ -94,6 +94,17 @@ POST   /api/items/{id}/reject
 
 Dates: `due` is `YYYY-MM-DD`. `remind_at` and `created_at` are ISO 8601 in UTC.
 
+## Re-run the classifier
+
+After changing spaces or the prompt, rebuild items from their captures:
+
+```sh
+docker cp tartib-tartib-1:/data/tartib.db ./tartib-backup.db     # first
+docker compose exec tartib python -m tartib.reclassify --all        # or --attention, add --dry-run to preview
+```
+
+Done and starred carry over when a capture still produces one task. Manual edits to space, title, or dates do not.
+
 ## Develop
 
 ```sh
