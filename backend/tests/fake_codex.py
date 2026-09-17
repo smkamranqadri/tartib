@@ -6,6 +6,8 @@ FAKE_CODEX_REPLY           fallback for either
 FAKE_CODEX_EXIT            exit code (default 0)
 FAKE_CODEX_SLEEP           seconds to sleep before replying
 FAKE_CODEX_RECORD          path; one JSON line per invocation with argv and stdin tty state
+FAKE_CODEX_REPLY_FILE      path to a JSON file {"classify": ..., "ask": ...}; wins over the env
+                           replies when present, so a long-running server can be steered
 """
 
 import json
@@ -29,6 +31,12 @@ if code:
     sys.exit(code)
 key = "FAKE_CODEX_REPLY_ASK" if is_ask else "FAKE_CODEX_REPLY_CLASSIFY"
 reply = os.environ.get(key) or os.environ.get("FAKE_CODEX_REPLY", "")
+if os.environ.get("FAKE_CODEX_REPLY_FILE") and os.path.exists(os.environ["FAKE_CODEX_REPLY_FILE"]):
+    with open(os.environ["FAKE_CODEX_REPLY_FILE"]) as f:
+        steer = json.load(f)
+    chosen = steer.get("ask" if is_ask else "classify")
+    if chosen is not None:
+        reply = json.dumps(chosen)
 if "--output-last-message" in argv:
     out = argv[argv.index("--output-last-message") + 1]
     with open(out, "w") as f:

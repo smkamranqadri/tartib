@@ -1,14 +1,24 @@
 import { Link } from "react-router-dom";
-import { getSpaces, getToday } from "../api";
-import Card from "../components/Card";
+import { getToday } from "../api";
 import ItemRow from "../components/ItemRow";
-import { formatCreated } from "../format";
-import type { Capture, Item } from "../types";
+import { todayLocal } from "../format";
+import type { Item } from "../types";
 import { useLoad } from "../useLoad";
+
+/** starred, then overdue, then due today, then reminders */
+function rank(item: Item, today: string): number {
+  if (item.starred) return 0;
+  if (item.due && item.due < today) return 1;
+  if (item.due) return 2;
+  return 3;
+}
 
 export default function Today({ version }: { version: number }) {
   const { data, setData, error, loading } = useLoad(getToday, [version]);
-  const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
+  const today = todayLocal();
+  const items = [...(data?.items ?? [])].sort(
+    (a, b) => rank(a, today) - rank(b, today) || (a.due ?? "").localeCompare(b.due ?? "") || a.id - b.id,
+  );
 
   function update(next: Item) {
     if (!data) return;
@@ -21,51 +31,18 @@ export default function Today({ version }: { version: number }) {
 
   return (
     <div className="screen">
-      <Card label="Today" aside={data && <span className="muted">{data.date}</span>}>
-        {error && <p className="error">{error}</p>}
-        {loading && !data && <p className="muted">Loading…</p>}
-        {data && data.items.length === 0 && <p className="muted">Nothing due, starred, or waiting on a reminder.</p>}
-        <ul className="items">
-          {data?.items.map((item) => (
-            <ItemRow key={item.id} item={item} spaces={spaces} onChange={update} />
-          ))}
-        </ul>
-      </Card>
-      <Card label="Recent" aside={<span className="muted">what you captured</span>}>
-        {data && data.recent.length === 0 && <p className="muted">Nothing captured yet.</p>}
-        <ul className="recent">{data?.recent.map((cap) => <RecentRow key={cap.id} cap={cap} />)}</ul>
-      </Card>
-    </div>
-  );
-}
-
-function RecentRow({ cap }: { cap: Capture }) {
-  const first = cap.items[0];
-  const text = cap.raw_text;
-  return (
-    <li className="recent-row">
-      <div className="recent-main">
-        {first ? (
-          <Link to={`/items/${first.id}`} className="item-text">
-            {text}
-          </Link>
-        ) : (
-          <span className="item-text">{text}</span>
-        )}
-      </div>
-      <div className="item-meta">
-        {cap.status === "pending" && <span className="chip stage-attention">filing…</span>}
-        {cap.answer && <span className="chip">answered</span>}
-        {cap.items.map((item) => (
-          <Link key={item.id} to={`/items/${item.id}`} className={`chip link ${item.stage === "attention" ? "stage-attention" : ""}`}>
-            {item.shape === "task" && item.title ? item.title : item.shape}
-            {" · "}
-            {item.space ?? (item.stage === "attention" ? "needs attention" : "no space")}
-          </Link>
+      {error && <p className="error">{error}</p>}
+      {loading && !data && <p className="muted">Loading…</p>}
+      {data && items.length === 0 && (
+        <p className="empty muted">
+          Nothing due. <Link to="/">Capture something?</Link>
+        </p>
+      )}
+      <ul className="rows">
+        {items.map((item) => (
+          <ItemRow key={item.id} item={item} onChange={update} />
         ))}
-        <span className="chip muted">{formatCreated(cap.created_at)}</span>
-      </div>
-      {cap.answer && <p className="recent-answer">{cap.answer.answer}</p>}
-    </li>
+      </ul>
+    </div>
   );
 }

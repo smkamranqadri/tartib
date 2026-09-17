@@ -1,6 +1,6 @@
 """Classifier eval against the real Codex CLI. Run with `uv run pytest -m eval` (about 3 min).
 
-15 captures: 3 multi-item, 2 questions, 2 with no clear space, 2 verb-less tasks, 1 timed
+16 captures: 4 multi-item, 2 questions, 2 with no clear space, 2 verb-less tasks, 1 timed
 reminder, 5 plain. Asserts shape, split count, space where unambiguous, and that no proposal
 carries a space outside TARTIB_SPACES. Failures are collected and reported together.
 """
@@ -44,6 +44,12 @@ FIXTURES = [
         ["note", "note"],
         ["work", "work"],
         {},
+    ),
+    (
+        "fix the login bug in tartib, and pray fajr on time tomorrow",
+        ["task", "task"],
+        [ANY, ANY],
+        {"due_last": "2026-09-18"},
     ),
     # questions
     ("what did Ali say about the API rate limits?", ["question"], [None], {}),
@@ -118,6 +124,12 @@ def test_classifier_eval():
             )
         if "due" in flags and (p0.due.isoformat() if p0.due else None) != flags["due"]:
             failures.append(f"{tag} -> due {p0.due} expected {flags['due']}")
+        last = proposals[-1]
+        if (
+            "due_last" in flags
+            and (last.due.isoformat() if last.due else None) != flags["due_last"]
+        ):
+            failures.append(f"{tag} -> last due {last.due} expected {flags['due_last']}")
         if (
             "remind_at" in flags
             and (p0.remind_at.isoformat() if p0.remind_at else None) != flags["remind_at"]

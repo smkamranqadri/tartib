@@ -1,119 +1,208 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { approveItem, getAttention, getSpaces, rejectItem } from "../api";
-import Card from "../components/Card";
-import ItemEditor from "../components/ItemEditor";
-import { formatCreated, formatDue, formatRemind } from "../format";
-import type { Edit, Item } from "../types";
+import SpaceSelect from "../components/SpaceSelect";
+import { formatDue } from "../format";
+import type { Item, Shape } from "../types";
 import { useLoad } from "../useLoad";
 
+interface Draft {
+  shape: Shape;
+  space: string | null;
+  title: string;
+  due: string;
+}
+
+function draftOf(item: Item): Draft {
+  const p = item.proposal && item.proposal.shape !== "question" ? item.proposal : null;
+  const shape = (p?.shape ?? item.shape) as Shape;
+  return {
+    shape,
+    space: p?.space ?? item.space,
+    title: p?.title ?? item.title ?? "",
+    due: p?.due ?? item.due ?? "",
+  };
+}
+
+/** One card at a time. Enter approves, Not now sends it to the back of the queue. */
 export default function Attention({ version, onDecided }: { version: number; onDecided: () => void }) {
   const { data, setData, error, loading } = useLoad(getAttention, [version]);
   const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
-  const [editing, setEditing] = useState<number | null>(null);
-  const [rowError, setRowError] = useState<{ id: number; message: string } | null>(null);
+  const [order, setOrder] = useState<number[]>([]);
+  const [pass, setPass] = useState(0); // how many "Not now" in this round
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [editing, setEditing] = useState<"title" | "due" | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  function replace(next: Item | null, id: number) {
-    if (!data) return;
-    setData({ items: next ? data.items.map((i) => (i.id === id ? next : i)) : data.items.filter((i) => i.id !== id) });
+  const items = useMemo(() => data?.items ?? [], [data]);
+  useEffect(() => {
+    setOrder((prev) => {
+      const ids = items.map((i) => i.id);
+      const kept = prev.filter((id) => ids.includes(id));
+      const added = ids.filter((id) => !kept.includes(id));
+      return [...kept, ...added];
+    });
+  }, [items]);
+
+  const current = order.length ? items.find((i) => i.id === order[0]) ?? null : null;
+  useEffect(() => {
+    setDraft(current ? draftOf(current) : null);
     setEditing(null);
+    setMenu(false);
+    setMsg(null);
+  }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function drop(id: number, next?: Item | null) {
+    setData({ items: next ? items.map((i) => (i.id === id ? next : i)) : items.filter((i) => i.id !== id) });
+    if (!next) setOrder((o) => o.filter((x) => x !== id));
     onDecided();
   }
 
-  async function approve(item: Item, edit?: Edit) {
-    setRowError(null);
+  async function approve() {
+    if (!current || !draft) return;
+    if (!draft.space) {
+      setMsg("Pick a space first.");
+      return;
+    }
     try {
-      await approveItem(item.id, edit);
-      replace(null, item.id);
+      await approveItem(current.id, {
+        shape: draft.shape,
+        space: draft.space,
+        title: draft.shape === "task" ? draft.title.trim() || null : null,
+        due: draft.shape === "task" && draft.due ? draft.due : null,
+      });
+      setPass(0);
+      drop(current.id);
     } catch (err) {
-      setRowError({ id: item.id, message: err instanceof Error ? err.message : "failed" });
-      throw err;
+      setMsg(err instanceof Error ? err.message : "failed");
     }
   }
 
-  async function reject(item: Item) {
-    setRowError(null);
+  function notNow() {
+    if (!current) return;
+    setOrder((o) => [...o.slice(1), o[0]]);
+    setPass((n) => n + 1);
+  }
+
+  async function reject() {
+    if (!current) return;
+    setMenu(false);
     try {
-      replace(await rejectItem(item.id), item.id);
+      const next = await rejectItem(current.id);
+      drop(current.id, next);
+      setDraft(draftOf(next));
     } catch (err) {
-      setRowError({ id: item.id, message: err instanceof Error ? err.message : "failed" });
+      setMsg(err instanceof Error ? err.message : "failed");
     }
   }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const t = e.target as HTMLElement | null;
+      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
+      if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        if (typing && t.tagName === "TEXTAREA") return;
+        e.preventDefault();
+        void approve();
+      } else if (e.key === "Escape") {
+        setEditing(null);
+        setMenu(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }); // re-bound every render so approve sees the latest draft
+
+  if (error) return <p className="error">{error}</p>;
+  if (loading && !data) return <p className="muted">Loading…</p>;
+  if (!current || !draft) return <p className="empty muted">All caught up.</p>;
+
+  const remaining = order.length;
+  const position = Math.min(pass + 1, remaining);
 
   return (
-    <div className="screen">
-      <Card label="Needs Attention" aside={data && <span className="muted">{data.items.length} waiting</span>}>
-        {error && <p className="error">{error}</p>}
-        {loading && !data && <p className="muted">Loading…</p>}
-        {data && data.items.length === 0 && <p className="muted">Inbox zero. Everything is filed.</p>}
-        <ul className="items">
-          {data?.items.map((item) => {
-            const p = item.proposal;
-            const canApprove = !!(p?.space ?? item.space);
-            return (
-              <li key={item.id} className="item attention">
-                <Link to={`/items/${item.id}`} className="raw link">
-                  {item.raw_text}
-                </Link>
-                <div className="item-meta">
-                  <span className="chip muted">{formatCreated(item.created_at)}</span>
-                </div>
-                {p ? (
-                  <p className="proposal">
-                    <strong>{p.shape}</strong>
-                    {p.space ? (
-                      <>
-                        {" "}
-                        in <strong>{p.space}</strong>
-                      </>
-                    ) : (
-                      <span className="muted"> · no space fits</span>
-                    )}
-                    {p.title && <> · {p.title}</>}
-                    {p.due && <> · due {formatDue(p.due)}</>}
-                    {p.remind_at && <> · remind {formatRemind(p.remind_at)}</>}
-                    <span className="muted"> · {Math.round(p.confidence * 100)}% sure</span>
-                  </p>
-                ) : (
-                  <p className="proposal muted">No proposal{item.proposal_error ? `: ${item.proposal_error}` : ". Pick a space to file it."}</p>
-                )}
-                {editing === item.id ? (
-                  <ItemEditor
-                    item={item}
-                    fromProposal
-                    spaces={spaces}
-                    submitLabel="Approve"
-                    requireSpace
-                    onSubmit={(edit: Edit) => approve(item, edit)}
-                    onCancel={() => setEditing(null)}
-                  />
-                ) : (
-                  <div className="decisions">
-                    {canApprove ? (
-                      <button type="button" onClick={() => void approve(item).catch(() => {})}>
-                        Approve
-                      </button>
-                    ) : (
-                      <button type="button" onClick={() => setEditing(item.id)}>
-                        File…
-                      </button>
-                    )}
-                    <button type="button" className="ghost" onClick={() => setEditing(item.id)}>
-                      Edit
-                    </button>
-                    {p && (
-                      <button type="button" className="ghost danger" onClick={() => void reject(item)} title="Discard the proposal; the item stays here">
-                        Reject
-                      </button>
-                    )}
-                    {rowError?.id === item.id && <span className="error">{rowError.message}</span>}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+    <div className="screen attention-one">
+      <p className="counter muted">
+        {position} of {remaining}
+      </p>
+      <div className="card one">
+        <p className="raw big">{current.raw_text}</p>
+        <p className="sentence">
+          <button type="button" className="word" onClick={() => setDraft({ ...draft, shape: draft.shape === "task" ? "note" : "task" })}>
+            {draft.shape === "task" ? "Task" : "Note"}
+          </button>
+          {draft.shape === "task" && (
+            <>
+              {" "}
+              {editing === "title" ? (
+                <input
+                  className="word-input"
+                  autoFocus
+                  value={draft.title}
+                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                  onBlur={() => setEditing(null)}
+                  placeholder="title"
+                  aria-label="Title"
+                />
+              ) : (
+                <button type="button" className="word quoted" onClick={() => setEditing("title")}>
+                  {draft.title || "untitled"}
+                </button>
+              )}
+            </>
+          )}{" "}
+          in{" "}
+          <span className={`word select ${draft.space ? "" : "missing"}`}>
+            <SpaceSelect value={draft.space} spaces={spaces} onChange={(space) => setDraft({ ...draft, space })} />
+            <b>{draft.space ?? "no space"}</b>
+          </span>
+          {draft.shape === "task" && (
+            <>
+              , due{" "}
+              {editing === "due" ? (
+                <input
+                  type="date"
+                  className="word-input"
+                  autoFocus
+                  value={draft.due}
+                  onChange={(e) => setDraft({ ...draft, due: e.target.value })}
+                  onBlur={() => setEditing(null)}
+                  aria-label="Due"
+                />
+              ) : (
+                <button type="button" className="word" onClick={() => setEditing("due")}>
+                  {draft.due ? formatDue(draft.due) : "never"}
+                </button>
+              )}
+            </>
+          )}
+          {current.proposal && <span className="muted small"> · {Math.round(current.proposal.confidence * 100)}%</span>}
+          {!current.proposal && current.proposal_error && <span className="muted small"> · {current.proposal_error}</span>}
+        </p>
+        {msg && <p className="error">{msg}</p>}
+        <div className="decisions">
+          <button type="button" className="primary" onClick={() => void approve()}>
+            Approve <kbd>↵</kbd>
+          </button>
+          <button type="button" className="ghost" onClick={notNow}>
+            Not now
+          </button>
+          <span className="more">
+            <button type="button" className="icon-btn" aria-label="More" onClick={() => setMenu((m) => !m)}>
+              …
+            </button>
+            {menu && (
+              <span className="menu">
+                <button type="button" onClick={() => void reject()}>
+                  Reject proposal
+                </button>
+                <Link to={`/items/${current.id}`}>Open</Link>
+              </span>
+            )}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

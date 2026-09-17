@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { approveItem, editItem, getItem, getSpaces } from "../api";
 import Card from "../components/Card";
 import ItemEditor from "../components/ItemEditor";
-import { formatCreated, formatDue, formatRemind } from "../format";
+import { formatDue, formatRelative, formatRemind } from "../format";
 import type { Edit } from "../types";
 import { useLoad } from "../useLoad";
 
@@ -34,7 +34,7 @@ export default function ItemPage({ version }: { version: number }) {
         label={isTask ? "Task" : "Note"}
         aside={
           <span className="muted">
-            {item.space ?? "no space"} · {formatCreated(item.created_at)}
+            {item.space ?? "no space"} · <span className="when" title={new Date(item.created_at).toLocaleString()}>{formatRelative(item.created_at)}</span>
             {waiting && <> · <span className="chip stage-attention">needs attention</span></>}
           </span>
         }

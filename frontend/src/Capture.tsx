@@ -1,10 +1,19 @@
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { capture } from "./api";
 
-export default function Capture({ onCaptured }: { onCaptured?: (id: number) => void }) {
+/** The one capture box. Lives on Home only. */
+export default function Capture({ onCaptured }: { onCaptured: (id: number) => void }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    ref.current?.focus();
+    const focus = () => ref.current?.focus();
+    window.addEventListener("tartib:focus-capture", focus);
+    return () => window.removeEventListener("tartib:focus-capture", focus);
+  }, []);
 
   async function submit(e?: FormEvent) {
     e?.preventDefault();
@@ -15,11 +24,12 @@ export default function Capture({ onCaptured }: { onCaptured?: (id: number) => v
     try {
       const { id } = await capture(value);
       setText("");
-      onCaptured?.(id);
+      onCaptured(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "capture failed");
     } finally {
       setBusy(false);
+      ref.current?.focus();
     }
   }
 
@@ -33,20 +43,15 @@ export default function Capture({ onCaptured }: { onCaptured?: (id: number) => v
   return (
     <form className="capture" onSubmit={submit}>
       <textarea
+        ref={ref}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKey}
-        placeholder="Capture anything. Enter to save, Shift+Enter for a new line."
-        rows={2}
-        autoFocus
+        placeholder="What's on your mind?"
+        rows={3}
         aria-label="Capture"
       />
-      <div className="capture-row">
-        {error ? <span className="error">{error}</span> : <span />}
-        <button type="submit" disabled={busy || !text.trim()}>
-          {busy ? "Saving…" : "Save"}
-        </button>
-      </div>
+      {error && <p className="error">{error}</p>}
     </form>
   );
 }

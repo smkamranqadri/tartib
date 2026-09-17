@@ -1,33 +1,43 @@
-import { useEffect, useState } from "react";
-import { getSpaces, listItems } from "../api";
-import Card from "../components/Card";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { ask, getSpaces, listItems } from "../api";
+import AnswerView from "../components/AnswerView";
 import ItemRow from "../components/ItemRow";
-import type { Item } from "../types";
+import type { Answer, Item } from "../types";
 import { useLoad } from "../useLoad";
 
 export default function All({ version }: { version: number }) {
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
   const [space, setSpace] = useState("");
-  const [shape, setShape] = useState("");
-  const [status, setStatus] = useState("");
+  const [showDone, setShowDone] = useState(false);
   const [more, setMore] = useState<Item[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [answer, setAnswer] = useState<Answer | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim()), 200);
     return () => clearTimeout(t);
   }, [q]);
 
+  useEffect(() => {
+    const focus = () => searchRef.current?.focus();
+    window.addEventListener("tartib:focus-search", focus);
+    return () => window.removeEventListener("tartib:focus-search", focus);
+  }, []);
+
   const { data, setData, error, loading } = useLoad(
-    () => listItems({ q: debounced, space, shape, status }),
-    [debounced, space, shape, status, version],
+    () => listItems({ q: debounced, space }),
+    [debounced, space, version],
   );
   useEffect(() => setMore([]), [data]);
   const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
 
-  const items = [...(data?.items ?? []), ...more];
-  const last = items[items.length - 1];
+  const all = [...(data?.items ?? []), ...more];
+  const items = showDone ? all : all.filter((i) => !(i.shape === "task" && i.status === "done"));
+  const last = all[all.length - 1];
   const nextBefore = more.length ? (last ? last.id : null) : (data?.next_before ?? null);
   const canLoadMore = !debounced && nextBefore !== null && (more.length === 0 || more.length % 50 === 0);
 
@@ -35,7 +45,7 @@ export default function All({ version }: { version: number }) {
     if (nextBefore === null) return;
     setLoadingMore(true);
     try {
-      const page = await listItems({ space, shape, status, before: nextBefore });
+      const page = await listItems({ space, before: nextBefore });
       setMore((m) => [...m, ...page.items]);
     } finally {
       setLoadingMore(false);
@@ -47,46 +57,75 @@ export default function All({ version }: { version: number }) {
     setMore((m) => m.map((i) => (i.id === next.id ? next : i)));
   }
 
-  const count = data ? `${items.length}${data.next_before ? "+" : ""}` : "";
+  async function runAsk() {
+    const question = q.trim();
+    if (!question || asking) return;
+    setAsking(true);
+    setAskError(null);
+    try {
+      setAnswer(await ask(question, space));
+    } catch (err) {
+      setAskError(err instanceof Error ? err.message : "ask failed");
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  function onKey(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey || q.trim().endsWith("?"))) {
+      e.preventDefault();
+      void runAsk();
+    }
+  }
+
+  function onChange(value: string) {
+    setQ(value);
+    if (answer || askError) {
+      setAnswer(null);
+      setAskError(null);
+    }
+  }
 
   return (
     <div className="screen">
-      <Card label="Search" aside={count && <span className="muted">{count} items</span>}>
-        <div className="filters">
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes and tasks" aria-label="Search" />
-          <select value={space} onChange={(e) => setSpace(e.target.value)} aria-label="Space">
-            <option value="">Any space</option>
-            {spaces.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <select value={shape} onChange={(e) => setShape(e.target.value)} aria-label="Shape">
-            <option value="">Any shape</option>
-            <option value="task">Tasks</option>
-            <option value="note">Notes</option>
-          </select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-            <option value="">Any status</option>
-            <option value="open">Open</option>
-            <option value="done">Done</option>
-          </select>
-        </div>
-        {error && <p className="error">{error}</p>}
-        {loading && !data && <p className="muted">Loading…</p>}
-        {data && items.length === 0 && <p className="muted">No items match.</p>}
-        <ul className="items">
-          {items.map((item) => (
-            <ItemRow key={item.id} item={item} spaces={spaces} onChange={update} showStage />
+      <div className="filters">
+        <input
+          ref={searchRef}
+          type="search"
+          value={q}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKey}
+          placeholder="Search, or end with ? to ask"
+          aria-label="Search"
+        />
+        <select value={space} onChange={(e) => setSpace(e.target.value)} aria-label="Space">
+          <option value="">Any space</option>
+          {spaces.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
-        </ul>
-        {canLoadMore && (
-          <button type="button" className="ghost" onClick={() => void loadMore()} disabled={loadingMore}>
-            {loadingMore ? "Loading…" : "Load more"}
-          </button>
-        )}
-      </Card>
+        </select>
+        <label className="toggle">
+          <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} /> Show done
+        </label>
+      </div>
+      {asking && <p className="muted small">Thinking…</p>}
+      {askError && <p className="error">{askError}</p>}
+      {answer && <AnswerView result={answer} onClose={() => setAnswer(null)} />}
+      {error && <p className="error">{error}</p>}
+      {loading && !data && <p className="muted">Loading…</p>}
+      {data && items.length === 0 && <p className="empty muted">No items match.</p>}
+      <ul className="rows">
+        {items.map((item) => (
+          <ItemRow key={item.id} item={item} onChange={update} />
+        ))}
+      </ul>
+      {canLoadMore && (
+        <button type="button" className="ghost" onClick={() => void loadMore()} disabled={loadingMore}>
+          {loadingMore ? "Loading…" : "Load more"}
+        </button>
+      )}
     </div>
   );
 }
