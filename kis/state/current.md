@@ -61,9 +61,9 @@
 ## Proof
 
 Finished slices keep their step-by-step proof in the commit messages, not here: `34ab011`,
-`fc75770`, `e2e31cc`, `91d7a22`, `970348e`, and for the three most recent `3643d11` (the plans),
-`a78f998` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
-`a86baf1` (slice 15 step 1).
+`fc75770`, `e2e31cc`, `91d7a22`, `970348e`, and for the three most recent `6bf7f48` (the plans),
+`7e7f294` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
+`81ffc81` (slice 15 step 1).
 
 Still operational from that: session 2 is owed an outcome, so the Done / Not finished /
 Abandoned question is sitting in the bar until it is answered.
