@@ -23,9 +23,12 @@
 - Push keys live in `.env` (2026-09-18). `cd backend && uv run python -m tartib.vapid` prints a
   fresh set; regenerating invalidates every subscription, and Settings re-mints on next open.
 - Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
-- Next: the one thing left on slice 12. Start a session on the phone, close the app, and check it
-  buzzes once when the time is up. `TARTIB_SESSION_MINUTES` is 25 in `.env`; set it to 1 and
-  `docker compose up -d` if you would rather not wait, then put it back.
+- Next: the one thing left on slice 12. Start a session on the phone and close the app, with the
+  desktop tab closed too on the first run so nothing else can answer for it, and check it buzzes
+  once when the time is up. Then repeat with the desktop tab open on the countdown: that is the
+  case migration 0008 exists for, and it should buzz either way. `TARTIB_SESSION_MINUTES` is 25
+  in `.env`; set it to 1 and `docker compose up -d` if you would rather not wait, then put it
+  back. Nothing is pushed to a desktop unless that browser enables reminders in Settings.
 
 ## Proof (2026-09-18) — slice 12 on real devices
 
