@@ -2,7 +2,7 @@
 
 - Branch: `main`, local only, working tree clean. Slices 11 and 12 and slice 15 step 1 are
   committed; git carries the detail. Deployed locally, not hosted anywhere yet.
-- Task: slice 15, PWA, step 1 of 3 done and proved (below). Phase Mode.
+- Task: slice 15, PWA, steps 1 and 2 of 3 done and proved (below). Phase Mode.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
 - The worker is `2026-09-18.6` and no longer calls `skipWaiting`, so a deploy is offered as a
   reload rather than swapped in underneath. A phone on `.5` or older still has the old worker's
@@ -21,7 +21,7 @@
   if Chrome ever shows "This site has been updated in the background", switch that path to a
   silent notification instead of no notification.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (149 passed) and `uv run pytest -m eval` (16 real-Codex
+- Verify: `cd backend && uv run pytest -q` (154 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
 - Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
   that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
@@ -35,8 +35,8 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 15 step 2 -- migration 0009, `captures.client_id` UNIQUE, and a POST that returns
-  the existing capture instead of making a second. Not started.
+- Next: slice 15 step 3 -- the IndexedDB queue, pending rows, flush on reconnect, and the SPEC
+  change that takes offline capture off the Out of scope list. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve `https://the domain` from `smkamranqadri/tartib` on Docker
   Hub, tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and
@@ -79,6 +79,27 @@ localhost:8000, signed in as the real app:
 and `npm run build` clean. Backend untouched this step; those ran as an integration check.
 
 Not proved: `pushsubscriptionchange`. See the plan's "Found while building step 1".
+
+### Slice 15 step 2, 2026-09-18 — a capture that is safe to send twice
+
+Migration 0009 adds `captures.client_id` and a unique index over it. Run first against a copy of
+the live database: 32 captures and 47 items before and after, schema 8 to 9, and all 32 NULLs
+sitting under the unique index without complaint, which is the whole reason a unique index was
+used rather than a constraint.
+
+Then applied for real (`a local backup` is the backup taken first) and
+driven through the running app with one `client_id` sent three times:
+
+```text
+attempt 1 -> HTTP 201  {"id":33}
+attempt 2 -> HTTP 200  {"id":33}
+attempt 3 -> HTTP 200  {"id":33}
+one row in captures, not three
+```
+
+That test capture and the item it produced were deleted afterwards; the database is back to 32
+and 47. 154 backend tests pass, ruff clean. Four migration tests pin the schema version and were
+bumped from 8 to 9, as every migration before this one has had to do.
 
 ## Known gaps
 

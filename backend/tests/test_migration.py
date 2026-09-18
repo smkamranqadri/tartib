@@ -51,8 +51,8 @@ def test_v1_to_v2(tmp_path):
     path = str(tmp_path / "v1.db")
     build_v1(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == 8
-    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 8
+    assert db.migrate(conn) == 9
+    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 9
 
     caps = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM captures ORDER BY id")}
     assert len(caps) == 5
@@ -123,7 +123,7 @@ def test_migrate_is_idempotent(tmp_path):
     build_v1(path)
     conn = db.connect(path)
     db.migrate(conn)
-    assert db.migrate(conn) == 8
+    assert db.migrate(conn) == 9
     assert conn.execute("SELECT COUNT(*) FROM captures").fetchone()[0] == 5
 
 
@@ -145,7 +145,7 @@ def test_0005_writes_off_reminders_that_are_already_due(tmp_path):
         )
     conn.commit()
 
-    assert db.migrate(conn) == 8
+    assert db.migrate(conn) == 9
     rows = {r["id"]: dict(r) for r in conn.execute("SELECT * FROM items")}
     assert rows[1]["reminded_at"] is not None  # already due: written off
     assert rows[2]["reminded_at"] is None  # still ahead: will fire

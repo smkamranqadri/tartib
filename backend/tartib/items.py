@@ -7,13 +7,14 @@ import sqlite3
 from datetime import date, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from tartib.auth import require_auth
 from tartib.deps import get_db
 from tartib.store import (
     SpaceError,
+    capture_by_client_id,
     create_capture,
     file_item,
     list_spaces,
@@ -35,18 +36,42 @@ def fetch_item(conn: sqlite3.Connection, item_id: int) -> sqlite3.Row:
 
 class CaptureBody(BaseModel):
     text: str = Field(min_length=1, max_length=20_000)
+    """Minted by the browser before the first attempt, so a capture that was queued offline and
+    sent twice is recognised as the same capture rather than becoming two. Optional: curl and
+    the iOS Shortcut send none, and nothing needs them to."""
+    client_id: str | None = Field(default=None, min_length=8, max_length=64)
 
 
 @router.post("/capture", status_code=201)
 def capture(
-    body: CaptureBody, request: Request, conn: sqlite3.Connection = Depends(get_db)
+    body: CaptureBody,
+    request: Request,
+    response: Response,
+    conn: sqlite3.Connection = Depends(get_db),
 ) -> dict:
     """Store the text as a capture and return its id. Classification runs in the background."""
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="text is empty")
     source = "api" if request.headers.get("authorization", "")[:7].lower() == "bearer " else "web"
-    capture_id = create_capture(conn, text, source)
+
+    if body.client_id:
+        existing = capture_by_client_id(conn, body.client_id)
+        if existing is not None:
+            # Already here. Not re-enqueued: the first attempt did that, and a capture still
+            # pending after a restart is re-queued at startup anyway.
+            response.status_code = 200
+            return {"id": existing}
+    try:
+        capture_id = create_capture(conn, text, source, body.client_id)
+    except sqlite3.IntegrityError:
+        # Two attempts at once, and the other won. The row it made is the answer to both.
+        existing = capture_by_client_id(conn, body.client_id) if body.client_id else None
+        if existing is None:
+            raise
+        response.status_code = 200
+        return {"id": existing}
+
     runner = getattr(request.app.state, "runner", None)
     if runner is not None:
         runner.enqueue(capture_id)

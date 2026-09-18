@@ -77,6 +77,21 @@ append-only and `raw_text` is immutable, so there is nothing to resolve.
 - `cd backend && uv run pytest -q && uv run ruff check .`; `cd frontend && npm run typecheck &&
   npm run build`; headless Chrome through playwright-core at 390px with the network cut over CDP.
 
+## Decided while building step 2
+
+- The id identifies the capture, not the request. A client that edited the text before retrying
+  still gets back the capture that was stored: `raw_text` is immutable by rule 1, so the
+  alternatives were to lie about what is stored or to make a second capture, and both are worse
+  than ignoring the second text.
+- A repeat is not re-enqueued. The first attempt did that, and a capture still pending after a
+  restart is re-queued at startup anyway, so re-enqueueing would only risk classifying twice.
+- The lookup and the insert are two statements, so two sends can both find nothing. The unique
+  index is what actually decides it; the `IntegrityError` path re-reads and returns the winner's
+  row. There is a test that drives exactly that gap.
+- `client_id` is 8 to 64 characters and optional. curl, the iOS Shortcut and every capture made
+  before this column existed send none, and two identical texts with no id are two captures,
+  because that is what the user did.
+
 ## Found while building step 1
 
 - Offline, the screens now render and every one of them says "Failed to fetch" in red -- the
@@ -104,5 +119,5 @@ a quiet duplication bug lives.
 ## Status
 - [x] shell: precache, start_url, id, theme-color, update prompt, pushsubscriptionchange, iOS
       (2026-09-18)
-- [ ] backend: migration 0009, client_id on POST /api/capture, tests
+- [x] backend: migration 0009, client_id on POST /api/capture, tests (2026-09-18)
 - [ ] the queue: IndexedDB, pending rows, flush on reconnect, SPEC change

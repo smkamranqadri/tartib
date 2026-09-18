@@ -93,13 +93,22 @@ def reconcile_spaces(conn: sqlite3.Connection, allowed: Sequence[str]) -> int:
     return cur.rowcount
 
 
-def create_capture(conn: sqlite3.Connection, text: str, source: str) -> int:
+def create_capture(
+    conn: sqlite3.Connection, text: str, source: str, client_id: str | None = None
+) -> int:
     cur = conn.execute(
-        "INSERT INTO captures (raw_text, source, created_at) VALUES (?, ?, ?)",
-        (text, source, utcnow_iso()),
+        "INSERT INTO captures (raw_text, source, created_at, client_id) VALUES (?, ?, ?, ?)",
+        (text, source, utcnow_iso(), client_id),
     )
     conn.commit()
     return int(cur.lastrowid or 0)
+
+
+def capture_by_client_id(conn: sqlite3.Connection, client_id: str) -> int | None:
+    """The capture this browser already sent under that id, if it arrived. What makes a queued
+    capture safe to retry: the row is found instead of a second one being made."""
+    row = conn.execute("SELECT id FROM captures WHERE client_id = ?", (client_id,)).fetchone()
+    return int(row["id"]) if row else None
 
 
 def insert_item(
