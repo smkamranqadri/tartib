@@ -67,6 +67,23 @@ something missing. Two things the HTTPS toggle did not do:
   served. With a cookie that is not yet `Secure`, that pair is how a session leaks. Force HTTPS,
   in CapRover or as Cloudflare's "Always Use HTTPS", before the app is behind that domain.
 
+### Decided while building step 1
+
+- The attempt that trips the block answers 429, not 401. Telling you on the attempt that locks
+  the door is kinder than a plain 401 followed by a surprise on the next try.
+- `require_auth` tries the cookie before the bearer header, which is the reverse of what it did.
+  A signature cannot be usefully guessed, so it is not something the backoff needs to defend,
+  and the new order means a signed-in browser never touches the counter even if it happens to
+  carry a stale header.
+- `get_state` and `set_state` moved from `reminders.py` into `store.py`, with `clear_state`
+  added. Two modules needed them, and `auth` importing `reminders` would have been the wrong
+  direction entirely.
+- The throttle opens its own short-lived connection rather than taking `get_db` as a dependency.
+  A dependency would open a connection on every request to every route; this opens one only
+  when a password is actually being compared, which a signed-in browser never does.
+- A blocked attempt records nothing, so the window grows once per window rather than once per
+  guess. That is deliberate and it is why the growth is tested directly rather than over HTTP.
+
 ## Step 2 — the image
 
 The VPS has disk but building there is the problem, so the image is built here and pushed to
@@ -145,8 +162,8 @@ The database starts empty. The laptop's is archived locally (path in `private.md
 Review: `/security-review` on step 1, `/code-review` on the diff before step 2 builds it.
 
 ## Status
-- [ ] global login backoff covering the bearer path, counters in app_state, tests
-- [ ] FORWARDED_ALLOW_IPS so the session cookie is Secure behind the proxy
+- [x] global login backoff covering the bearer path, counters in app_state, tests (2026-09-18)
+- [x] FORWARDED_ALLOW_IPS so the session cookie is Secure behind the proxy (2026-09-18)
 - [ ] buildx amd64, push to Docker Hub, captain-definition, deploy script
 - [ ] CapRover app: persistent dirs, Codex login, Claude token, env, HTTPS, health, empty DB
 - [ ] prove on real devices, backup cron with a restore, tag v1.0

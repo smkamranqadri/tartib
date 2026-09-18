@@ -12,6 +12,7 @@ from tartib import db, push
 from tartib.clock import as_utc_iso as iso
 from tartib.clock import today_in, utcnow
 from tartib.config import Settings
+from tartib.store import get_state, set_state
 
 log = logging.getLogger("tartib.reminders")
 
@@ -21,20 +22,6 @@ INTERVAL = 60.0
 # older than this is marked sent without pushing; a reminder is a moment, not a backlog.
 GRACE = timedelta(hours=6)
 DIGEST_KEY = "digest_date"
-
-
-def get_state(conn: sqlite3.Connection, key: str) -> str | None:
-    row = conn.execute("SELECT value FROM app_state WHERE key = ?", (key,)).fetchone()
-    return row["value"] if row else None
-
-
-def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
-    conn.execute(
-        "INSERT INTO app_state (key, value) VALUES (?, ?)"
-        " ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-        (key, value),
-    )
-    conn.commit()
 
 
 def mark_reminded(conn: sqlite3.Connection, item_id: int, remind_at: str, now_iso: str) -> None:

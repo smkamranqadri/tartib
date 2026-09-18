@@ -93,6 +93,27 @@ def reconcile_spaces(conn: sqlite3.Connection, allowed: Sequence[str]) -> int:
     return cur.rowcount
 
 
+def get_state(conn: sqlite3.Connection, key: str) -> str | None:
+    """`app_state` is the small key/value table migration 0005 added. It holds whatever has to
+    outlive a restart and does not belong to an item: the digest's date, the login counters."""
+    row = conn.execute("SELECT value FROM app_state WHERE key = ?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
+    conn.execute(
+        "INSERT INTO app_state (key, value) VALUES (?, ?)"
+        " ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+        (key, value),
+    )
+    conn.commit()
+
+
+def clear_state(conn: sqlite3.Connection, *keys: str) -> None:
+    conn.executemany("DELETE FROM app_state WHERE key = ?", [(k,) for k in keys])
+    conn.commit()
+
+
 def create_capture(
     conn: sqlite3.Connection, text: str, source: str, client_id: str | None = None
 ) -> int:

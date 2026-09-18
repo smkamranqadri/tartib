@@ -14,7 +14,8 @@
   each time;
   the citations below are the new ones. A copy of the repository as it was before that is kept
   locally; the path is in `private.md`, and it is the undo button until the push has happened.
-- Task: none in flight. Slice 16 is closed: the repository is public (below).
+- Task: slice 17, deploy, step 1 of 4 done and proved (below). Phase Mode.
+  Plan and step status: `kis/intent/slice-17-deploy.md`. Slice 16 is closed.
   Plan and step status: `kis/intent/slice-16-public-repo.md`. Slice 15 is closed.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
 - The worker is `2026-09-18.7` and no longer calls `skipWaiting`, so a deploy is offered as a
@@ -37,7 +38,7 @@
   if Chrome ever shows "This site has been updated in the background", switch that path to a
   silent notification instead of no notification.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (154 passed) and `uv run pytest -m eval` (16 real-Codex
+- Verify: `cd backend && uv run pytest -q` (163 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
 - Reminders on a phone need HTTPS and a stable origin. How this machine provides one today, and
   how to end it, are in `private.md`. A push subscription is bound to the exact origin that
@@ -49,9 +50,9 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 17, deploy. Step 1 is the global login backoff, hung off the password comparison
-  so it covers the bearer path too, with counters in `app_state`. `kis/intent/slice-17-deploy.md`.
-  Not started. Steps 2 to 4 are the image, the CapRover app, and proving it, ending at v1.0.
+- Next: slice 17 step 2 -- the image. `docker buildx build --platform linux/amd64` here, pushed
+  to `smkamranqadri/tartib` on Docker Hub, plus a `captain-definition` and a deploy script.
+  Check the VPS is amd64 first. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve a domain (in `private.md`) from `smkamranqadri/tartib` on Docker Hub,
   tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and CapRover
@@ -137,6 +138,25 @@ The run before that one failed three ways and one was a real bug: pending rows w
 seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
 
 154 backend tests pass, ruff clean, typecheck and build clean.
+
+### Slice 17 step 1, 2026-09-18 — a login that can be on the internet
+
+Nine new tests, 163 passing, ruff clean. The backoff hangs off `auth.check_password`, so it
+covers the bearer header as well as `/api/login`; a test guesses at `/api/today` to prove it, and
+another proves the two doors share one counter.
+
+Driven against the running container as well as in tests: four wrong passwords answer 401, the
+fifth answers 429 with `Retry-After: 30`, and the **correct** password is refused with 429 while
+blocked -- comparing it would say which guess was right. The block was cleared afterwards, and
+the correct password then answered 200, so nothing is left locked.
+
+The cookie half, which no unit test can reach because it depends on uvicorn rather than the app:
+with `--forwarded-allow-ips "*"` added to the image, a login carrying `X-Forwarded-Proto: https`
+now comes back `...; SameSite=lax; Secure`, and a plain http login still comes back without it,
+so local development is unaffected.
+
+The README's security section claimed there is no rate limiting. It is public now, so that was
+corrected in the same commit.
 
 ### Slice 16 step 3, 2026-09-18 — published
 

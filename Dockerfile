@@ -32,4 +32,10 @@ ENV PATH="/app/.venv/bin:$PATH" \
     CODEX_HOME=/root/.codex
 VOLUME /data
 EXPOSE 8000
-CMD ["uvicorn", "--factory", "tartib.main:create_app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+# --forwarded-allow-ips is what makes --proxy-headers do anything here. On its own that flag
+# trusts X-Forwarded-Proto only from 127.0.0.1, and behind a reverse proxy the peer is the
+# container network, so the app saw "http", and the session cookie went out without Secure on a
+# site served over HTTPS. "*" is safe in this shape and only this shape: nothing reaches the
+# port except the proxy in front of it, so the header cannot be set by anyone untrusted.
+CMD ["uvicorn", "--factory", "tartib.main:create_app", "--host", "0.0.0.0", "--port", "8000", \
+     "--proxy-headers", "--forwarded-allow-ips", "*"]

@@ -40,7 +40,11 @@ No Codex? Set `TARTIB_AI_COMMAND=off` and every capture goes to Needs Attention 
 
 ### Security
 
-One password, one user. Every `/api` route accepts that password as a bearer token as well as the session cookie, which is what makes shortcuts and scripts easy and also means the password is the only thing between anyone and everything. There is no rate limiting, no lockout, and no second factor. Put it behind HTTPS and treat the password as the whole security model. The session cookie is marked `Secure` only when the app sees an HTTPS request, so behind a reverse proxy you need `FORWARDED_ALLOW_IPS` set for uvicorn to trust `X-Forwarded-Proto`.
+One password, one user. Every `/api` route accepts that password as a bearer token as well as the session cookie, which is what makes shortcuts and scripts easy and also means the password is the only thing between anyone and everything. There is no second factor. Put it behind HTTPS and treat the password as the whole security model.
+
+Guessing is slowed by a global backoff: four failures are free, then each further attempt gets `429` with a `Retry-After`, in a window that doubles from 30 seconds and stops at five minutes. It hangs off the password comparison rather than the login route, so it covers the bearer header too — otherwise guesses would simply move to a route nobody was watching. It is global rather than per-IP because behind a proxy the client address only arrives in a header, and one password is one account. While blocked, a correct password is refused as well: checking it would say which guess was right. A browser already holding a valid session cookie is never affected, so nobody can log you out by hammering the door.
+
+The session cookie is marked `Secure` only when the app sees an HTTPS request. Behind a reverse proxy that needs uvicorn to trust `X-Forwarded-Proto`; the image runs with `--proxy-headers --forwarded-allow-ips "*"`, which is safe precisely because nothing reaches the port except the proxy in front of it.
 
 ### Environment
 
