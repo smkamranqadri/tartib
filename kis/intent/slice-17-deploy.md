@@ -2,8 +2,8 @@
 
 Tartib runs on a laptop behind a private network, so reminders stop whenever the lid closes. That is the
 one thing that keeps it from being a daily driver. It moves to the CapRover VPS that already
-hosts everything else, on a public HTTPS domain — which means the auth has to be worth exposing
-first.
+hosts everything else, at `https://the domain`, with CapRover taking the certificate
+from Let's Encrypt — which means the auth has to be worth exposing first.
 
 ## Step 1 — a login that can be on the internet
 
@@ -32,8 +32,12 @@ Proved by tests before anything is deployed.
 
 ## Step 2 — the image
 
-The VPS has disk but building there is the problem, so the image is built here and pushed to a
-public Docker Hub repository. This Mac is arm64 and the VPS is amd64, so it is
+The VPS has disk but building there is the problem, so the image is built here and pushed to
+`smkamranqadri/tartib` on Docker Hub, public. Tags are immutable versions -- `v1.0`, then `v1.1`
+and so on -- and there is no `latest`: CapRover deploys by image name, and a tag whose contents
+changed underneath it can redeploy to the same string and quietly serve either image. A version
+per deploy also makes a rollback a choice from a list rather than a rebuild.
+This Mac is arm64 and the VPS is amd64, so it is
 `docker buildx build --platform linux/amd64` under QEMU: slow, accepted, and the known cost of
 not using CI. If it becomes intolerable the same buildx line moves into GitHub Actions on
 `ubuntu-latest`, which is native amd64 and free for a public repository — the escape hatch, not
@@ -67,8 +71,8 @@ The database starts empty. The Mac's is archived to `a local backup directory` a
 
 ## Step 4 — prove it, protect it, tag it
 
-- Log in over the public domain. Six wrong passwords return 429, and the right one works after
-  the window.
+- Log in at `https://the domain` on a valid certificate. Six wrong passwords return
+  429, and the right one works after the window.
 - A capture typed on the phone over cellular files itself within about fifteen seconds: the
   copied Codex login working from that address.
 - Break Codex deliberately; a capture still files through the Claude fallback.

@@ -38,8 +38,8 @@
 - Next: slice 15 step 2 -- migration 0009, `captures.client_id` UNIQUE, and a POST that returns
   the existing capture instead of making a second. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
-  Two values still needed, neither blocking slice 15: the Docker Hub namespace for the image and
-  the domain CapRover will serve. Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
+  Slice 17 will serve `https://the domain` from `smkamranqadri/tartib` on Docker
+  Hub, tagged per version with no `latest`. Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
   verified on the GitHub account, or the rewritten commits will not link to it.
 
 ## Proof
