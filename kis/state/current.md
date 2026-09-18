@@ -2,8 +2,8 @@
 
 - Branch: `main`, local only, working tree clean. Slice 11 is committed (three commits,
   `ecd2000`, `c38495b`, `8a897ad`) and deployed.
-- Task: none in flight. Slice 11 (push reminders) is done and deployed; slices 12 to 14 are
-  approved but unplanned, in `kis/intent/backlog.md`.
+- Task: slice 12, pomodoro. Plan approved 2026-09-18 in `kis/intent/slice-12-pomodoro.md`.
+  Not started. Slice 11 (push reminders) is done and deployed.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
 - Verify: `cd backend && uv run pytest -q` (127 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
@@ -16,8 +16,9 @@
 - Settings shows the installed service worker version (`DEVICE` -> Reminders worker). A phone
   silently sitting on an old worker cost a whole debugging round before that existed.
 - Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
-- Next: nothing queued. Slice 12 (pomodoro) is next in the backlog and needs a plan; note that
-  its "session-done push" contradicts rule 4, which allows exactly two things to push.
+- Next: slice 12, step 1 of 3: migration 0007 plus the sessions API and the end-of-session
+  scheduler. Rule 4 was widened on approval to allow the session-done push, so that contradiction
+  is settled; the push stays silent while the app is on screen.
 
 ## Review after the slice (2026-09-18)
 
