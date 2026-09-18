@@ -2,12 +2,13 @@
 
 - Branch: `main`, local only, working tree clean. Slice 11 is committed (three commits,
   `ecd2000`, `c38495b`, `8a897ad`) and deployed.
-- Task: slice 12, pomodoro. Steps 1 and 2 done; step 3 (briefs + proof + deploy) is next.
-  Phase Mode.
+- Task: slice 12, pomodoro, step 3 of 3. Deployed and proved on the live app; the last check
+  needs the phone. Phase Mode.
   Plan and step status: `kis/intent/slice-12-pomodoro.md`.
-- Verification plan for step 3: the brief work is already in step 1; what is left is proving it
-  (a brief regenerates after a session in that space and not otherwise) and deploying, then one
-  real session ending on the phone with the app closed.
+- Left to do on slice 12: start a session on the phone, close the app, and check it buzzes once
+  when the time is up. Everything else is proved. `TARTIB_SESSION_MINUTES` is 25 in `.env`; set
+  it to 1 and `docker compose up -d` if you would rather not wait 25 minutes for the proof, then
+  put it back.
 - Watch after deploy: the service worker returns without showing anything when a session ends
   with the app on screen. Browsers allow that only within a budget for `userVisibleOnly` pushes;
   if Chrome ever shows "This site has been updated in the background", switch that path to a

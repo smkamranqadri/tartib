@@ -62,6 +62,52 @@ def test_spaces_summary_counts_and_order(ai_client, monkeypatch, settings):
     assert body["unfiled"]["unfiled"] is True and body["unfiled"]["total"] >= 1
 
 
+def test_a_session_in_the_space_regenerates_the_brief(ai_client, monkeypatch, tmp_path):
+    """A pomodoro is the one thing besides an item that changes what the brief should say."""
+    record = tmp_path / "calls.jsonl"
+    task = file_task(ai_client, monkeypatch, "pray fajr", "health")
+    file_task(ai_client, monkeypatch, "call the bank", "work")
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_ask_reply(monkeypatch, "Open: pray fajr.", [task["id"]])
+
+    assert ai_client.get("/api/spaces/health/brief").json()["fresh"] is True
+    calls = len(records(record))
+    assert ai_client.get("/api/spaces/health/brief").json()["fresh"] is False  # cached
+
+    # a session on a task in another space leaves this brief alone
+    other = ai_client.get("/api/items?space=work").json()["items"][0]
+    elsewhere = ai_client.post("/api/sessions", json={"item_id": other["id"]}).json()
+    ai_client.post(f"/api/sessions/{elsewhere['id']}/outcome", json={"outcome": "unfinished"})
+    assert ai_client.get("/api/spaces/health/brief").json()["fresh"] is False
+    assert len(records(record)) == calls
+
+    # a session on a task in this space does not
+    session = ai_client.post("/api/sessions", json={"item_id": task["id"]}).json()
+    ai_client.post(f"/api/sessions/{session['id']}/outcome", json={"outcome": "unfinished"})
+    set_ask_reply(monkeypatch, "Open: pray fajr. One session today.", [task["id"]])
+    again = ai_client.get("/api/spaces/health/brief").json()
+    assert again["fresh"] is True
+    assert len(records(record)) == calls + 1
+    # and the count reached the prompt as a fact, not an instruction
+    prompt = records(record)[-1]["argv"][-1]
+    assert "Today the user spent 1 pomodoro session on this space." in prompt
+
+
+def test_a_session_with_no_task_touches_no_brief(ai_client, monkeypatch, tmp_path):
+    record = tmp_path / "calls.jsonl"
+    task = file_task(ai_client, monkeypatch, "pray fajr", "health")
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_ask_reply(monkeypatch, "Open: pray fajr.", [task["id"]])
+    ai_client.get("/api/spaces/health/brief")
+    calls = len(records(record))
+
+    bare = ai_client.post("/api/sessions", json={}).json()
+    ai_client.post(f"/api/sessions/{bare['id']}/outcome", json={"outcome": "done"})
+
+    assert ai_client.get("/api/spaces/health/brief").json()["fresh"] is False
+    assert len(records(record)) == calls
+
+
 def test_brief_is_cached_by_fingerprint(ai_client, monkeypatch, tmp_path):
     record = tmp_path / "calls.jsonl"
     file_task(ai_client, monkeypatch, "pray fajr", "health")
