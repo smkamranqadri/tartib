@@ -1,4 +1,4 @@
-import type { Answer, Brief, Capture, Edit, Item, SpaceSummary } from "./types";
+import type { Answer, Brief, Capture, Edit, Item, Outcome, Session, SessionState, SpaceSummary } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -44,7 +44,13 @@ export const logout = () => send<{ ok: true }>("POST", "/api/logout");
 export const capture = (text: string) => send<{ id: number }>("POST", "/api/capture", { text });
 
 export const getToday = () =>
-  api<{ date: string; items: Item[]; recent: Capture[]; active_space: string | null }>("/api/today");
+  api<{
+    date: string;
+    items: Item[];
+    recent: Capture[];
+    active_space: string | null;
+    sessions: { total: number; by_item: Record<string, number> };
+  }>("/api/today");
 export const getSpacesSummary = () => api<{ spaces: SpaceSummary[]; unfiled: SpaceSummary }>("/api/spaces/summary");
 export const getBrief = (space: string, refresh = false) =>
   api<Brief>(`/api/spaces/${encodeURIComponent(space)}/brief${refresh ? "?refresh=true" : ""}`);
@@ -65,6 +71,12 @@ export const subscribePush = (endpoint: string, keys: { p256dh: string; auth: st
 export const unsubscribePush = (endpoint: string) =>
   send<{ ok: true; removed: number }>("DELETE", "/api/subscriptions", { endpoint });
 export const getSpaces = () => api<{ spaces: string[] }>("/api/spaces");
+
+export const getCurrentSession = () => api<SessionState>("/api/sessions/current");
+export const startSession = (item_id: number | null) => send<Session>("POST", "/api/sessions", { item_id });
+export const stopSession = (id: number) => send<Session>("POST", `/api/sessions/${id}/stop`);
+export const answerSession = (id: number, outcome: Outcome) =>
+  send<Session>("POST", `/api/sessions/${id}/outcome`, { outcome });
 
 export interface ListParams {
   q?: string;

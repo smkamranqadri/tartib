@@ -5,6 +5,7 @@ import { takePendingNav } from "./push";
 import Capture from "./Capture";
 import AskBar from "./components/AskBar";
 import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
+import SessionBar from "./components/SessionBar";
 import Toast, { type ToastState } from "./components/Toast";
 import Home from "./screens/Home";
 import Inbox from "./screens/Inbox";
@@ -15,6 +16,7 @@ import Space from "./screens/Space";
 import Spaces from "./screens/Spaces";
 import Waiting from "./screens/Waiting";
 import Settings from "./screens/Settings";
+import { SessionProvider } from "./session";
 import { ThemeContext, type Theme } from "./theme";
 import type { Answer, Capture as CaptureRecord } from "./types";
 import { useLoad } from "./useLoad";
@@ -187,6 +189,7 @@ export default function App() {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
+      <SessionProvider onFinish={bump}>
       <div className={`app ${showChat ? "has-askbar" : ""}`}>
         <header className="top">
           <NavLink to="/" className="brand" end>
@@ -211,6 +214,7 @@ export default function App() {
           <div className="top-actions" />
         </header>
         <Capture onCaptured={onCaptured} />
+        <SessionBar />
         <main>
           <Routes>
             <Route path="/" element={<Home version={version} answer={answer} onCloseAnswer={() => setAnswer(null)} />} />
@@ -233,6 +237,7 @@ export default function App() {
         {showChat && <AskBar spaces={spaces} />}
         <Toast toast={toast} />
       </div>
+      </SessionProvider>
     </ThemeContext.Provider>
   );
 }

@@ -8,10 +8,12 @@ import ItemEditor from "../components/ItemEditor";
 import Menu from "../components/Menu";
 import { ErrorLine, Loading } from "../components/Status";
 import { formatDue, formatRelative, formatRemind } from "../format";
+import { useSession } from "../session";
 import type { Capture as CaptureRecord, Edit } from "../types";
 import { useLoad } from "../useLoad";
 
 export default function ItemPage({ version }: { version: number }) {
+  const session = useSession();
   const { id } = useParams();
   const itemId = Number(id);
   const navigate = useNavigate();
@@ -87,6 +89,9 @@ export default function ItemPage({ version }: { version: number }) {
             </span>
             <Menu
               items={[
+                ...(isTask && item.stage === "filed" && item.status === "open"
+                  ? [{ label: "Start a session", onSelect: () => void session.start(item.id) }]
+                  : []),
                 { label: "Edit text", onSelect: () => setEditingText(true) },
                 { label: "Delete", danger: true, onSelect: () => setConfirmDelete(true) },
               ]}

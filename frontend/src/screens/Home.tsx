@@ -4,6 +4,7 @@ import AnswerView from "../components/AnswerView";
 import Card from "../components/Card";
 import { AlertIcon, ClockIcon, StarIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
+import { StartSession } from "../components/SessionBar";
 import PageHead from "../components/PageHead";
 import RecentList from "../components/RecentList";
 import { Empty, ErrorLine, Loading } from "../components/Status";
@@ -22,6 +23,7 @@ function rank(item: Item, today: string): number {
  *  the desktop grid places Needs attention in the right column. */
 export default function Home({ version, answer, onCloseAnswer }: { version: number; answer: Answer | null; onCloseAnswer: () => void }) {
   const { data, setData, error, loading } = useLoad(getToday, [version]);
+  const sessions = data?.sessions.total ?? 0;
   const attention = useLoad(getAttention, [version]);
   const today = todayLocal();
   const items = [...(data?.items ?? [])].sort((a, b) => rank(a, today) - rank(b, today) || (a.due ?? "").localeCompare(b.due ?? "") || a.id - b.id);
@@ -59,9 +61,22 @@ export default function Home({ version, answer, onCloseAnswer }: { version: numb
           {items.length > 0 && (
             <ul className="rows flat">
               {items.map((item) => (
-                <ItemRow key={item.id} item={item} onChange={update} />
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  onChange={update}
+                  sessions={data?.sessions.by_item[String(item.id)] ?? 0}
+                />
               ))}
             </ul>
+          )}
+          {data && (
+            <p className="session-total">
+              <span className="muted">
+                {sessions === 0 ? "No sessions yet today" : sessions === 1 ? "1 session today" : `${sessions} sessions today`}
+              </span>
+              <StartSession itemId={null} className="ghost" label="Start a session" />
+            </p>
           )}
         </Card>
         <Card className="area-attention" icon={<AlertIcon />} label="Needs attention" aside={waiting ?? "…"}>

@@ -62,6 +62,16 @@ def test_only_one_runs_at_a_time(auth):
     assert auth.post("/api/sessions", json={}).status_code == 201
 
 
+def test_stopping_early_still_asks_for_an_outcome(auth):
+    """A stopped session has an `ends_at` still in the future. It is finished all the same."""
+    session = auth.post("/api/sessions", json={}).json()
+    auth.post(f"/api/sessions/{session['id']}/stop")
+
+    current = auth.get("/api/sessions/current").json()
+    assert current["state"] == "awaiting", current
+    assert current["session"]["id"] == session["id"]
+
+
 def test_current_survives_a_closed_tab(auth):
     task = a_task(auth)
     started = auth.post("/api/sessions", json={"item_id": task["id"]}).json()
@@ -211,6 +221,20 @@ def test_an_answered_session_does_not_buzz(auth, tmp_path):
 
 
 # --- counts ---
+
+
+def test_a_task_you_worked_on_shows_up_on_today(auth):
+    """No due date, not starred, no reminder: without the session it would not be there, and
+    the count would have nowhere to appear."""
+    task = a_task(auth)
+    assert [i["id"] for i in auth.get("/api/today").json()["items"]] == []
+
+    session = auth.post("/api/sessions", json={"item_id": task["id"]}).json()
+    auth.post(f"/api/sessions/{session['id']}/outcome", json={"outcome": "unfinished"})
+
+    today = auth.get("/api/today").json()
+    assert [i["id"] for i in today["items"]] == [task["id"]]
+    assert today["sessions"]["by_item"] == {str(task["id"]): 1}
 
 
 def test_today_counts_the_total_and_the_task(auth, tmp_path):

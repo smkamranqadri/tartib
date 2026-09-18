@@ -59,9 +59,15 @@ def running(conn: sqlite3.Connection, now: datetime) -> sqlite3.Row | None:
 
 
 def awaiting(conn: sqlite3.Connection, now: datetime) -> sqlite3.Row | None:
-    """Finished, and still owed an outcome. Does not stop you starting the next one."""
+    """Finished, and still owed an outcome. Does not stop you starting the next one.
+
+    Finished means either its time ran out or it was stopped by hand, and a stopped session
+    has an `ends_at` still in the future -- which is why the window is measured from when it
+    actually ended rather than from when it was going to."""
     return conn.execute(
-        "SELECT * FROM sessions WHERE outcome IS NULL AND ends_at <= ? AND ends_at > ?"
+        "SELECT * FROM sessions WHERE outcome IS NULL"
+        " AND (ended_at IS NOT NULL OR ends_at <= ?)"
+        " AND COALESCE(ended_at, ends_at) > ?"
         " ORDER BY id DESC LIMIT 1",
         (iso(now), iso(now - OUTCOME_WINDOW)),
     ).fetchone()

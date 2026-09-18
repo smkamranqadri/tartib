@@ -95,7 +95,18 @@ Only task-linked sessions have a space. A session with no task counts on Today a
   tidied on a read, or already fired all fall out of the same check.
 - `as_utc_iso` and `parse_iso` moved into `clock.py`, where the reminder loop's copy lived.
 
+## Decided while building step 2
+
+- A task you spent a session on today appears on Today, whatever its due date says. Without
+  that the per-task count had nowhere to appear: a task with no due date and no star was not
+  on Today at all, so the feature was invisible exactly where the plan said to show it.
+- The outcome is asked inline in the same bar, not in a modal. This product has no dialogs,
+  and blocking the app to ask about 25 minutes that already happened would be nagging.
+- `awaiting` measures its window from when a session actually ended, not from when it was
+  going to: a session stopped by hand has an `ends_at` still in the future, and asking only
+  about elapsed `ends_at` made a stopped session vanish instead of asking for an outcome.
+
 ## Status
 - [x] migration + API + scheduler (2026-09-18)
-- [ ] session bar + end sheet + Today counts
+- [x] session bar + end sheet + Today counts (2026-09-18)
 - [ ] briefs + proof + deploy

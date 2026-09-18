@@ -5,10 +5,20 @@ import { formatDueLong, formatRelative, formatRemind, todayLocal } from "../form
 import type { Edit, Item } from "../types";
 import { AlertIcon, NoteIcon } from "./Icons";
 import Row from "./Row";
+import { StartSession } from "./SessionBar";
 
 /** An item as a row. Leading glyph: checkbox for a filed task, alert for something
  *  awaiting a decision, note for a note. */
-export default function ItemRow({ item, onChange }: { item: Item; onChange: (item: Item) => void }) {
+export default function ItemRow({
+  item,
+  onChange,
+  sessions = 0,
+}: {
+  item: Item;
+  onChange: (item: Item) => void;
+  /** Today's pomodoro count for this item, shown in the meta line when there is one. */
+  sessions?: number;
+}) {
   const [error, setError] = useState<string | null>(null);
   const isTask = item.shape === "task";
   const editable = item.stage === "filed";
@@ -29,6 +39,7 @@ export default function ItemRow({ item, onChange }: { item: Item; onChange: (ite
 
   const meta: string[] = [waiting ? "needs attention" : (item.space ?? "no space"), formatRelative(item.updated_at ?? item.created_at)];
   if (waiting && item.proposal) meta.push(`${Math.round(item.proposal.confidence * 100)}%`);
+  if (sessions) meta.push(sessions === 1 ? "1 session" : `${sessions} sessions`);
 
   return (
     <Row
@@ -77,9 +88,12 @@ export default function ItemRow({ item, onChange }: { item: Item; onChange: (ite
         ) : undefined
       }
       actions={
-        <Link to={`/items/${item.id}`} className="icon-btn" aria-label="Edit">
-          ✎
-        </Link>
+        <>
+          {isTask && editable && item.status === "open" && <StartSession itemId={item.id} />}
+          <Link to={`/items/${item.id}`} className="icon-btn" aria-label="Edit">
+            ✎
+          </Link>
+        </>
       }
     >
       {error && <span className="error">{error}</span>}

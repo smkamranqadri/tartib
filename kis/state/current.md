@@ -2,14 +2,16 @@
 
 - Branch: `main`, local only, working tree clean. Slice 11 is committed (three commits,
   `ecd2000`, `c38495b`, `8a897ad`) and deployed.
-- Task: slice 12, pomodoro. Step 1 of 3 done; step 2 (session bar, end sheet, Today counts) is
-  next. Phase Mode.
+- Task: slice 12, pomodoro. Steps 1 and 2 done; step 3 (briefs + proof + deploy) is next.
+  Phase Mode.
   Plan and step status: `kis/intent/slice-12-pomodoro.md`.
-- Verification plan for step 2: `npm run typecheck && npm run build`, then the built app in
-  headless Chrome: start, reload mid-session, the bar survives, the sheet after the end, each
-  outcome, and no push while a client is visible.
-- The session push has no visible-client suppression yet: `sw.js` gets it in step 2, so until
-  then a session ending buzzes even with the app open.
+- Verification plan for step 3: the brief work is already in step 1; what is left is proving it
+  (a brief regenerates after a session in that space and not otherwise) and deploying, then one
+  real session ending on the phone with the app closed.
+- Watch after deploy: the service worker returns without showing anything when a session ends
+  with the app on screen. Browsers allow that only within a budget for `userVisibleOnly` pushes;
+  if Chrome ever shows "This site has been updated in the background", switch that path to a
+  silent notification instead of no notification.
 - Decided while starting step 1, where the plan was silent:
   - Stop early is `POST /api/sessions/{id}/stop`, not `DELETE`. Every other DELETE in this API
     removes a row, and a stopped session is kept, counted, and given an outcome.
@@ -19,7 +21,7 @@
   - A session waiting for an outcome follows you for 12 hours, then stops being offered. An
     outcome sheet for something from two days ago is an ambush, not a question.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (144 passed) and `uv run pytest -m eval` (16 real-Codex
+- Verify: `cd backend && uv run pytest -q` (146 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
 - Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
   that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
@@ -30,9 +32,24 @@
 - Settings shows the installed service worker version (`DEVICE` -> Reminders worker). A phone
   silently sitting on an old worker cost a whole debugging round before that existed.
 - Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
-- Next: slice 12, step 2 of 3: the session bar under the capture bar, the start control on a task
-  row and item page, the Done / Not finished / Abandoned sheet, today's counts on Today, and the
-  visible-client check in `sw.js`.
+- Next: slice 12, step 3 of 3: prove the brief regeneration, deploy, and end one real session on
+  the phone with the app closed.
+
+## Proof (2026-09-18) — slice 12 step 2
+
+The built app driven in headless Chrome, with one-minute sessions:
+
+- 14 checks: no bar before a session; the bar appears with a countdown and survives a reload and
+  a move to another screen; the start control disappears while one runs; stopping asks for an
+  outcome rather than discarding the session; answering clears the bar; a session on a task names
+  it; the bar becomes the question when the time is up with nobody polling; "Done" ticks a task
+  off and ticks nothing on a bare session; Today counts the total and the task. No page errors.
+- 4 more on the push: silent while the app is on screen, a reminder still shows there, and the
+  session push does arrive once the app is not on screen.
+- Screenshots at 390px and 1280px of the running bar, the outcome question, and the counts.
+- Slice 11 suites re-run against the same build: settings 20/20, click 5/5, wake 5/5,
+  rotate 6/6, tags both survive.
+- 146 backend tests, ruff and format clean, typecheck and build clean.
 
 ## Proof (2026-09-18) — slice 12 step 1
 

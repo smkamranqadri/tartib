@@ -79,3 +79,22 @@ export interface Brief {
   updated_at: string;
   fresh: boolean;
 }
+
+export type Outcome = "done" | "unfinished" | "abandoned";
+
+export interface Session {
+  id: number;
+  item_id: number | null;
+  started_at: string;
+  ends_at: string;
+  ended_at: string | null;
+  outcome: Outcome | null;
+  created_at: string;
+}
+
+/** What the app shows on load: a countdown, an outcome sheet, or neither. */
+export interface SessionState {
+  state: "running" | "awaiting" | null;
+  session: Session | null;
+  item: Item | null;
+}

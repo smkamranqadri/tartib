@@ -329,3 +329,16 @@ button:disabled { opacity: .5; cursor: default; }
 .title-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
 .title-actions .more { margin-left: 0; }
 @media (max-width: 640px) { .title-actions { margin-top: 0; } }
+
+/* The running session, under the capture bar on every screen. */
+.session-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -12px 0 22px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.session-icon { display: inline-flex; }
+.session-time { font-variant-numeric: tabular-nums; font-weight: 600; }
+.session-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 14px; }
+.session-bar.done { border-color: var(--accent); }
+.session-outcomes { display: flex; gap: 8px; flex-wrap: wrap; }
+.session-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 0; font-size: 14px; }
+@media (max-width: 560px) {
+  .session-outcomes { width: 100%; }
+  .session-outcomes button { flex: 1; }
+}

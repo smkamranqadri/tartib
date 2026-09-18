@@ -26,19 +26,26 @@ router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 def today(
     conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict:
-    """Open tasks due today or earlier, starred, or whose reminder time has passed,
-    plus the newest 3 captures."""
+    """Open tasks due today or earlier, starred, whose reminder time has passed, or that you
+    have spent a session on today, plus the newest 3 captures.
+
+    A task you are running pomodoros on is today's work whatever its due date says, and it is
+    the only place its session count can be shown."""
     now = utcnow()
     today = today_in(settings.zone, now)
     day = today.isoformat()
+    counts = counts_today(conn, settings, now)
+    worked_on = [int(i) for i in counts["by_item"]]
+    placeholders = ", ".join("?" * len(worked_on))
+    worked_clause = f" OR items.id IN ({placeholders})" if worked_on else ""
     rows = conn.execute(
-        """
+        f"""
         SELECT * FROM items
         WHERE stage = 'filed' AND shape = 'task' AND status = 'open'
-          AND (due <= ? OR starred = 1 OR remind_at <= ?)
+          AND (due <= ? OR starred = 1 OR remind_at <= ?{worked_clause})
         ORDER BY due IS NULL, due, remind_at IS NULL, remind_at, starred DESC, created_at DESC
         """,
-        (day, utcnow_iso()),
+        (day, utcnow_iso(), *worked_on),
     ).fetchall()
     recent = conn.execute("SELECT * FROM captures ORDER BY id DESC LIMIT ?", (RECENT,)).fetchall()
     active = conn.execute(
@@ -50,7 +57,7 @@ def today(
         "recent": [serialize_capture(conn, r) for r in recent],
         "active_space": active["space"] if active else None,
         # Today's pomodoros: the total, and per task where one was attached.
-        "sessions": counts_today(conn, settings, now),
+        "sessions": counts,
     }
 
 

@@ -7,7 +7,7 @@ const CACHE = "tartib-shell-v1";
 const PENDING_NAV = "/__pending-nav";
 /* Bumped by hand whenever this file changes. The app shows it in Settings, so "is the phone
    actually running this worker?" is a question with an answer instead of a guess. */
-const SW_VERSION = "2026-09-18.4";
+const SW_VERSION = "2026-09-18.5";
 const VERSION_KEY = "/__sw-version";
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -66,16 +66,25 @@ self.addEventListener("push", (event) => {
   }
   const url = payload.url || "/";
   event.waitUntil(
-    self.registration.showNotification(payload.title || "Tartib", {
-      body: payload.body,
-      icon: "/icon-192.png",
-      data: { url },
-      /* The server tags per item, so a reminder replaces only itself. With no tag, nothing
-         is ever replaced -- better a duplicate than a reminder the phone never showed. */
-      tag: payload.tag,
-      /* Without this, the same reminder re-fired would swap in silently. */
-      renotify: !!payload.tag,
-    }),
+    (async () => {
+      /* A session ending while you are looking at the app is not news: the bar on screen
+         already turned into the question. Being buzzed about the countdown you are watching
+         is the nagging rule 4 exists to prevent. A reminder always shows. */
+      if (String(payload.tag || "").startsWith("session-")) {
+        const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+        if (windows.some((c) => c.visibilityState === "visible")) return;
+      }
+      await self.registration.showNotification(payload.title || "Tartib", {
+        body: payload.body,
+        icon: "/icon-192.png",
+        data: { url },
+        /* The server tags per item, so a reminder replaces only itself. With no tag, nothing
+           is ever replaced -- better a duplicate than a reminder the phone never showed. */
+        tag: payload.tag,
+        /* Without this, the same reminder re-fired would swap in silently. */
+        renotify: !!payload.tag,
+      });
+    })(),
   );
 });
 

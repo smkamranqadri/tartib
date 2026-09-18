@@ -75,6 +75,8 @@ POST   /api/login {password}     POST /api/logout     GET /api/health (public)
 POST   /api/capture {text} -> 201 {id}   (a capture id)
 GET    /api/captures/{id} -> capture, its items, and the answer if it was a question
 GET    /api/today -> {date, items, recent (newest 3 captures), active_space, sessions {total, by_item}}
+       items are open filed tasks due today or earlier, starred, with a passed reminder, or
+       worked on in a session today
 GET    /api/attention -> {items, stale, stale_days}   stale = open filed tasks with updated_at older than 14 days
 GET    /api/recent?limit=50&before=<id> -> {captures, next_before}   keyset paging
 GET    /api/items?q=&space=&shape=&status=&limit=&before=     GET /api/items/{id}
@@ -101,6 +103,7 @@ POST   /api/sessions/{id}/outcome {outcome}
 
 ## Frontend shell
 
+`session.tsx` holds the running pomodoro: it renders a countdown against the server's `ends_at`, re-asks whenever the app comes back, and is what `SessionBar` and the start controls read. `SessionBar` sits under the capture bar on every screen and turns into the Done / Not finished / Abandoned question in place; there is no modal, here or anywhere.
 Routes: `/` Home (dashboard), `/inbox`, `/inbox/attention` (every waiting item), `/inbox/recent` (paged captures), `/spaces`, `/spaces/:name`, `/settings`, `/items/:id`. Redirects: `/attention`, `/attention/all`, `/recent`, `/today`, `/search`, `/all`. Pill nav Home · Inbox · Spaces · Settings; the Inbox pill stays active across all three inbox routes.
 `push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible.
 `App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
