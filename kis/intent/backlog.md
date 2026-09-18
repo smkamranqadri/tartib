@@ -28,7 +28,10 @@ Unscheduled candidates:
   for input. Captures queue serially, so a burst during a real outage stalls for minutes and
   files nothing. The fallback exists to cover an outage quickly and currently does the opposite.
   Either give the fallback leg its own shorter timeout, or check the token is present before
-  spending a capture on it.
+  spending a capture on it. Deeper than the timeout: on 2026-09-18 the CLI hung in the deployed
+  container even with a valid token and a reachable API, and hung the same way when run by hand
+  there, so the fallback is currently theoretical on that host. Worth establishing whether the
+  CLI can run headless in a container at all before relying on it as insurance.
 - Automatic retry for `proposal_error` items after a Codex outage or usage-limit block. Today they wait for a human. Seen for real on 2026-09-17 when the ChatGPT usage limit hit mid-deploy.
 - Codex takes about 10s per item on the host. Fine for personal volume; a burst of captures queues serially.
 - Ask retrieval is keyword-only FTS5. The cheap next step is letting Codex propose 3 to 5 search terms first, still no embeddings. Slice 14 needs this, not just wants it: a follow-up like "what about the second one?" has no content words, so the OR-query returns nothing.

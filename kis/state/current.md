@@ -180,13 +180,28 @@ an acceptance check rather than a hope.
 11:58:56Z, the claim taken, and the subscription still present afterwards rather than pruned by a
 404 or 410 -- so the push service accepted it. Whether the phone rang is the user's half.
 
-**The Claude fallback is wired but not working.** With `TARTIB_AI_COMMAND=codex1` the error is
-`cannot run 'codex1': [Errno 2] No such file or directory; fallback: timed out after 120s`: the
-fallback is invoked, then hangs for the full timeout instead of failing. `stdin` is DEVNULL, so
-it is authenticating rather than waiting for input -- `CLAUDE_CODE_OAUTH_TOKEN` is not set on the
-server, or is not valid. Two captures are in Needs Attention carrying that error;
-`python -m tartib.reclassify --attention` rebuilds them once the token is in.
-That slow failure is now a backlog item in its own right.
+**The Claude fallback does not work on this server, and the cause is inside the CLI.** With
+`TARTIB_AI_COMMAND=codex1` the error is `cannot run 'codex1': [Errno 2] No such file or
+directory; fallback: timed out after 120s`. Codex fails fast and correctly; the fallback is
+invoked and then hangs for the whole timeout.
+
+What was ruled out, in order:
+
+- The token. It was set before those captures ran, and is present in the container.
+- Tartib's invocation. Running `claude` inside the container by hand -- interactively, and with
+  `--print` and no `--json-schema` -- hangs identically. Nothing in this repository is involved.
+- The network. From the container, `api.anthropic.com` and `console.anthropic.com` both connect
+  over IPv4.
+- IPv6. It is genuinely unreachable from the container (`Network is unreachable`), and that was
+  my theory, and it was wrong: an unreachable network errors instantly and cannot produce a
+  120-second hang. `NODE_OPTIONS=--dns-result-order=ipv4first` changed nothing, `exit=124`.
+
+So the hang is in the CLI's own startup or run inside that container. `claude --version` and
+`HOME` writability are the two things left unchecked.
+
+**Because it is broken, having it configured is worse than not having it.** A Codex failure now
+costs 120s per capture and fails anyway, and captures queue serially. Unset
+`TARTIB_AI_FALLBACK_COMMAND` until the hang is understood; failures are then instant.
 
 Still to prove: the fallback actually filing a capture with Codex broken, and a backup that has
 been restored from once. Then v1.0.
@@ -295,7 +310,7 @@ one would be a force-push to a repository other people can clone.
 
 ## Known gaps
 
-- The Claude fallback inside Docker needs `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`; without it a Codex outage still parks captures in the Inbox.
+- The Claude fallback does not run in the deployed container: the CLI hangs until the timeout even with a valid token, a reachable API and no involvement from Tartib's code. A Codex outage therefore parks captures in the Inbox, slowly. Proved 2026-09-18; see the step 4 notes.
 - Voice capture depends on the browser; it was proved with an injected engine, not real dictation.
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
   Inbox screen also shows.
