@@ -4,14 +4,17 @@
   is subscribed -- lives in `kis/state/private.md`, which is gitignored and never published. This
   file carries the substance without the specifics, and points there.
 
-- Branch: `main`, local only, working tree clean. Deployed locally, not hosted anywhere yet.
+- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public,
+  working tree clean. **History is published now.** Any further rewrite is a force-push, and
+  anyone who cloned in between keeps the old copy, so the three rewrites of 2026-09-18 were the
+  last cheap ones. Deployed locally, not hosted anywhere yet.
   History was rewritten twice on 2026-09-18: once to one identity, `Muhammad Kamran
   <smkamranqadri@yahoo.com>` as author and committer, and once to scrub the domain, the private
   network setup and the backup paths out of blobs and commit messages both. Every SHA changed
   each time;
   the citations below are the new ones. A copy of the repository as it was before that is kept
   locally; the path is in `private.md`, and it is the undo button until the push has happened.
-- Task: slice 16, the public repo, steps 1 and 2 of 3 done (below). Standard Mode.
+- Task: none in flight. Slice 16 is closed: the repository is public (below).
   Plan and step status: `kis/intent/slice-16-public-repo.md`. Slice 15 is closed.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
 - The worker is `2026-09-18.7` and no longer calls `skipWaiting`, so a deploy is offered as a
@@ -46,9 +49,9 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 16 step 3 -- push to `https://github.com/smkamranqadri/tartib.git`. That is the
-  point of no return for the rewrite: after it, any further history change is a force-push to a
-  public repository. Not started.
+- Next: slice 17, deploy. Step 1 is the global login backoff, hung off the password comparison
+  so it covers the bearer path too, with counters in `app_state`. `kis/intent/slice-17-deploy.md`.
+  Not started. Steps 2 to 4 are the image, the CapRover app, and proving it, ending at v1.0.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve a domain (in `private.md`) from `smkamranqadri/tartib` on Docker Hub,
   tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and CapRover
@@ -134,6 +137,22 @@ The run before that one failed three ways and one was a real bug: pending rows w
 seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
 
 154 backend tests pass, ruff clean, typecheck and build clean.
+
+### Slice 16 step 3, 2026-09-18 — published
+
+`https://github.com/smkamranqadri/tartib`, public, `main` tracking `origin/main` at the commit
+this machine has. README renders, all eight screenshots are there, GitHub's secret scanning
+reports no alerts, and `kis/state/private.md` is absent from the remote -- checked by asking the
+API for it, not by trusting `.gitignore`.
+
+The pre-flight earned its place twice over. It caught the second email address still named in the
+plan file that explained why that address had been removed from the commits, which would have
+published in prose exactly what the rewrite took off the metadata. Fixed in the tree and scrubbed
+from history before the push, as a third and final rewrite.
+
+Three rewrites in one day, all before anything was published: one for identity, one for the
+domain and the private-network setup, one for the address. That is the whole budget -- the next
+one would be a force-push to a repository other people can clone.
 
 ### Slice 16 step 2, 2026-09-18 — documentation that is true
 

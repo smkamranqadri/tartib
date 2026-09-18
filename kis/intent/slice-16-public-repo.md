@@ -105,4 +105,4 @@ Review: `/security-review` before the push. It is the last moment the repository
 - [x] filter-repo to one identity, update the KIS commit citations, secret scan, confirm the
       email is verified on GitHub (2026-09-18; the test-key item was void)
 - [x] README, .env.example, CONTRIBUTING, screenshots from a seeded database (2026-09-18)
-- [ ] push
+- [x] push (2026-09-18)
