@@ -5,6 +5,10 @@
 - Task: slice 12, pomodoro, step 3 of 3. Deployed and proved on the live app; the last check
   needs the phone. Phase Mode.
   Plan and step status: `kis/intent/slice-12-pomodoro.md`.
+- Only the phone is subscribed to push (`web.push.apple.com`, one row). No desktop browser has
+  enabled reminders, so nothing is pushed there: a session ending only turns the bar into the
+  outcome question on an open tab. Enabling it on a desktop is one switch for all three pushers
+  and would mean two buzzes for every reminder and every digest.
 - Left to do on slice 12: start a session on the phone, close the app, and check it buzzes once
   when the time is up. Everything else is proved. `TARTIB_SESSION_MINUTES` is 25 in `.env`; set
   it to 1 and `docker compose up -d` if you would rather not wait 25 minutes for the proof, then
@@ -22,7 +26,7 @@
   - A session waiting for an outcome follows you for 12 hours, then stops being offered. An
     outcome sheet for something from two days ago is an ambush, not a question.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (146 passed) and `uv run pytest -m eval` (16 real-Codex
+- Verify: `cd backend && uv run pytest -q` (148 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
 - Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
   that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
@@ -35,6 +39,12 @@
 - Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
 - Next: slice 12, step 3 of 3: prove the brief regeneration, deploy, and end one real session on
   the phone with the app closed.
+
+## Proof (2026-09-18) — slice 12 on real devices
+
+A 25-minute session started from the phone on a real task appeared on the desktop with the same
+countdown, which is the whole point of the session being a row rather than a tab. Its end, and
+whether the phone buzzes with the app closed, is the one thing on slice 12 still unproved.
 
 ## Proof (2026-09-18) — slice 12 step 2
 
