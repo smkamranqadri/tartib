@@ -1,8 +1,13 @@
 # Current
 
-- Branch: `main`, local only, working tree clean. Slices 11 and 12 and slice 15 step 1 are
-  committed; git carries the detail. Deployed locally, not hosted anywhere yet.
-- Task: none in flight. Slice 15 is closed, all three steps proved (below). Phase Mode.
+- Branch: `main`, local only, working tree clean. Deployed locally, not hosted anywhere yet.
+  History was rewritten on 2026-09-18 to one identity, `Muhammad Kamran
+  <smkamranqadri@yahoo.com>`, author and committer, across all 63 commits. Every SHA changed;
+  the citations below are the new ones. A copy of the repository as it was before that sits at
+  `a local backup directory` (165MB, includes node_modules and .venv,
+  so delete it once the push has happened).
+- Task: slice 16, the public repo, step 1 of 3 done (below). Standard Mode.
+  Plan and step status: `kis/intent/slice-16-public-repo.md`. Slice 15 is closed.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
 - The worker is `2026-09-18.7` and no longer calls `skipWaiting`, so a deploy is offered as a
   reload rather than swapped in underneath. A phone on `.5` or older still has the old worker's
@@ -38,9 +43,8 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 16, the public repo. Step 1 is `git filter-repo` to one identity, updating the
-  commit hashes KIS cites, moving the test VAPID key into a fixture, and a full-history secret
-  scan. `kis/intent/slice-16-public-repo.md`. Not started.
+- Next: slice 16 step 2 -- the README rewritten against SPEC, `.env.example` completed,
+  CONTRIBUTING, and screenshots from a seeded database. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve `https://the domain` from `smkamranqadri/tartib` on Docker
   Hub, tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and
@@ -52,10 +56,10 @@
 
 ## Proof
 
-Finished slices keep their step-by-step proof in the commit messages, not here: `ecd2000`,
-`8a897ad`, `7d8ffd6`, `6c5c16b`, `9a80a28`, and for the three most recent `1923c7c` (the plans),
-`70e91c6` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
-`6d78953` (slice 15 step 1).
+Finished slices keep their step-by-step proof in the commit messages, not here: `025bf8b`,
+`b77dbee`, `3c7c85d`, `3b1d468`, `4fe05ed`, and for the three most recent `9ead0c8` (the plans),
+`5b73d55` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
+`e1fbd94` (slice 15 step 1).
 
 Still operational from that: session 2 is owed an outcome, so the Done / Not finished /
 Abandoned question is sitting in the bar until it is answered.
@@ -126,6 +130,22 @@ The run before that one failed three ways and one was a real bug: pending rows w
 seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
 
 154 backend tests pass, ruff clean, typecheck and build clean.
+
+### Slice 16 step 1, 2026-09-18 — one identity, and no secrets
+
+- `git filter-repo --mailmap`: 63 commits, all now `Muhammad Kamran <smkamranqadri@yahoo.com>`
+  as both author and committer. Files untouched -- diffed against the pre-rewrite copy, and only
+  the KIS citation edits differ.
+- All eight SHAs cited in KIS were remapped through `.git/filter-repo/commit-map` and each
+  resolves to a commit with the subject it had before. filter-repo also rewrote the SHAs quoted
+  inside commit messages, which was not expected and is one less thing to fix.
+- Full-history secret scan by hand, no scanner being installed: no PEM private key anywhere, no
+  secret-shaped assignment, and the live password and both VAPID keys appear zero times. `.env`
+  was never tracked.
+- The plan's "move the test VAPID key into a fixture" was **void**: it was never hard-coded.
+  `test_reminders.py` does `TEST_PUBLIC, TEST_PRIVATE = generate()`, a fresh pair per run. The
+  claim came from a grep hit read without the line above it.
+- 154 tests pass, ruff clean, typecheck and build clean after the rewrite.
 
 ## Known gaps
 

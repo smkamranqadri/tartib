@@ -12,14 +12,15 @@ as `Muhammad Kamran <smkamranqadri@yahoo.com>`. `git filter-repo` maps both to
 
 That rewrites every SHA, and KIS cites SHAs on purpose: the step-by-step proof for slices 11 and
 12 lives in commit messages rather than in State, and `state/current.md`,
-`intent/slice-12-pomodoro.md` and `intent/history.md` point at `ecd2000`, `8a897ad`, `7d8ffd6`,
-`6c5c16b` and `9a80a28`. Updating those citations is part of this step, not a follow-up, or the
+`intent/slice-12-pomodoro.md` and `intent/history.md` point at `025bf8b`, `b77dbee`, `3c7c85d`,
+`3b1d468` and `4fe05ed`. Updating those citations is part of this step, not a follow-up, or the
 proof on record points at nothing. After the first push a second rewrite means a force-push, so
 this happens once, now.
 
-`backend/tests/test_reminders.py` hard-codes a VAPID private key. It is generated and harmless,
-but GitHub push protection can block a push over it, and a scanner flagging the repo on day one
-is a poor first impression. It moves into a fixture that generates a pair at test time.
+~~Move the test VAPID key into a fixture.~~ **Void, 2026-09-18.** It was never hard-coded:
+`test_reminders.py` line 20 is `TEST_PUBLIC, TEST_PRIVATE = generate()`, a fresh pair per run.
+The claim came from reading a grep hit without reading the line above it, and it is wrong. There
+is no key in the tests and nothing to scrub.
 
 Then a full-history secret scan while the repo is still private, and a check that
 `smkamranqadri@yahoo.com` is verified on the GitHub account — unverified, and none of the
@@ -78,7 +79,7 @@ proved running somewhere real — a tag on code that has only ever run on one la
 Review: `/security-review` before the push. It is the last moment the repository is private.
 
 ## Status
-- [ ] filter-repo to one identity, update the KIS commit citations, test key into a fixture,
-      secret scan, confirm the email is verified on GitHub
+- [x] filter-repo to one identity, update the KIS commit citations, secret scan, confirm the
+      email is verified on GitHub (2026-09-18; the test-key item was void)
 - [ ] README, .env.example, CONTRIBUTING, screenshots from a seeded database
 - [ ] push
