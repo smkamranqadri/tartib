@@ -175,8 +175,9 @@ memory limit 512MB, matching what `docker-compose.yml` carried. Force HTTPS on. 
 
 - Log in at `https://<the domain>` on a valid certificate. Six wrong passwords return
   429, and the right one works after the window.
-- The session cookie comes back with `Secure` on it. This is the one that will pass by default
-  if nobody looks, because everything else about the login still works without it.
+- [x] The session cookie comes back with `Secure` on it (2026-09-18), checked both by a login
+  over the domain and in DevTools on a real session. This is the one that would have passed by
+  default if nobody looked, because everything else about the login works without it.
 - [x] A capture files itself into a space on the deployed app: the server's own Codex login
   working, 2026-09-18. The device-code login removed the risk rather than mitigating it.
 - Break Codex deliberately; a capture still files through the Claude fallback.

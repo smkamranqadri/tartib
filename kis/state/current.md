@@ -169,10 +169,17 @@ on the deployed app too.
 
 Force HTTPS confirmed: `http://` answers 302 to the https origin.
 
-Still to prove: the session cookie carrying `Secure`; a session ending buzzing the phone from the
-new origin, ideally with a desktop tab open on the countdown, which is the migration 0008 case
-that has never been tested on real devices; the Claude fallback with Codex broken deliberately;
-and a backup that has actually been restored from once. Then v1.0.
+**The session cookie carries `Secure`** on the deployed app, so `--forwarded-allow-ips "*"` is
+doing its job behind Cloudflare and the app sees `https` rather than the `http` it saw before.
+Checked twice: a login over the domain returns `...; SameSite=lax; Secure`, and DevTools shows
+`HttpOnly ✓ Secure ✓ SameSite Lax` on a real browser session. This is the one item in the whole
+deployment that fails completely silently -- everything works without it -- which is why it is
+an acceptance check rather than a hope.
+
+Still to prove: a session ending buzzing the phone from the new origin, ideally with a desktop
+tab open on the countdown, which is the migration 0008 case that has never been tested on real
+devices; the Claude fallback with Codex broken deliberately; and a backup that has actually been
+restored from once. Then v1.0.
 
 ### Slice 17 step 3, 2026-09-18 — deployed
 
