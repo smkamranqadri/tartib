@@ -34,7 +34,7 @@ open http://localhost:8000
 
 No Codex? Set `TARTIB_AI_COMMAND=off` and every capture goes to Needs Attention for you to file by hand.
 
-**Fallback.** With `TARTIB_AI_FALLBACK_COMMAND=claude`, any Codex failure (usage limit, outage, timeout) is retried once through the Claude Code CLI with the same prompt and schema. Both CLIs are in the image. On the host the Claude login is used as is; inside Docker set `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
+**Fallback.** With `TARTIB_AI_FALLBACK_COMMAND=claude`, any Codex failure (usage limit, outage, timeout) is retried once through the Claude Code CLI with the same prompt and schema. Both CLIs are in the image. See [Secrets and logins](#secrets-and-logins) for how to authenticate either.
 
 **Spaces** are managed on the Spaces screen and live in the database. `TARTIB_SPACES` only seeds the table once, when it is empty, and is ignored afterwards.
 
@@ -45,6 +45,53 @@ One password, one user. Every `/api` route accepts that password as a bearer tok
 Guessing is slowed by a global backoff: four failures are free, then each further attempt gets `429` with a `Retry-After`, in a window that doubles from 30 seconds and stops at five minutes. It hangs off the password comparison rather than the login route, so it covers the bearer header too — otherwise guesses would simply move to a route nobody was watching. It is global rather than per-IP because behind a proxy the client address only arrives in a header, and one password is one account. While blocked, a correct password is refused as well: checking it would say which guess was right. A browser already holding a valid session cookie is never affected, so nobody can log you out by hammering the door.
 
 The session cookie is marked `Secure` only when the app sees an HTTPS request. Behind a reverse proxy that needs uvicorn to trust `X-Forwarded-Proto`; the image runs with `--proxy-headers --forwarded-allow-ips "*"`, which is safe precisely because nothing reaches the port except the proxy in front of it.
+
+### Secrets and logins
+
+Five things need generating or authenticating, and none of them live in this repository.
+
+**The password, and the cookie signing key.**
+
+```sh
+openssl rand -base64 24    # TARTIB_PASSWORD
+openssl rand -hex 32       # TARTIB_SECRET
+```
+
+Set `TARTIB_SECRET` explicitly even though it is optional. Unset, it is derived from the password, so changing the password later silently logs out every device.
+
+**Push keys**, if you want reminders. Tartib generates its own pair:
+
+```sh
+cd backend && uv run python -m tartib.vapid     # from a checkout
+docker run --rm <your-image> python -m tartib.vapid   # or from the image, no checkout needed
+```
+
+It prints the three lines to paste. They are a matched pair: a subscription is bound to the public key that made it, so replacing one half breaks every existing subscription with a `403` — which is neither `404` nor `410`, so nothing prunes the dead row and the UI keeps claiming reminders are on. Without both keys the reminder loop never starts, and `/api/config` withholds the public key so the interface will not offer to switch on something that cannot fire.
+
+**The Codex login.** Locally, `codex login` on the host is enough: compose mounts `~/.codex` into the container.
+
+On a server there is no browser, but the CLI authenticates with a device code, so this works over SSH:
+
+```sh
+docker exec -it <container> codex login
+```
+
+It has to be a persistent directory at `/root/.codex`, or the login is wiped by the next deploy. Two ways, and the difference matters:
+
+- **A named volume.** Then the login must be made *inside the container*, as above. The host's own `~/.codex` is a different directory the container never sees.
+- **A bind mount** of the host path — `/home/ubuntu/.codex:/root/.codex`, say. Then log in on the host and the container reads the same files. Note the container runs as root and Codex rewrites its credential on token refresh, so those files end up owned by `root`.
+
+Either way the mount is read-write, because the refresh has to go somewhere.
+
+**The Claude fallback token**, which unlike the others is a single string rather than a login:
+
+```sh
+claude setup-token
+```
+
+Run it where you are already signed in, and put the result in `CLAUDE_CODE_OAUTH_TOKEN`. A container login would work too, but nothing persists Claude's credentials across a redeploy, and an environment variable survives one.
+
+Without this the fallback is inert, and a Codex outage means captures pile up in Needs Attention with `proposal_error` set. Nothing is lost and nothing is announced — you find out by noticing the Inbox growing.
 
 ### Environment
 
