@@ -189,7 +189,7 @@ memory limit 512MB, matching what `docker-compose.yml` carried. Force HTTPS on. 
 - ~~A cron on the VPS copies `/data/tartib.db` off the persistent directory~~ **deferred
   2026-09-18 by decision**, and moved to the backlog. A persistent directory is not a backup, and
   a backup nobody has restored is a rumour -- so the deployment is, for now, not backed up.
-- Tag `v1.0` and cut the GitHub release.
+- [x] Tag `v1.0` and cut the GitHub release (2026-09-18).
 
 ## Risks and assumptions
 
@@ -219,4 +219,5 @@ Review: `/security-review` on step 1, `/code-review` on the diff before step 2 b
 - [x] CapRover app: persistent dirs, Codex login, Claude token, env, health, empty DB
       (2026-09-18). Container HTTP Port must be 8000, not CapRover's default 80.
       Force HTTPS on, confirmed: `http://` answers 302 to the https origin.
-- [ ] prove on real devices, backup cron with a restore, tag v1.0
+- [x] prove on real devices, tag v1.0 (2026-09-18). Backups deferred to the backlog; the
+      Claude fallback is recorded as broken on that host.

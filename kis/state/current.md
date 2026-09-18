@@ -14,8 +14,9 @@
   each time;
   the citations below are the new ones. A copy of the repository as it was before that is kept
   locally; the path is in `private.md`, and it is the undo button until the push has happened.
-- Task: slice 17, deploy, step 3 done -- the app is deployed and serving on the domain. Step 4,
-  proving it, is next. Phase Mode.
+- Task: none in flight. **Slice 17 is closed and v1.0 is tagged and released.** Tartib runs on
+  its own host, behind HTTPS, reachable from the phone -- which is what slices 15, 16 and 17 set
+  out to achieve before it became the daily driver.
 - Force HTTPS is on: `http://` answers 302 to the https origin, confirmed 2026-09-18.
 - Reminders are enabled on the phone against the new origin, so the push path works end to end
   there. Enabling them in a desktop Chrome fails with "Registration failed - push service error",
@@ -68,7 +69,7 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 17 step 3 -- the CapRover app, which is dashboard work rather than anything this
+- Superseded: slice 17 step 3 -- the CapRover app, which is dashboard work rather than anything this
   repository can do: deploy `smkamranqadri/tartib:v1.0` by image name, persistent directories at
   `/data` and `/root/.codex`, the Codex login copied into the second, the environment from the
   checklist in the plan, 512MB limit, force HTTPS, health check on `/api/health`, empty database.
