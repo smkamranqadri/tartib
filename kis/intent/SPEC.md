@@ -20,6 +20,8 @@ An item is classifier output. One capture produces zero or more items.
 
 Input box at the top of every screen, or `POST /api/capture {"text": "..."}`. The capture is stored and `201 {id}` returns immediately. `GET /api/captures/{id}` reports status, items, and answer; the PWA polls it after each capture.
 
+From the app, a capture is written to a local queue before it is sent, so the box can clear at once and nothing depends on the send working. One that cannot go out shows as "waiting to send" in Recent and goes when the network or the app comes back, oldest first. Each carries a `client_id`; `POST /api/capture` answers `200 {id}` with the capture it already has if it has seen that id, so a retry is never a second capture. Captures sent by curl or a Shortcut carry none and are never deduplicated.
+
 ## Classify
 
 A background call to `classify(text, context)` returns a list of proposals `{text, shape, space, title, due, remind_at, confidence}`, one per independent item in the capture. Context: current datetime in `TARTIB_TZ` and the configured spaces.
@@ -73,4 +75,12 @@ Rows everywhere come from one component: leading glyph (checkbox for a filed tas
 
 ## Out of scope
 
-Projects, tags, offline capture queue, multi-user. Push and pomodoro left this list on 2026-09-17 under the rule 4 carve-outs.
+Projects, tags, multi-user. Push and pomodoro left this list on 2026-09-17 under the rule 4 carve-outs.
+
+Offline capture queue left it on 2026-09-18, in slice 15. The argument is the one the other two
+were made on: rule 4 exists so that Tartib does not nag, and a capture box that quietly drops
+what you typed underground is not nagging, it is lying. It is also the smallest of the three in
+what it adds to the product -- no new screen, no new decision to make, nothing that pushes. A
+capture is written down before it is sent, shown as waiting until it goes, and carries a
+`client_id` so a retry is recognised rather than duplicated. Offline *reading* stays out of
+scope: the app still needs the network to show you anything.

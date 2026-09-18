@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { getCapture, getSpaces, setUnauthorizedHandler } from "./api";
+import { type Pending, onPending, watchForReconnect } from "./offline";
 import { takePendingNav } from "./push";
 import Capture from "./Capture";
 import AskBar from "./components/AskBar";
@@ -54,6 +55,7 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(readTheme);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
+  const [pending, setPending] = useState<Pending[]>([]);
   const pollRef = useRef(0);
   const toastTimer = useRef<number | null>(null);
   const navigate = useNavigate();
@@ -116,6 +118,24 @@ export default function App() {
   }, []);
   const location = useLocation();
   const bump = () => setVersion((v) => v + 1);
+
+  /* The queue, and sending it when the network or the app comes back. A capture that landed
+     this way was typed minutes ago, so it gets a quiet line rather than the full outcome
+     toast: the answer to "did my capture survive" is that it is on the list now. */
+  useEffect(() => onPending(setPending), []);
+  useEffect(
+    () =>
+      watchForReconnect((result) => {
+        bump();
+        if (result.rejected.length) showToast({ text: result.rejected[0], phase: "final" });
+        else if (result.sent.length)
+          showToast({
+            text: `Sent ${result.sent.length} capture${result.sent.length === 1 ? "" : "s"}`,
+            phase: "final",
+          });
+      }),
+    [],
+  );
   const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];
   const onSearchPage = location.pathname.startsWith("/spaces") || location.pathname.startsWith("/search");
   const showChat = location.pathname === "/" || location.pathname === "/inbox";
@@ -222,15 +242,18 @@ export default function App() {
           <div className="top-actions" />
         </header>
         <UpdateBar />
-        <Capture onCaptured={onCaptured} />
+        <Capture
+          onCaptured={onCaptured}
+          onQueued={() => showToast({ text: "Saved offline", phase: "final" })}
+        />
         <SessionBar />
         <main>
           <Routes>
-            <Route path="/" element={<Home version={version} answer={answer} onCloseAnswer={() => setAnswer(null)} />} />
+            <Route path="/" element={<Home version={version} answer={answer} pending={pending} onCloseAnswer={() => setAnswer(null)} />} />
             <Route path="/today" element={<Navigate to="/" replace />} />
             <Route path="/inbox" element={<Inbox version={version} onDecided={bump} />} />
             <Route path="/inbox/attention" element={<Waiting version={version} onDecided={bump} />} />
-            <Route path="/inbox/recent" element={<Recent version={version} />} />
+            <Route path="/inbox/recent" element={<Recent version={version} pending={pending} />} />
             <Route path="/attention" element={<Navigate to="/inbox" replace />} />
             <Route path="/attention/all" element={<Navigate to="/inbox/attention" replace />} />
             <Route path="/recent" element={<Navigate to="/inbox/recent" replace />} />

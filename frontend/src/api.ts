@@ -41,7 +41,10 @@ const send = <T,>(method: string, path: string, body?: unknown) =>
 
 export const login = (password: string) => send<{ ok: true }>("POST", "/api/login", { password });
 export const logout = () => send<{ ok: true }>("POST", "/api/logout");
-export const capture = (text: string) => send<{ id: number }>("POST", "/api/capture", { text });
+/** `client_id` makes the send safe to repeat: the server answers 200 with the capture it
+ *  already has rather than making a second one. See `offline.ts`. */
+export const capture = (text: string, client_id?: string) =>
+  send<{ id: number }>("POST", "/api/capture", client_id ? { text, client_id } : { text });
 
 export const getToday = () =>
   api<{

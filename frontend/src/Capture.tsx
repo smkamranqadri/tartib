@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { capture } from "./api";
+import { ApiError, capture } from "./api";
 import { MicIcon } from "./components/Icons";
+import { enqueue, flush } from "./offline";
 
 type Recognition = {
   lang: string;
@@ -25,7 +26,14 @@ function makeRecognition(): Recognition | null {
 }
 
 /** The capture bar in the header: one line, Enter or Add saves, mic dictates into the field. */
-export default function Capture({ onCaptured }: { onCaptured: (id: number) => void }) {
+export default function Capture({
+  onCaptured,
+  onQueued,
+}: {
+  onCaptured: (id: number) => void;
+  /** It is written down but not sent. Nothing is lost; it goes when the network comes back. */
+  onQueued: () => void;
+}) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +54,25 @@ export default function Capture({ onCaptured }: { onCaptured: (id: number) => vo
     if (!value || busy) return;
     setBusy(true);
     setError(null);
+    /* Written down before it is sent, so the box can clear at once and nothing depends on the
+       send working. Rule 2: a capture never waits. */
+    const queued = await enqueue(value);
+    setText("");
     try {
-      const { id } = await capture(value);
-      setText("");
-      onCaptured(id);
+      if (!queued) {
+        // No storage to queue in. Send it straight out rather than refusing to capture at all.
+        const { id } = await capture(value);
+        onCaptured(id);
+        return;
+      }
+      const result = await flush();
+      if (result.rejected.length) setError(result.rejected[0]);
+      else if (result.sent.length) onCaptured(result.sent[result.sent.length - 1]);
+      else onQueued();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "capture failed");
+      /* Only the unqueued path can land here; a queued one is still safely written down. */
+      setError(err instanceof ApiError ? err.message : "capture failed");
+      setText(value);
     } finally {
       setBusy(false);
       ref.current?.focus();

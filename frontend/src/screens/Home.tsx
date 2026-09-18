@@ -7,6 +7,7 @@ import ItemRow from "../components/ItemRow";
 import { StartSession } from "../components/SessionBar";
 import PageHead from "../components/PageHead";
 import RecentList from "../components/RecentList";
+import type { Pending } from "../offline";
 import { Empty, ErrorLine, Loading } from "../components/Status";
 import { formatLongDate, todayLocal } from "../format";
 import type { Answer, Item } from "../types";
@@ -21,7 +22,7 @@ function rank(item: Item, today: string): number {
 
 /** Dashboard. DOM order is Today, Needs attention, Recent, which is the phone order;
  *  the desktop grid places Needs attention in the right column. */
-export default function Home({ version, answer, onCloseAnswer }: { version: number; answer: Answer | null; onCloseAnswer: () => void }) {
+export default function Home({ version, answer, pending, onCloseAnswer }: { version: number; answer: Answer | null; pending: Pending[]; onCloseAnswer: () => void }) {
   const { data, setData, error, loading } = useLoad(getToday, [version]);
   const sessions = data?.sessions.total ?? 0;
   const attention = useLoad(getAttention, [version]);
@@ -100,7 +101,12 @@ export default function Home({ version, answer, onCloseAnswer }: { version: numb
           )}
         </Card>
         <Card className="area-recent" icon={<ClockIcon />} label="Recent" aside={<span className="muted">last 3</span>}>
-          {data && <RecentList captures={data.recent} />}
+          {/* Also when there is no `data`: offline the server call fails, and a capture waiting
+              to send is exactly what you want to see then. Hiding it behind the load was how
+              the queue became invisible in the one situation it exists for. */}
+          {(data || pending.length > 0) && (
+            <RecentList captures={data?.recent ?? []} pending={pending} />
+          )}
           <p className="view-all">
             <Link to="/inbox/recent">View all →</Link>
           </p>

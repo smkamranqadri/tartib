@@ -5,9 +5,12 @@ const CACHE = "tartib-shell-v1";
    wakes, which is the only thing that works on iOS: a home-screen app is frozen while this
    worker runs, so it cannot answer a message in time, and navigate() does nothing to it. */
 const PENDING_NAV = "/__pending-nav";
-/* Bumped by hand whenever this file changes. The app shows it in Settings, so "is the phone
-   actually running this worker?" is a question with an answer instead of a guess. */
-const SW_VERSION = "2026-09-18.6";
+/* Bumped by hand whenever this file changes -- and whenever the app does. A browser only
+   re-installs a worker whose bytes differ, so a release that changes only the bundle leaves the
+   old worker active: its precache still holds the previous build, and nothing offers the reload.
+   The app shows this in Settings, so "is the phone actually running this worker?" is a question
+   with an answer instead of a guess. */
+const SW_VERSION = "2026-09-18.7";
 const VERSION_KEY = "/__sw-version";
 /* Where the page leaves the VAPID public key, so this worker can re-subscribe on its own when
    the push service rotates an endpoint. The page is not running when that happens. */

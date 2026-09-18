@@ -2,12 +2,15 @@
 
 - Branch: `main`, local only, working tree clean. Slices 11 and 12 and slice 15 step 1 are
   committed; git carries the detail. Deployed locally, not hosted anywhere yet.
-- Task: slice 15, PWA, steps 1 and 2 of 3 done and proved (below). Phase Mode.
+- Task: none in flight. Slice 15 is closed, all three steps proved (below). Phase Mode.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
-- The worker is `2026-09-18.6` and no longer calls `skipWaiting`, so a deploy is offered as a
+- The worker is `2026-09-18.7` and no longer calls `skipWaiting`, so a deploy is offered as a
   reload rather than swapped in underneath. A phone on `.5` or older still has the old worker's
   behaviour until it next updates: `.5` skips the wait, so it will take `.6` on its own, once.
   After that every further update waits to be accepted. Settings shows which version is on.
+  `SW_VERSION` must be bumped whenever the app changes, not only when `sw.js` does: a browser
+  re-installs a worker only when its bytes differ, so a bundle-only release would otherwise leave
+  the old worker active and offer no reload.
 - Approved and planned next, in order: slice 15 PWA (`kis/intent/slice-15-pwa.md`), slice 16
   public repo (`kis/intent/slice-16-public-repo.md`), slice 17 deploy
   (`kis/intent/slice-17-deploy.md`). Remote exists and is empty:
@@ -35,8 +38,9 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 15 step 3 -- the IndexedDB queue, pending rows, flush on reconnect, and the SPEC
-  change that takes offline capture off the Out of scope list. Not started.
+- Next: slice 16, the public repo. Step 1 is `git filter-repo` to one identity, updating the
+  commit hashes KIS cites, moving the test VAPID key into a fixture, and a full-history secret
+  scan. `kis/intent/slice-16-public-repo.md`. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve `https://the domain` from `smkamranqadri/tartib` on Docker
   Hub, tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and
@@ -100,6 +104,28 @@ one row in captures, not three
 That test capture and the item it produced were deleted afterwards; the database is back to 32
 and 47. 154 backend tests pass, ruff clean. Four migration tests pin the schema version and were
 bumped from 8 to 9, as every migration before this one has had to do.
+
+### Slice 15 step 3, 2026-09-18 — the queue
+
+Headless Chrome at 390px against a throwaway instance on port 8001 with its own database, so
+none of this touched the real one (still 32 captures, 47 items):
+
+```text
+PASS  offline capture says so                     "Saved offline"
+PASS  three captures are waiting                  3 rows
+PASS  they are in IndexedDB, and sort oldest first
+PASS  the queue survives a reload while offline   3 rows
+PASS  offline says you're offline                 "You're offline."
+PASS  nothing is left waiting / it says what it sent  "Sent 3 captures"
+PASS  all three arrived, oldest first, no duplicates
+PASS  a second flush sends nothing
+```
+
+The run before that one failed three ways and one was a real bug: pending rows were inside
+`{data && ...}` and `data` is null exactly when offline, so the queue worked and could not be
+seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
+
+154 backend tests pass, ruff clean, typecheck and build clean.
 
 ## Known gaps
 

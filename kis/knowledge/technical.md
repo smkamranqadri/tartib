@@ -129,6 +129,16 @@ launch paid one). `index.html` carries a `theme-color` per colour scheme so the 
 right before any script runs, and `App` overwrites both with the active theme's background when
 the chosen theme is not the system's. `background_color` is a single dark value and the app has
 two themes, so one of them gets a mismatched splash; a manifest cannot know which.
+`offline.ts` is the capture queue and the only path a capture takes: `enqueue` writes it to an
+IndexedDB store keyed by `client_id`, then `flush` sends what is queued oldest first and stops at
+the first one that does not go, so a later capture cannot overtake an earlier one. Ordering lives
+in the sort in `list()`, not the store -- `getAll()` returns key order. A 4xx that is not 401 or
+429 leaves the queue and surfaces in the toast, since it can never succeed and would wedge
+everything behind it; 401 and 5xx stay queued. `watchForReconnect` flushes on `online` and on the
+same wake points `push.ts` watches, not Background Sync, which Safari does not have. Both capture
+lists render pending rows even when their server load failed, which is exactly when there are any.
+`useLoad` owns every screen's load error and says "You're offline." rather than the browser's
+"Failed to fetch".
 `push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible.
 `App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
 

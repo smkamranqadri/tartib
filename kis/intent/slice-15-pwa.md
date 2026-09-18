@@ -92,6 +92,30 @@ append-only and `raw_text` is immutable, so there is nothing to resolve.
   before this column existed send none, and two identical texts with no id are two captures,
   because that is what the user did.
 
+## Decided and found while building step 3
+
+- The queue is not the offline path, it is the only path. Every capture is written down and then
+  sent, online or not, which is one code path instead of two and makes a capture survive the tab
+  closing between typing and sending.
+- A permanent rejection leaves the queue. A 4xx that is not 401 or 429 can never succeed, and
+  retrying it forever would wedge every capture behind it; the error surfaces in the toast
+  instead. 401 stays queued, because a session that lapsed can come back, and so does 5xx --
+  seen for real when the proof server lost its database mid-run and all three captures correctly
+  stayed put.
+- **Bug found by running it, not reading it.** The pending rows were inside `{data && ...}`, and
+  `data` is null exactly when the server cannot be reached. The queue worked and was invisible in
+  the only situation it exists for. Both capture lists now render when there is something queued,
+  even with no server data.
+- `getAll()` on IndexedDB returns key order, not insertion order, so ordering lives in the sort
+  in `list()` rather than in the store. Ties are possible only for captures typed in the same
+  millisecond.
+- `SW_VERSION` now has to be bumped when *the app* changes, not only when `sw.js` does. A browser
+  re-installs a worker only when its bytes differ, so a release that changes only the bundle
+  leaves the old worker active, its precache holding the previous build and no reload offered.
+  That was harmless before step 1 and is not any more.
+- The raw "Failed to fetch" from step 1's findings is gone: `useLoad` owns every screen's load
+  error and now says "You're offline." when that is what is wrong.
+
 ## Found while building step 1
 
 - Offline, the screens now render and every one of them says "Failed to fetch" in red -- the
@@ -120,4 +144,4 @@ a quiet duplication bug lives.
 - [x] shell: precache, start_url, id, theme-color, update prompt, pushsubscriptionchange, iOS
       (2026-09-18)
 - [x] backend: migration 0009, client_id on POST /api/capture, tests (2026-09-18)
-- [ ] the queue: IndexedDB, pending rows, flush on reconnect, SPEC change
+- [x] the queue: IndexedDB, pending rows, flush on reconnect, SPEC change (2026-09-18)
