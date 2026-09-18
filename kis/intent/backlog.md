@@ -18,6 +18,13 @@ sit behind 15 to 17:
 - **14 AI contract** — the classifier prompt editable and stored as an override with the
   default shipped in code; Ask becomes continuous.
 
+Deferred from a slice rather than never planned:
+
+- **Backups for the deployed database.** Slice 17 step 4 called for a cron copying
+  `/data/tartib.db` off the persistent directory and one restore actually performed; deferred
+  2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so it is
+  not a backup, and everything in that database exists exactly once.
+
 Unscheduled candidates:
 
 - Image is 1.62GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras, plus cryptography and aiohttp via pywebpush since slice 11). Not a stated constraint (memory is, and runtime is 42MiB). A slimmer route: download the Codex release binary instead of npm. Worth more after slice 17: every deploy cross-builds this image under QEMU, where size is time.

@@ -186,9 +186,9 @@ memory limit 512MB, matching what `docker-compose.yml` carried. Force HTTPS on. 
   buzzes.
 - A session started on the phone buzzes once when it ends with the app closed. This is slice 12's
   outstanding proof, re-run where it will actually live.
-- A cron on the VPS copies `/data/tartib.db` off the persistent directory, and one of its files
-  is restored once. A persistent directory is not a backup, and a backup nobody has restored is
-  a rumour.
+- ~~A cron on the VPS copies `/data/tartib.db` off the persistent directory~~ **deferred
+  2026-09-18 by decision**, and moved to the backlog. A persistent directory is not a backup, and
+  a backup nobody has restored is a rumour -- so the deployment is, for now, not backed up.
 - Tag `v1.0` and cut the GitHub release.
 
 ## Risks and assumptions

@@ -203,8 +203,13 @@ So the hang is in the CLI's own startup or run inside that container. `claude --
 costs 120s per capture and fails anyway, and captures queue serially. Unset
 `TARTIB_AI_FALLBACK_COMMAND` until the hang is understood; failures are then instant.
 
-Still to prove: the fallback actually filing a capture with Codex broken, and a backup that has
-been restored from once. Then v1.0.
+**Backups are deferred, 2026-09-18, by decision.** There is no copy of `/data/tartib.db` off the
+CapRover persistent directory, which is the same disk as everything else. Every capture, item and
+space on that server exists once. Until this is done, the honest description of the deployment is
+that it works and is not backed up.
+
+Still open on slice 17: the fallback actually filing a capture with Codex broken, and that
+backup. Neither blocks v1.0; both are recorded rather than assumed.
 
 ### Slice 17 step 3, 2026-09-18 — deployed
 
