@@ -1,9 +1,12 @@
 # Slice 17: harden, publish the image, deploy (approved 2026-09-18)
 
-Tartib runs on a laptop behind a private network, so reminders stop whenever the lid closes. That is the
-one thing that keeps it from being a daily driver. It moves to the CapRover VPS that already
-hosts everything else, at `https://the domain`, with CapRover taking the certificate
-from Let's Encrypt — which means the auth has to be worth exposing first.
+Tartib runs on a laptop reachable only over a private network, so reminders stop whenever the lid
+closes. That is the one thing keeping it from being a daily driver. It moves to the CapRover VPS
+that already hosts everything else, on a public HTTPS domain with a Let's Encrypt certificate —
+which means the auth has to be worth exposing first.
+
+The domain, and the state of its DNS and certificate, are in `kis/state/private.md`; this plan
+says `<the domain>` throughout so it can be read by anyone.
 
 ## Step 1 — a login that can be on the internet
 
@@ -60,7 +63,7 @@ something missing. Two things the HTTPS toggle did not do:
 - It does not make the session cookie `Secure`. That still needs `FORWARDED_ALLOW_IPS` and
   Cloudflare on Full (strict); the toggle supplies the origin certificate the second of those
   depends on, so it is a prerequisite rather than the fix.
-- `http://the domain` answers 200 instead of redirecting, so plaintext is still
+- `http://<the domain>` answers 200 instead of redirecting, so plaintext is still
   served. With a cookie that is not yet `Secure`, that pair is how a session leaks. Force HTTPS,
   in CapRover or as Cloudflare's "Always Use HTTPS", before the app is behind that domain.
 
@@ -101,11 +104,11 @@ Every variable from `.env` moves into the CapRover panel, plus the container mem
 `docker-compose.yml` used to carry, HTTPS with force-redirect, and a health check on
 `/api/health`. `docker-compose.yml` stays for local development.
 
-The database starts empty. The Mac's is archived to `a local backup directory` and not migrated.
+The database starts empty. The laptop's is archived locally (path in `private.md`) and not migrated.
 
 ## Step 4 — prove it, protect it, tag it
 
-- Log in at `https://the domain` on a valid certificate. Six wrong passwords return
+- Log in at `https://<the domain>` on a valid certificate. Six wrong passwords return
   429, and the right one works after the window.
 - The session cookie comes back with `Secure` on it. This is the one that will pass by default
   if nobody looks, because everything else about the login still works without it.

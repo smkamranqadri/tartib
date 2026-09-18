@@ -1,11 +1,14 @@
 # Current
 
+- Local operational detail -- the domain, how HTTPS reaches the phone, backup paths, which device
+  is subscribed -- lives in `kis/state/private.md`, which is gitignored and never published. This
+  file carries the substance without the specifics, and points there.
+
 - Branch: `main`, local only, working tree clean. Deployed locally, not hosted anywhere yet.
   History was rewritten on 2026-09-18 to one identity, `Muhammad Kamran
   <smkamranqadri@yahoo.com>`, author and committer, across all 63 commits. Every SHA changed;
-  the citations below are the new ones. A copy of the repository as it was before that sits at
-  `a local backup directory` (165MB, includes node_modules and .venv,
-  so delete it once the push has happened).
+  the citations below are the new ones. A copy of the repository as it was before that is kept
+  locally; the path is in `private.md`, and it is the undo button until the push has happened.
 - Task: slice 16, the public repo, steps 1 and 2 of 3 done (below). Standard Mode.
   Plan and step status: `kis/intent/slice-16-public-repo.md`. Slice 15 is closed.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
@@ -20,10 +23,10 @@
   public repo (`kis/intent/slice-16-public-repo.md`), slice 17 deploy
   (`kis/intent/slice-17-deploy.md`). Remote exists and is empty:
   `https://github.com/smkamranqadri/tartib.git`, public.
-- Only the phone is subscribed to push (`web.push.apple.com`, one row). No desktop browser has
-  enabled reminders, so nothing is pushed there: a session ending only turns the bar into the
-  outcome question on an open tab. Enabling it on a desktop is one switch for all three pushers
-  and would mean two buzzes for every reminder and every digest.
+- One device is subscribed to push; no desktop browser has enabled reminders, so nothing is
+  pushed there and a session ending only turns the bar into the outcome question on an open tab.
+  Enabling it on a desktop is one switch for all three pushers and would mean two buzzes for
+  every reminder and every digest. Which device, and the keys, are in `private.md`.
 - Watch after deploy: the service worker returns without showing anything when a session ends
   with the app on screen. Browsers allow that only within a budget for `userVisibleOnly` pushes;
   if Chrome ever shows "This site has been updated in the background", switch that path to a
@@ -31,13 +34,11 @@
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
 - Verify: `cd backend && uv run pytest -q` (154 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
-- Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
-  that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
-  `the serve command` and `the network down command` end it; doing so means enabling
-  reminders again afterwards, since a subscription is bound to that exact origin.
-- Push keys live in `.env` (2026-09-18). `cd backend && uv run python -m tartib.vapid` prints a
-  fresh set; regenerating invalidates every subscription, and Settings re-mints on next open.
-- Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
+- Reminders on a phone need HTTPS and a stable origin. How this machine provides one today, and
+  how to end it, are in `private.md`. A push subscription is bound to the exact origin that
+  minted it, so changing the origin means enabling reminders again afterwards.
+- Push keys live in `.env`. `cd backend && uv run python -m tartib.vapid` prints a fresh set;
+  regenerating invalidates every subscription, and Settings re-mints on next open.
 - Not yet proved on a real device: a session ending while a *desktop tab watches the countdown*.
   That is the case migration 0008 exists for, and it should buzz either way; the retry above had
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
@@ -47,12 +48,12 @@
   point of no return for the rewrite: after it, any further history change is a force-push to a
   public repository. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
-  Slice 17 will serve `https://the domain` from `smkamranqadri/tartib` on Docker
-  Hub, tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and
-  CapRover already answers there with its placeholder page, so the path is wired end to end.
-  Carried into slice 17: the session cookie will not be `Secure` behind that proxy until
-  `FORWARDED_ALLOW_IPS` is set and Cloudflare is on Full (strict) -- proved locally, written up
-  in the plan. Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
+  Slice 17 will serve a domain (in `private.md`) from `smkamranqadri/tartib` on Docker Hub,
+  tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and CapRover
+  already answers there with its placeholder page, so the path is wired end to end. Carried into
+  slice 17: the session cookie will not be `Secure` behind that proxy until `FORWARDED_ALLOW_IPS`
+  is set and Cloudflare is on Full (strict) -- proved locally, written up in the plan.
+  Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
   verified on the GitHub account, or the rewritten commits will not link to it.
 
 ## Proof
@@ -96,7 +97,7 @@ the live database: 32 captures and 47 items before and after, schema 8 to 9, and
 sitting under the unique index without complaint, which is the whole reason a unique index was
 used rather than a constraint.
 
-Then applied for real (`a local backup` is the backup taken first) and
+Then applied for real, with a backup taken first (path in `private.md`), and
 driven through the running app with one `client_id` sent three times:
 
 ```text
@@ -176,5 +177,5 @@ seen. Screenshot of the fixed offline state confirmed by eye, not just by select
   rotation still means reminders are silently off until Settings is next opened.
 - Tapping a reminder on iOS opens Tartib but does not navigate to `/today`. Whether iOS runs the
   worker's `notificationclick` at all was never established; `technical.md` records what was tried.
-- Reminders depend on the Mac being awake and on a private network running at both ends. There is no
-  hosting, so a closed laptop means no reminders.
+- Reminders depend on this machine being awake and on the private network running at both ends.
+  There is no hosting yet, so a closed laptop means no reminders. Slice 17 is what fixes it.
