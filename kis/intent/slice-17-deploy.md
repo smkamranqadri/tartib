@@ -113,7 +113,7 @@ not using CI. If it becomes intolerable the same buildx line moves into GitHub A
 `ubuntu-latest`, which is native amd64 and free for a public repository — the escape hatch, not
 the plan.
 
-- Confirm the VPS architecture with `uname -m` before building for it.
+- ~~Confirm the VPS architecture with `uname -m` before building for it.~~ Done: x86_64.
 - A short deploy script so build, push and redeploy is one command, documented in the README.
 - A `captain-definition` in the repository as well. It is not the route used here, but it makes
   the project one-click deployable for anyone else on CapRover, which is a real reason to have
@@ -139,6 +139,31 @@ Every variable from `.env` moves into the CapRover panel, plus the container mem
 
 The database starts empty. The laptop's is archived locally (path in `private.md`) and not migrated.
 
+### The CapRover configuration, concretely
+
+Environment, from the local `.env`. Four of these are secrets and get copied by hand:
+
+```text
+TARTIB_PASSWORD             secret; long and random, since it is the whole security model
+TARTIB_SECRET               secret; set it explicitly so a password change does not log you out
+TARTIB_VAPID_PUBLIC         same pair as local, or every subscription is invalidated
+TARTIB_VAPID_PRIVATE        secret
+TARTIB_VAPID_EMAIL
+CLAUDE_CODE_OAUTH_TOKEN     secret; from `claude setup-token`, for the fallback
+TARTIB_AI_FALLBACK_COMMAND  claude
+TARTIB_TZ                   Asia/Karachi
+TARTIB_SPACES               ignored once the spaces table has rows, but harmless to set
+TARTIB_SUMMARY_TIME
+TARTIB_SESSION_MINUTES
+```
+
+`TARTIB_DB_PATH` and `TARTIB_STATIC_DIR` are already right in the image. `TARTIB_AI_COMMAND`
+defaults to `codex`.
+
+Persistent directories: `/data` for the database, `/root/.codex` for the Codex login. Container
+memory limit 512MB, matching what `docker-compose.yml` carried. Force HTTPS on. Health check on
+`/api/health`.
+
 ## Step 4 — prove it, protect it, tag it
 
 - Log in at `https://<the domain>` on a valid certificate. Six wrong passwords return
@@ -160,7 +185,7 @@ The database starts empty. The laptop's is archived locally (path in `private.md
 
 ## Risks and assumptions
 
-- Assumes the VPS is amd64; step 2 checks rather than assumes.
+- ~~Assumes the VPS is amd64~~ **Confirmed 2026-09-18: the VPS reports x86_64**, so the image built for `linux/amd64` is the right one.
 - The QEMU cross-build may be slow enough to be annoying on every deploy. GitHub Actions is the
   escape.
 - The copied Codex login may re-authenticate on a new address, silently. The Claude fallback is
@@ -180,7 +205,6 @@ Review: `/security-review` on step 1, `/code-review` on the diff before step 2 b
 ## Status
 - [x] global login backoff covering the bearer path, counters in app_state, tests (2026-09-18)
 - [x] FORWARDED_ALLOW_IPS so the session cookie is Secure behind the proxy (2026-09-18)
-- [~] buildx amd64 proved, captain-definition and deploy.sh written (2026-09-18).
-      **Push blocked:** no Docker Hub credentials on this machine.
+- [x] buildx amd64, push to Docker Hub, captain-definition, deploy script (2026-09-18)
 - [ ] CapRover app: persistent dirs, Codex login, Claude token, env, HTTPS, health, empty DB
 - [ ] prove on real devices, backup cron with a restore, tag v1.0
