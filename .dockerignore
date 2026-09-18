@@ -1,0 +1,34 @@
+# The Dockerfile builds its own dependencies: `npm ci` in the web stage, `uv sync` in the app
+# stage. Then `COPY frontend/ ./` and `COPY backend/ ./` bring the source across -- and without
+# this file they would bring the host's node_modules and .venv with it, straight over the top.
+#
+# On this machine that was merely wasteful. Cross-building for another architecture it is wrong:
+# those directories hold native binaries built for the host, and copying them into an image for
+# a different platform puts arm64 objects in an amd64 image.
+**/node_modules
+**/.venv
+
+# Build output. The image makes its own; the host's is stale by definition.
+frontend/dist
+backend/static
+
+# Never needed, and .env holds the password and the push keys. No COPY line reaches it, but
+# there is no reason for it to be in the build context at all.
+.env
+*.db
+*.db-wal
+*.db-shm
+
+.git
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+.DS_Store
+
+# Project memory, docs and agent scaffolding: read by people, not by the runtime.
+kis
+docs
+.agents
+.claude
+.pi

@@ -69,6 +69,18 @@ The session cookie is marked `Secure` only when the app sees an HTTPS request. B
 | `TARTIB_SUMMARY_TIME` | no | `08:00` | One daily digest, at the first tick past this time in `TARTIB_TZ`. |
 | `TARTIB_SESSION_MINUTES` | no | `25` | Every pomodoro is this long. No per-session choice. |
 
+## Deploy it
+
+There is a `captain-definition`, so a [CapRover](https://caprover.com) instance can build and deploy this from the repository directly. That is not the route used here: the image carries a Node runtime and two AI CLIs, and building it on a small VPS is the part that falls over. It is built on a workstation and pushed instead.
+
+```sh
+./deploy.sh v1.0        # buildx for linux/amd64, push to Docker Hub
+```
+
+Then in CapRover, the app's Deployment tab, "Deploy via ImageName". Tags are immutable versions and there is no `latest`: CapRover deploys by image name, and a tag whose contents changed underneath it can redeploy to the same string and serve either image with nothing to tell them apart. A version per deploy also makes a rollback a choice from a list instead of a rebuild.
+
+Set `TARTIB_IMAGE` for your own Docker Hub namespace, and `TARTIB_PLATFORM` if your server is not amd64. The app needs two persistent directories: `/data` for the database, and `/root/.codex` if you want classification, which means getting a Codex login onto the server.
+
 ## Capture from anywhere
 
 Every `/api` route accepts the password as a bearer token, so shortcuts and scripts need no login flow.

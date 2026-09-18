@@ -67,6 +67,22 @@ something missing. Two things the HTTPS toggle did not do:
   served. With a cookie that is not yet `Secure`, that pair is how a session leaks. Force HTTPS,
   in CapRover or as Cloudflare's "Always Use HTTPS", before the app is behind that domain.
 
+### Found while building step 2
+
+There was no `.dockerignore`, and the Dockerfile does `COPY frontend/ ./` after `npm ci` and
+`COPY backend/ ./` after `uv sync`. Without one, both copy the host's `node_modules` and `.venv`
+over the top of what the image just built. On this machine that was only wasteful; cross-building
+for another architecture it is wrong, because those directories hold native binaries built for
+arm64. Caught while the first build was still pulling base layers, so no QEMU time was lost.
+
+Build context went from 156MB to about 2MB. Image size, measured with `docker images` both
+times, went from 1.62GB to 1.42GB -- roughly the excluded directories, which were being copied in
+and then built over, leaving both copies in the layers.
+
+Worth knowing for anyone quoting a number: `docker images` and `docker image inspect --format
+'{{.Size}}'` disagree on this setup, reporting 1.42GB and 0.39GB for the same image. Quote one
+tool consistently or the comparison is meaningless.
+
 ### Decided while building step 1
 
 - The attempt that trips the block answers 429, not 401. Telling you on the attempt that locks
@@ -164,6 +180,7 @@ Review: `/security-review` on step 1, `/code-review` on the diff before step 2 b
 ## Status
 - [x] global login backoff covering the bearer path, counters in app_state, tests (2026-09-18)
 - [x] FORWARDED_ALLOW_IPS so the session cookie is Secure behind the proxy (2026-09-18)
-- [ ] buildx amd64, push to Docker Hub, captain-definition, deploy script
+- [~] buildx amd64 proved, captain-definition and deploy.sh written (2026-09-18).
+      **Push blocked:** no Docker Hub credentials on this machine.
 - [ ] CapRover app: persistent dirs, Codex login, Claude token, env, HTTPS, health, empty DB
 - [ ] prove on real devices, backup cron with a restore, tag v1.0

@@ -155,6 +155,17 @@ One component per pattern, each the only owner of its markup:
 One primary button class (`.primary`), one ghost, one icon button. Space page collapse state lives in localStorage `tartib-space-<name>`.
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 
+## Deploy
+
+`captain-definition` (schemaVersion 2, pointing at the Dockerfile) exists so anyone else can
+one-click this onto CapRover, but it is not the route used: the image is built on the
+workstation by `deploy.sh` and pushed to Docker Hub, and CapRover deploys it by image name. The
+VPS has the disk but building a Node-plus-two-CLIs image there is what falls over. This machine
+is arm64 and the server is not, so `deploy.sh` runs `docker buildx build --platform linux/amd64`
+under QEMU; `TARTIB_IMAGE` and `TARTIB_PLATFORM` override the defaults. The script refuses to
+overwrite a tag that already exists, because the tags are immutable versions and there is no
+`latest` -- CapRover redeploying the same string could otherwise serve either image.
+
 ## Maintenance
 
 `python -m tartib.reclassify --all | --attention [--dry-run]` (in Docker: `docker compose exec tartib python -m tartib.reclassify --all`). Deletes the selected captures' items, marks the captures pending, runs the Runner in-process until drained, then carries `starred`/`status` over where a capture still yields one task. Safe with the server up; do not restart the server mid-run. Back up `/data/tartib.db` first (`docker cp tartib-tartib-1:/data/tartib.db …`).

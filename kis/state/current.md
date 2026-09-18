@@ -14,7 +14,14 @@
   each time;
   the citations below are the new ones. A copy of the repository as it was before that is kept
   locally; the path is in `private.md`, and it is the undo button until the push has happened.
-- Task: slice 17, deploy, step 1 of 4 done and proved (below). Phase Mode.
+- Task: slice 17, deploy, step 2 of 4. Phase Mode. The image is built and proved; the push is
+  blocked.
+- **Blocker:** no Docker Hub credentials on this machine, so `smkamranqadri/tartib:v1.0` cannot
+  be pushed. `docker login -u smkamranqadri` needs an interactive terminal, or a token through
+  `--password-stdin`. Nothing else in step 2 is waiting on anything.
+- Also still unconfirmed: whether the VPS is amd64. The image was built for it on that
+  assumption. If it is ARM, `TARTIB_PLATFORM=linux/arm64 ./deploy.sh v1.0` is the fix and that
+  build is native and quick.
   Plan and step status: `kis/intent/slice-17-deploy.md`. Slice 16 is closed.
   Plan and step status: `kis/intent/slice-16-public-repo.md`. Slice 15 is closed.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
@@ -50,9 +57,10 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 17 step 2 -- the image. `docker buildx build --platform linux/amd64` here, pushed
-  to `smkamranqadri/tartib` on Docker Hub, plus a `captain-definition` and a deploy script.
-  Check the VPS is amd64 first. Not started.
+- Next: finish step 2 by pushing `v1.0` once Docker Hub credentials exist (`./deploy.sh v1.0`),
+  then step 3 -- the CapRover app: persistent dirs at `/data` and `/root/.codex`, the Codex login
+  copied in, `CLAUDE_CODE_OAUTH_TOKEN` set, env from the dashboard, force HTTPS, health check,
+  empty database.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve a domain (in `private.md`) from `smkamranqadri/tartib` on Docker Hub,
   tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and CapRover
@@ -138,6 +146,21 @@ The run before that one failed three ways and one was a real bug: pending rows w
 seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
 
 154 backend tests pass, ruff clean, typecheck and build clean.
+
+### Slice 17 step 2, 2026-09-18 — the image cross-builds and runs
+
+`docker buildx build --platform linux/amd64` succeeds and the result is genuinely amd64, not a
+manifest that merely claims to be:
+
+```text
+arch amd64 / os linux        python -c platform.machine() -> x86_64
+uvicorn present, static built, codex and claude both on PATH
+no stray host node_modules
+booted under --platform linux/amd64: /api/health 200, index.html 200, login 200, 69MiB
+```
+
+Not pushed: this machine has no Docker Hub credentials. That is the blocker above, and it is the
+only thing left in step 2.
 
 ### Slice 17 step 1, 2026-09-18 — a login that can be on the internet
 
