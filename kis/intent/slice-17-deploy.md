@@ -51,6 +51,19 @@ both have to be true, or it stays broken quietly:
 
 Proved by tests before anything is deployed, and re-checked on the live domain in step 4.
 
+### Already done, 2026-09-18
+
+The CapRover app exists, the domain is bound to it and HTTPS is enabled; the certificate is
+valid. `/api/health` still answers 404 because the app has no image yet -- that is step 2, not
+something missing. Two things the HTTPS toggle did not do:
+
+- It does not make the session cookie `Secure`. That still needs `FORWARDED_ALLOW_IPS` and
+  Cloudflare on Full (strict); the toggle supplies the origin certificate the second of those
+  depends on, so it is a prerequisite rather than the fix.
+- `http://the domain` answers 200 instead of redirecting, so plaintext is still
+  served. With a cookie that is not yet `Secure`, that pair is how a session leaks. Force HTTPS,
+  in CapRover or as Cloudflare's "Always Use HTTPS", before the app is behind that domain.
+
 ## Step 2 — the image
 
 The VPS has disk but building there is the problem, so the image is built here and pushed to
