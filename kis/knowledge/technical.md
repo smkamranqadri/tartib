@@ -166,6 +166,12 @@ under QEMU; `TARTIB_IMAGE` and `TARTIB_PLATFORM` override the defaults. The scri
 overwrite a tag that already exists, because the tags are immutable versions and there is no
 `latest` -- CapRover redeploying the same string could otherwise serve either image.
 
+The Codex CLI authenticates with a device code, so `codex login` works over SSH on a headless
+server with no browser callback and no credential files to carry. On CapRover it is run inside
+the container, because the persistent directory is a labelled volume and the host's own
+`~/.codex` is a different directory the container never sees. The mount is read-write so the
+CLI's token refresh persists.
+
 ## Maintenance
 
 `python -m tartib.reclassify --all | --attention [--dry-run]` (in Docker: `docker compose exec tartib python -m tartib.reclassify --all`). Deletes the selected captures' items, marks the captures pending, runs the Runner in-process until drained, then carries `starred`/`status` over where a capture still yields one task. Safe with the server up; do not restart the server mid-run. Back up `/data/tartib.db` first (`docker cp tartib-tartib-1:/data/tartib.db …`).

@@ -125,11 +125,18 @@ the plan.
 ## Step 3 — the app on CapRover
 
 Deployed by image name. A persistent directory at `/data`, another at `/root/.codex` with the
-Codex login copied into it — the browser OAuth flow expects a localhost callback, so the files
-are copied rather than a login performed there.
+the Codex login made **on the server**: the CLI supports device-code authentication, so
+`codex login` works over SSH with no browser callback and nothing has to be copied. This plan
+said the opposite until 2026-09-18, when it was tried and worked; the claim that it needs a
+localhost callback was simply wrong. Doing it there is also better than copying, because the
+session is minted from the address it will be used from.
+
+The login must be made **inside the container**, not on the host. The persistent directory is a
+CapRover-labelled volume, so the host's own `~/.codex` is a different directory that the
+container never sees.
 
 `CLAUDE_CODE_OAUTH_TOKEN` is set as well. Both CLIs are already in the image running identical
-prompts, so if the copied Codex login ever objects to the VPS's address, filing keeps working and
+prompts, so if the Codex login ever stops being accepted, filing keeps working and
 promoting Claude to primary is an env change with no code. Without it the failure is invisible:
 no error, just an Inbox slowly filling with `proposal_error` notes.
 
@@ -171,7 +178,7 @@ memory limit 512MB, matching what `docker-compose.yml` carried. Force HTTPS on. 
 - The session cookie comes back with `Secure` on it. This is the one that will pass by default
   if nobody looks, because everything else about the login still works without it.
 - A capture typed on the phone over cellular files itself within about fifteen seconds: the
-  copied Codex login working from that address.
+  server's own Codex login working.
 - Break Codex deliberately; a capture still files through the Claude fallback.
 - The phone re-enables reminders against the new origin. Every existing subscription is bound to
   the old origin and is dead; `push.py` prunes them on the first 404 or 410. A reminder
@@ -188,8 +195,10 @@ memory limit 512MB, matching what `docker-compose.yml` carried. Force HTTPS on. 
 - ~~Assumes the VPS is amd64~~ **Confirmed 2026-09-18: the VPS reports x86_64**, so the image built for `linux/amd64` is the right one.
 - The QEMU cross-build may be slow enough to be annoying on every deploy. GitHub Actions is the
   escape.
-- The copied Codex login may re-authenticate on a new address, silently. The Claude fallback is
-  the mitigation and proving it is an acceptance check, not a hope.
+- ~~The copied Codex login may re-authenticate on a new address~~ -- much reduced now that the
+  login is made on the server itself rather than carried there. A session can still lapse, and
+  it lapses silently into an Inbox of unclassified notes, so the Claude fallback stays the
+  mitigation and proving it stays an acceptance check.
 - A global backoff means anyone hammering the login slows yours too. Accepted, and bounded by the
   cookie exemption above.
 - The bearer token is the password. One leaked Shortcut configuration is full access. Use a long
