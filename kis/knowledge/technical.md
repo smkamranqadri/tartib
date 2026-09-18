@@ -112,6 +112,23 @@ POST   /api/sessions/{id}/outcome {outcome}
 
 `session.tsx` holds the running pomodoro: it renders a countdown against the server's `ends_at`, re-asks whenever the app comes back, and is what `SessionBar` and the start controls read. `SessionBar` sits under the capture bar on every screen and turns into the Done / Not finished / Abandoned question in place; there is no modal, here or anywhere.
 Routes: `/` Home (dashboard), `/inbox`, `/inbox/attention` (every waiting item), `/inbox/recent` (paged captures), `/spaces`, `/spaces/:name`, `/settings`, `/items/:id`. Redirects: `/attention`, `/attention/all`, `/recent`, `/today`, `/search`, `/all`. Pill nav Home · Inbox · Spaces · Settings; the Inbox pill stays active across all three inbox routes.
+`sw.js` precaches at install rather than waiting for a navigation to fill the cache: it fetches
+`index.html`, reads the hashed `/assets/` URLs out of it with a regex, and caches those with the
+icons and the manifest. Caching the HTML alone was not enough -- it only names the assets, so the
+first offline launch after an install rendered a blank page with a title. Every put is settled
+individually, so one missing file cannot fail the install and leave the old worker in place.
+It does not call `skipWaiting()` on install. A new worker waits, `update.ts` notices it and the
+app offers one line -- "A new version is ready" with Reload -- which posts `tartib:skip-waiting`
+and reloads once `controllerchange` fires. Only a handover the user asked for reloads: that event
+also fires the first time a worker claims a page that had none. `sw.js` also handles
+`pushsubscriptionchange`, re-subscribing with the key `push.ts` leaves at `/__vapid-key` in the
+shell cache and re-registering against `/api/subscriptions` with `credentials: "include"`; Safari
+does not fire that event, so on the phone it is insurance rather than a fix.
+`manifest.webmanifest` has an `id` and a `start_url` of `/` (it was `/today`, a redirect, so every
+launch paid one). `index.html` carries a `theme-color` per colour scheme so the first paint is
+right before any script runs, and `App` overwrites both with the active theme's background when
+the chosen theme is not the system's. `background_color` is a single dark value and the app has
+two themes, so one of them gets a mismatched splash; a manifest cannot know which.
 `push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible.
 `App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
 

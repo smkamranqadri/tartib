@@ -331,6 +331,9 @@ button:disabled { opacity: .5; cursor: default; }
 @media (max-width: 640px) { .title-actions { margin-top: 0; } }
 
 /* The running session, under the capture bar on every screen. */
+/* Same shape as the session bar: this sits in the same place and should not look like a
+   different kind of thing. Muted, because it is an offer and not news. */
+.update-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -12px 0 16px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; color: var(--muted); }
 .session-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -12px 0 22px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
 .session-icon { display: inline-flex; }
 .session-time { font-variant-numeric: tabular-nums; font-weight: 600; }

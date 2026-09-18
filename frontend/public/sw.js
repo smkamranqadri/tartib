@@ -7,10 +7,40 @@ const CACHE = "tartib-shell-v1";
 const PENDING_NAV = "/__pending-nav";
 /* Bumped by hand whenever this file changes. The app shows it in Settings, so "is the phone
    actually running this worker?" is a question with an answer instead of a guess. */
-const SW_VERSION = "2026-09-18.5";
+const SW_VERSION = "2026-09-18.6";
 const VERSION_KEY = "/__sw-version";
+/* Where the page leaves the VAPID public key, so this worker can re-subscribe on its own when
+   the push service rotates an endpoint. The page is not running when that happens. */
+const VAPID_KEY = "/__vapid-key";
 
-self.addEventListener("install", () => self.skipWaiting());
+/* The first launch after an install is the one most likely to have no network, and it was the
+   one that failed: nothing was cached until a navigation had already succeeded. Caching the
+   shell alone is not enough either -- index.html only names hashed asset files, and without
+   those the app is a blank page with a title. So the asset URLs are read out of the HTML. */
+async function precache() {
+  const cache = await caches.open(CACHE);
+  const res = await fetch("/index.html", { cache: "no-cache" });
+  if (!res.ok) return;
+  const html = await res.text();
+  await cache.put("/index.html", new Response(html, { headers: res.headers }));
+  const assets = new Set(html.match(/\/assets\/[A-Za-z0-9._-]+/g) || []);
+  const extras = ["/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-180.png"];
+  /* One missing file must not fail the install and leave the old worker in place forever. */
+  await Promise.allSettled(
+    [...assets, ...extras].map(async (url) => {
+      const hit = await fetch(url, { cache: "no-cache" });
+      if (hit.ok) await cache.put(url, hit);
+    }),
+  );
+}
+
+/* No skipWaiting. A worker that takes over mid-session can serve a shell whose assets the
+   running page has never heard of; the page offers a reload instead and this waits for it. */
+self.addEventListener("install", (event) => event.waitUntil(precache()));
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "tartib:skip-waiting") self.skipWaiting();
+});
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
@@ -121,3 +151,52 @@ self.addEventListener("notificationclick", (event) => {
     })(),
   );
 });
+
+/* A push service is allowed to retire an endpoint and hand out a new one. When it does, the
+   page is not running -- that is the whole point of push -- so nothing re-registers and
+   reminders are simply off until Settings is next opened, with no sign that anything happened.
+   This subscribes again and tells the server, using the key the page left in the cache.
+
+   Safari does not fire this event today, so on the phone this is insurance rather than a fix;
+   it is the desktop and Android browsers that rotate endpoints and say so. */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      const key = await applicationServerKey(event.oldSubscription);
+      if (!key) return; // nothing to mint with; Settings will re-register on the next visit
+      const sub = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: key,
+      });
+      const { endpoint, keys } = sub.toJSON();
+      await fetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        /* Same-origin, so the signed session cookie rides along and this is authorised. */
+        credentials: "include",
+        body: JSON.stringify({ endpoint, keys }),
+      });
+    })(),
+  );
+});
+
+/** The key to mint with: the one the page wrote down, or failing that the one the expiring
+ *  subscription was made with. Returned as bytes, which is what subscribe() wants. */
+async function applicationServerKey(oldSubscription) {
+  try {
+    const hit = await (await caches.open(CACHE)).match(VAPID_KEY);
+    if (hit) return keyBytes(await hit.text());
+  } catch {
+    /* storage can be unavailable; fall through to the old subscription */
+  }
+  return oldSubscription?.options?.applicationServerKey || null;
+}
+
+/** base64url to bytes. The same conversion as push.ts, which cannot be imported here. */
+function keyBytes(base64url) {
+  const padded = base64url.replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+  return bytes;
+}

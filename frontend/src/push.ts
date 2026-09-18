@@ -9,6 +9,7 @@ import { subscribePush, unsubscribePush } from "./api";
 const SHELL_CACHE = "tartib-shell-v1";
 const PENDING_NAV = "/__pending-nav";
 const VERSION_KEY = "/__sw-version";
+const VAPID_KEY = "/__vapid-key";
 
 /** Which service worker is actually installed here. Null means none has activated yet.
  *  Shown in Settings: a phone quietly sitting on an old worker is otherwise invisible, and
@@ -149,6 +150,17 @@ async function register(sub: PushSubscription): Promise<void> {
   await subscribePush(endpoint, keys);
 }
 
+/** Leave the key where `sw.js` can find it. When a push service retires an endpoint the page
+ *  is not running, so the worker has to re-subscribe on its own, and it needs this to do it. */
+async function rememberKey(vapidPublic: string): Promise<void> {
+  if (!("caches" in window)) return;
+  try {
+    await (await caches.open(SHELL_CACHE)).put(VAPID_KEY, new Response(vapidPublic));
+  } catch {
+    /* a nicety for a rotation that may never happen; never worth failing a subscribe over */
+  }
+}
+
 /** Ask, subscribe, and register with the server. Returns the resulting permission state. */
 export async function enablePush(vapidPublic: string): Promise<PushState> {
   const permission = await Notification.requestPermission();
@@ -157,6 +169,7 @@ export async function enablePush(vapidPublic: string): Promise<PushState> {
   const reg = await registration();
   await navigator.serviceWorker.ready;
   await register(await mintSubscription(reg, vapidPublic));
+  await rememberKey(vapidPublic);
   return "granted";
 }
 
@@ -174,6 +187,7 @@ export async function resyncSubscription(vapidPublic: string): Promise<boolean> 
   if (!reg) return false;
   // Permission is already granted, so re-minting after a key rotation needs no gesture.
   await register(await mintSubscription(reg, vapidPublic));
+  await rememberKey(vapidPublic);
   return true;
 }
 

@@ -77,6 +77,20 @@ append-only and `raw_text` is immutable, so there is nothing to resolve.
 - `cd backend && uv run pytest -q && uv run ruff check .`; `cd frontend && npm run typecheck &&
   npm run build`; headless Chrome through playwright-core at 390px with the network cut over CDP.
 
+## Found while building step 1
+
+- Offline, the screens now render and every one of them says "Failed to fetch" in red -- the
+  raw browser error, straight through `ErrorLine`. It was always there; a shell that no longer
+  fails to open is what made it visible. Step 3 is where this belongs, since that is when the
+  app starts having something honest to say about being offline.
+- `pushsubscriptionchange` cannot be proved here. It needs a push service to actually retire an
+  endpoint, and Safari does not fire the event at all. The handler is registered and the key it
+  needs is written to the shell cache on subscribe; both were confirmed by reading the served
+  worker, which is as far as proof goes without a rotation happening for real.
+- The manifest's `background_color` is one colour and the app has two themes, so a dark-theme
+  phone gets a light splash or the reverse. A manifest cannot know, and iOS reads it before any
+  script runs. Left as it is, dark, matching the icon.
+
 ## Files
 
 `frontend/public/sw.js`, `manifest.webmanifest`, `frontend/index.html`, `frontend/src/main.tsx`,
@@ -88,6 +102,7 @@ Review: `/code-review` on steps 2 and 3. An idempotency key and a replay queue i
 a quiet duplication bug lives.
 
 ## Status
-- [ ] shell: precache, start_url, id, theme-color, update prompt, pushsubscriptionchange, iOS
+- [x] shell: precache, start_url, id, theme-color, update prompt, pushsubscriptionchange, iOS
+      (2026-09-18)
 - [ ] backend: migration 0009, client_id on POST /api/capture, tests
 - [ ] the queue: IndexedDB, pending rows, flush on reconnect, SPEC change

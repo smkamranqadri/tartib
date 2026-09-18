@@ -7,6 +7,7 @@ import AskBar from "./components/AskBar";
 import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
 import SessionBar from "./components/SessionBar";
 import Toast, { type ToastState } from "./components/Toast";
+import UpdateBar from "./components/UpdateBar";
 import Home from "./screens/Home";
 import Inbox from "./screens/Inbox";
 import ItemPage from "./screens/ItemPage";
@@ -125,6 +126,13 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    /* The status bar should agree with the theme you picked. index.html carries one of these
+       per colour scheme so the first paint is right; this corrects it when the chosen theme
+       is not the system's. Both are updated, or the media queries would fight this back. */
+    const bar = theme === "dark" ? "#0f1412" : "#f2f5f3";
+    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+      meta.setAttribute("content", bar);
+    }
     try {
       localStorage.setItem("tartib-theme", theme);
     } catch {
@@ -213,6 +221,7 @@ export default function App() {
           </nav>
           <div className="top-actions" />
         </header>
+        <UpdateBar />
         <Capture onCaptured={onCaptured} />
         <SessionBar />
         <main>
