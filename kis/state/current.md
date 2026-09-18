@@ -1,334 +1,94 @@
 # Current
 
-- Local operational detail -- the domain, how HTTPS reaches the phone, backup paths, which device
-  is subscribed -- lives in `kis/state/private.md`, which is gitignored and never published. This
-  file carries the substance without the specifics, and points there.
-
+- Local operational detail -- the domain, the backup paths, which device is subscribed, how HTTPS
+  reached the phone before the move -- lives in `kis/state/private.md`, gitignored and never
+  published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public,
-  working tree clean. **History is published now.** Any further rewrite is a force-push, and
-  anyone who cloned in between keeps the old copy, so the three rewrites of 2026-09-18 were the
-  last cheap ones. Deployed locally, not hosted anywhere yet.
-  History was rewritten twice on 2026-09-18: once to one identity, `Muhammad Kamran
-  <smkamranqadri@yahoo.com>` as author and committer, and once to scrub the domain, the private
-  network setup and the backup paths out of blobs and commit messages both. Every SHA changed
-  each time;
-  the citations below are the new ones. A copy of the repository as it was before that is kept
-  locally; the path is in `private.md`, and it is the undo button until the push has happened.
-- Task: none in flight. **Slice 17 is closed and v1.0 is tagged and released.** Tartib runs on
-  its own host, behind HTTPS, reachable from the phone -- which is what slices 15, 16 and 17 set
-  out to achieve before it became the daily driver.
-- `TARTIB_AI_COMMAND` is back to `codex` after the fallback test, and classification is working
-  on the deployed app: captures 17 to 22 filed themselves into `tartib` and `namazee` with
-  titles, checked 2026-09-18 12:33Z. It is in real use now, which is the point of all of this.
-- Force HTTPS is on: `http://` answers 302 to the https origin, confirmed 2026-09-18.
-- Reminders are enabled on the phone against the new origin, so the push path works end to end
-  there. Enabling them in a desktop Chrome fails with "Registration failed - push service error",
-  which is the browser failing to register with FCM and not a Tartib problem:
-  `pushManager.subscribe()` never contacts the server, and the same VAPID key from the same
-  `/api/config` was accepted by iOS. Check `chrome://gcm-internals` for the connection state; a
-  VPN or exit node, or a Chromium derivative with Google push disabled, are the usual causes.
-  Not worth chasing unless wanted: one switch covers all three pushers, so a desktop
-  subscription means two buzzes for every reminder and every digest.
-- Container HTTP Port has to be 8000 in CapRover, not the default 80: uvicorn binds 8000 and the
-  image exposes it. No host port mapping -- that would bypass nginx, and with it TLS and
-  `X-Forwarded-Proto`, which is what the `Secure` cookie depends on.
-  Plan and step status: `kis/intent/slice-17-deploy.md`. No blocker.
-- `smkamranqadri/tartib:v1.0` is on Docker Hub, linux/amd64. Tags are immutable: the next deploy
-  is `v1.1`, and `deploy.sh` refuses to overwrite one that exists.
-- The VPS reports `x86_64`, confirmed 2026-09-18, so `linux/amd64` is right and the image
-  already built is the one that will run there.
-  Plan and step status: `kis/intent/slice-17-deploy.md`. Slice 16 is closed.
-  Plan and step status: `kis/intent/slice-16-public-repo.md`. Slice 15 is closed.
-  Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
-- The worker is `2026-09-18.7` and no longer calls `skipWaiting`, so a deploy is offered as a
-  reload rather than swapped in underneath. A phone on `.5` or older still has the old worker's
-  behaviour until it next updates: `.5` skips the wait, so it will take `.6` on its own, once.
-  After that every further update waits to be accepted. Settings shows which version is on.
-  `SW_VERSION` must be bumped whenever the app changes, not only when `sw.js` does: a browser
-  re-installs a worker only when its bytes differ, so a bundle-only release would otherwise leave
-  the old worker active and offer no reload.
-- Approved and planned next, in order: slice 15 PWA (`kis/intent/slice-15-pwa.md`), slice 16
-  public repo (`kis/intent/slice-16-public-repo.md`), slice 17 deploy
-  (`kis/intent/slice-17-deploy.md`). Remote exists and is empty:
-  `https://github.com/smkamranqadri/tartib.git`, public.
-- One device is subscribed to push; no desktop browser has enabled reminders, so nothing is
-  pushed there and a session ending only turns the bar into the outcome question on an open tab.
-  Enabling it on a desktop is one switch for all three pushers and would mean two buzzes for
-  every reminder and every digest. Which device, and the keys, are in `private.md`.
-- Watch after deploy: the service worker returns without showing anything when a session ends
-  with the app on screen. Browsers allow that only within a budget for `userVisibleOnly` pushes;
-  if Chrome ever shows "This site has been updated in the background", switch that path to a
-  silent notification instead of no notification.
-- Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (163 passed) and `uv run pytest -m eval` (16 real-Codex
-  fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
-- Reminders on a phone need HTTPS and a stable origin. How this machine provides one today, and
-  how to end it, are in `private.md`. A push subscription is bound to the exact origin that
-  minted it, so changing the origin means enabling reminders again afterwards.
-- Push keys live in `.env`. `cd backend && uv run python -m tartib.vapid` prints a fresh set;
-  regenerating invalidates every subscription, and Settings re-mints on next open.
-- Not yet proved on a real device: a session ending while a *desktop tab watches the countdown*.
-  That is the case migration 0008 exists for, and it should buzz either way; the retry above had
-  every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
-  enables reminders in Settings, so what this would check is that the desktop's read no longer
-  steals the phone's push.
-- Superseded: slice 17 step 3 -- the CapRover app, which is dashboard work rather than anything this
-  repository can do: deploy `smkamranqadri/tartib:v1.0` by image name, persistent directories at
-  `/data` and `/root/.codex`, the Codex login copied into the second, the environment from the
-  checklist in the plan, 512MB limit, force HTTPS, health check on `/api/health`, empty database.
-  Then step 4 proves it on real devices and tags v1.0.
-  Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
-  Slice 17 will serve a domain (in `private.md`) from `smkamranqadri/tartib` on Docker Hub,
-  tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and CapRover
-  already answers there with its placeholder page, so the path is wired end to end. Carried into
-  slice 17: the session cookie will not be `Secure` behind that proxy until `FORWARDED_ALLOW_IPS`
-  is set and Cloudflare is on Full (strict) -- proved locally, written up in the plan.
-  Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
-  verified on the GitHub account, or the rewritten commits will not link to it.
+  working tree clean. `v1.0` is tagged and released.
+- Task: none in flight. Slices 12, 15, 16 and 17 are all closed. Tartib runs on its own host,
+  behind HTTPS, reachable from the phone, and is in real use -- which is what slices 15 to 17
+  existed for. Plans: `kis/intent/slice-1{5,6,7}-*.md`.
+- Next, in no fixed order and none of it started:
+  1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
+     2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
+     everything on that server exists exactly once. This is the one open item whose cost is
+     unbounded.
+  2. **The Claude fallback hang**, below.
+  3. Slice 13 (presentation) and slice 14 (AI contract), approved in the backlog, unplanned.
+
+## The deployment
+
+- One container on a CapRover VPS (`x86_64`), image `smkamranqadri/tartib:v1.0` from Docker Hub,
+  deployed by image name. Tags are immutable versions with no `latest`: the next deploy is
+  `v1.1`, and `deploy.sh` refuses to overwrite a tag that exists.
+- Container HTTP Port must be 8000, not CapRover's default 80. No host port mapping -- that would
+  bypass nginx and with it TLS and `X-Forwarded-Proto`, which is what the `Secure` cookie needs.
+- Persistent directories at `/data` and `/root/.codex`. The Codex login was made on the server
+  with a device code, and classification works from there.
+- Force HTTPS is on; `http://` answers 302.
+- The database starts and remains separate from the local one. Local development still runs
+  `docker compose up -d --build` against http://localhost:8000.
+
+## Open
+
+- **The Claude fallback does not run on the deployed host.** With Codex broken deliberately the
+  fallback is invoked and hangs for the full 120s timeout. Ruled out: the token (present in the
+  container), Tartib's invocation (running the CLI there by hand hangs identically), and the
+  network (`api.anthropic.com` and `console.anthropic.com` both connect over IPv4). IPv6 is
+  unreachable from the container but cannot be the cause -- an unreachable network errors
+  instantly. The hang is inside the CLI's own startup there.
+  It is still configured on the server as of 2026-09-18, so a Codex failure costs 120s per
+  capture and fails anyway; captures queue serially. Unsetting `TARTIB_AI_FALLBACK_COMMAND`
+  makes those failures instant, and is a one-field change in the dashboard.
+- No backups of the deployed database. See Next.
+
+## Commands
+
+- Verify: `cd backend && uv run pytest -q` (163 passed) and `uv run pytest -m eval` (16
+  real-Codex fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
+- Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
+- Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
+  subscription; Settings re-mints on the next open.
 
 ## Proof
 
-Finished slices keep their step-by-step proof in the commit messages, not here: `34ab011`,
-`fc75770`, `e2e31cc`, `91d7a22`, `970348e`, and for the three most recent `6bf7f48` (the plans),
-`7e7f294` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
-`81ffc81` (slice 15 step 1).
+Finished slices keep their step-by-step proof in the commit messages, not here. Slices 11 and 12:
+`34ab011`, `fc75770`, `e2e31cc`, `91d7a22`, `970348e`, `7e7f294`. Slice 15: `81ffc81`, `e11dcf1`,
+`5423d4d`. Slice 16: `bb1df57`, `90ac360`, `7ec12e1`. Slice 17: `1a2bbcb`, `5031388`, `6d7170c`,
+`5c103b2`, `3a966db`, `57837ea`, `5b36d25`, `c315141`.
 
-Still operational from that: session 2 is owed an outcome, so the Done / Not finished /
-Abandoned question is sitting in the bar until it is answered.
+Proved on the deployed app, not only in tests: a capture classifies and files itself; the session
+cookie carries `Secure` behind the proxy; a session ending pushes and the phone buzzes **with a
+desktop tab open on the same countdown**, which is the migration 0008 case that had never been
+tested on real devices; `http://` redirects.
+
+History was rewritten three times on 2026-09-18, all before publication: once to one identity,
+once to scrub the domain and the private-network setup, once to remove the second email address.
+Every SHA changed each time and the citations above are the current ones. That budget is spent --
+the repository is public, so any further rewrite is a force-push.
 
 Earlier (v0.1): every route driven headlessly at 390px and 1280px with the fake classifier; real
 Codex exercised on the host for classification, briefs, and ask.
 
-### Slice 15 step 1, 2026-09-18 — the shell
-
-Headless Chrome through playwright-core at 390px, against the rebuilt container on
-localhost:8000, signed in as the real app:
-
-- The shell cache after install holds `/index.html`, both hashed assets, all three icons, the
-  manifest and the version marker. The assets are the point: `index.html` only names them, and
-  caching the HTML without them is a blank page with a title.
-- Offline reload renders the whole app -- header, nav, capture bar, page chrome. Offline deep
-  link to `/spaces` renders it too.
-- `theme-color` reads `#0f1412` on dark and `#f2f5f3` on light, both metas, after a reload.
-- `start_url` is `/` and the manifest has an `id`.
-- Update handover, with a new worker published into the container mid-session: nothing is
-  offered on a current install; the new worker is offered and not forced; the old one stays in
-  charge until the button is pressed; pressing it hands over and the app still works.
-
-`cd backend && uv run pytest -q` 149 passed, `uv run ruff check .` clean, `npm run typecheck`
-and `npm run build` clean. Backend untouched this step; those ran as an integration check.
-
-Not proved: `pushsubscriptionchange`. See the plan's "Found while building step 1".
-
-### Slice 15 step 2, 2026-09-18 — a capture that is safe to send twice
-
-Migration 0009 adds `captures.client_id` and a unique index over it. Run first against a copy of
-the live database: 32 captures and 47 items before and after, schema 8 to 9, and all 32 NULLs
-sitting under the unique index without complaint, which is the whole reason a unique index was
-used rather than a constraint.
-
-Then applied for real, with a backup taken first (path in `private.md`), and
-driven through the running app with one `client_id` sent three times:
-
-```text
-attempt 1 -> HTTP 201  {"id":33}
-attempt 2 -> HTTP 200  {"id":33}
-attempt 3 -> HTTP 200  {"id":33}
-one row in captures, not three
-```
-
-That test capture and the item it produced were deleted afterwards; the database is back to 32
-and 47. 154 backend tests pass, ruff clean. Four migration tests pin the schema version and were
-bumped from 8 to 9, as every migration before this one has had to do.
-
-### Slice 15 step 3, 2026-09-18 — the queue
-
-Headless Chrome at 390px against a throwaway instance on port 8001 with its own database, so
-none of this touched the real one (still 32 captures, 47 items):
-
-```text
-PASS  offline capture says so                     "Saved offline"
-PASS  three captures are waiting                  3 rows
-PASS  they are in IndexedDB, and sort oldest first
-PASS  the queue survives a reload while offline   3 rows
-PASS  offline says you're offline                 "You're offline."
-PASS  nothing is left waiting / it says what it sent  "Sent 3 captures"
-PASS  all three arrived, oldest first, no duplicates
-PASS  a second flush sends nothing
-```
-
-The run before that one failed three ways and one was a real bug: pending rows were inside
-`{data && ...}` and `data` is null exactly when offline, so the queue worked and could not be
-seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
-
-154 backend tests pass, ruff clean, typecheck and build clean.
-
-### Slice 17 step 4, 2026-09-18 — in progress
-
-Proved on the deployed app: a capture classifies and files itself into a space, which means the
-**Codex login made on the server with a device code is accepted from the VPS's own address**.
-That was the largest standing risk in this plan -- a copied login being refused from a
-datacentre -- and making the login there rather than carrying it is what removed it. Sessions run
-on the deployed app too.
-
-Force HTTPS confirmed: `http://` answers 302 to the https origin.
-
-**The session cookie carries `Secure`** on the deployed app, so `--forwarded-allow-ips "*"` is
-doing its job behind Cloudflare and the app sees `https` rather than the `http` it saw before.
-Checked twice: a login over the domain returns `...; SameSite=lax; Secure`, and DevTools shows
-`HttpOnly ✓ Secure ✓ SameSite Lax` on a real browser session. This is the one item in the whole
-deployment that fails completely silently -- everything works without it -- which is why it is
-an acceptance check rather than a hope.
-
-**A session ending pushed from the new origin.** `ends_at`, `ended_at` and `notified_at` all
-11:58:56Z, the claim taken, and the subscription still present afterwards rather than pruned by a
-404 or 410 -- so the push service accepted it. Whether the phone rang is the user's half.
-
-**The Claude fallback does not work on this server, and the cause is inside the CLI.** With
-`TARTIB_AI_COMMAND=codex1` the error is `cannot run 'codex1': [Errno 2] No such file or
-directory; fallback: timed out after 120s`. Codex fails fast and correctly; the fallback is
-invoked and then hangs for the whole timeout.
-
-What was ruled out, in order:
-
-- The token. It was set before those captures ran, and is present in the container.
-- Tartib's invocation. Running `claude` inside the container by hand -- interactively, and with
-  `--print` and no `--json-schema` -- hangs identically. Nothing in this repository is involved.
-- The network. From the container, `api.anthropic.com` and `console.anthropic.com` both connect
-  over IPv4.
-- IPv6. It is genuinely unreachable from the container (`Network is unreachable`), and that was
-  my theory, and it was wrong: an unreachable network errors instantly and cannot produce a
-  120-second hang. `NODE_OPTIONS=--dns-result-order=ipv4first` changed nothing, `exit=124`.
-
-So the hang is in the CLI's own startup or run inside that container. `claude --version` and
-`HOME` writability are the two things left unchecked.
-
-**Because it is broken, having it configured is worse than not having it.** A Codex failure
-costs 120s per capture and fails anyway, and captures queue serially. Unsetting
-`TARTIB_AI_FALLBACK_COMMAND` makes failures instant instead. As of 2026-09-18 it is still
-configured on the server -- `/api/config` reports `fallback: true` -- so that cost is live
-whenever Codex has a bad minute. It is a one-field change in the dashboard when wanted.
-
-**Backups are deferred, 2026-09-18, by decision.** There is no copy of `/data/tartib.db` off the
-CapRover persistent directory, which is the same disk as everything else. Every capture, item and
-space on that server exists once. Until this is done, the honest description of the deployment is
-that it works and is not backed up.
-
-Still open on slice 17: the fallback actually filing a capture with Codex broken, and that
-backup. Neither blocks v1.0; both are recorded rather than assumed.
-
-### Slice 17 step 3, 2026-09-18 — deployed
-
-Serving on the domain: `/api/health` answers `{"ok":true,"ai":true,"fallback":true}`, the page
-title is Tartib rather than CapRover's placeholder, TLS verifies over HTTP/2, and the manifest,
-service worker and icons all return 200.
-
-`"ai": true` reflects configuration only -- it means `TARTIB_AI_COMMAND` is not `off`, not that
-the Codex login works. That needs a real capture, which is step 4.
-
-The Codex login was made on the server with a device code rather than copied, and the persistent
-directory question turned out to matter: a CapRover-labelled volume is not the host's `~/.codex`,
-so a host login is invisible to the container unless the directory is a bind mount instead.
-
-### Slice 17 step 2, 2026-09-18 — the image cross-builds and runs
-
-`docker buildx build --platform linux/amd64` succeeds and the result is genuinely amd64, not a
-manifest that merely claims to be:
-
-```text
-arch amd64 / os linux        python -c platform.machine() -> x86_64
-uvicorn present, static built, codex and claude both on PATH
-no stray host node_modules
-booted under --platform linux/amd64: /api/health 200, index.html 200, login 200, 69MiB
-```
-
-Not pushed: this machine has no Docker Hub credentials. That is the blocker above, and it is the
-only thing left in step 2.
-
-**Pushed and verified from the registry's side**, not just from the exit code: the hub holds
-`linux/amd64` (plus buildx's provenance attestation, which is the `unknown/unknown` entry), a
-fresh `docker pull --platform linux/amd64` gives an `amd64/linux` image, and running that pulled
-copy answers `/api/health` 200. `deploy.sh` itself worked, which was the other thing step 2
-needed to establish.
-
-### Slice 17 step 1, 2026-09-18 — a login that can be on the internet
-
-Nine new tests, 163 passing, ruff clean. The backoff hangs off `auth.check_password`, so it
-covers the bearer header as well as `/api/login`; a test guesses at `/api/today` to prove it, and
-another proves the two doors share one counter.
-
-Driven against the running container as well as in tests: four wrong passwords answer 401, the
-fifth answers 429 with `Retry-After: 30`, and the **correct** password is refused with 429 while
-blocked -- comparing it would say which guess was right. The block was cleared afterwards, and
-the correct password then answered 200, so nothing is left locked.
-
-The cookie half, which no unit test can reach because it depends on uvicorn rather than the app:
-with `--forwarded-allow-ips "*"` added to the image, a login carrying `X-Forwarded-Proto: https`
-now comes back `...; SameSite=lax; Secure`, and a plain http login still comes back without it,
-so local development is unaffected.
-
-The README's security section claimed there is no rate limiting. It is public now, so that was
-corrected in the same commit.
-
-### Slice 16 step 3, 2026-09-18 — published
-
-`https://github.com/smkamranqadri/tartib`, public, `main` tracking `origin/main` at the commit
-this machine has. README renders, all eight screenshots are there, GitHub's secret scanning
-reports no alerts, and `kis/state/private.md` is absent from the remote -- checked by asking the
-API for it, not by trusting `.gitignore`.
-
-The pre-flight earned its place twice over. It caught the second email address still named in the
-plan file that explained why that address had been removed from the commits, which would have
-published in prose exactly what the rewrite took off the metadata. Fixed in the tree and scrubbed
-from history before the push, as a third and final rewrite.
-
-Three rewrites in one day, all before anything was published: one for identity, one for the
-domain and the private-network setup, one for the address. That is the whole budget -- the next
-one would be a force-push to a repository other people can clone.
-
-### Slice 16 step 2, 2026-09-18 — documentation that is true
-
-- `.env.example` now matches `config.py` in both directions; it was missing `TARTIB_DB_PATH`,
-  `TARTIB_SESSION_MINUTES` and `TARTIB_STATIC_DIR`.
-- README rewritten against SPEC. It had claimed three screens, listed routes that no longer
-  exist, and still had pomodoro and push under "Not planned" after both shipped. Its API list
-  was verified against the running app's OpenAPI rather than transcribed, its memory claim
-  against `docker stats` (41.26MiB of 512MB), and its eval count corrected from 15 to 16.
-- `CONTRIBUTING.md` written: how to run it, the verification commands, house style, and the
-  part that matters -- rule 4 is a hard constraint, so a patch adding tags or a pomodoro history
-  screen is declined on principle, and the route to changing that starts with an argument in an
-  issue rather than a diff.
-- Eight screenshots in `docs/screenshots/`, 1280px light and 390px dark, from a **throwaway
-  database seeded with invented captures** driven through the fake classifier. Confirmed by
-  query that none of that text exists in the real database, and the real one is still 32/47.
-  Each screenshot was looked at, not just produced.
-
-### Slice 16 step 1, 2026-09-18 — one identity, and no secrets
-
-- `git filter-repo --mailmap`: 63 commits, all now `Muhammad Kamran <smkamranqadri@yahoo.com>`
-  as both author and committer. Files untouched -- diffed against the pre-rewrite copy, and only
-  the KIS citation edits differ.
-- All eight SHAs cited in KIS were remapped through `.git/filter-repo/commit-map` and each
-  resolves to a commit with the subject it had before. filter-repo also rewrote the SHAs quoted
-  inside commit messages, which was not expected and is one less thing to fix.
-- Full-history secret scan by hand, no scanner being installed: no PEM private key anywhere, no
-  secret-shaped assignment, and the live password and both VAPID keys appear zero times. `.env`
-  was never tracked.
-- The plan's "move the test VAPID key into a fixture" was **void**: it was never hard-coded.
-  `test_reminders.py` does `TEST_PUBLIC, TEST_PRIVATE = generate()`, a fresh pair per run. The
-  claim came from a grep hit read without the line above it.
-- 154 tests pass, ruff clean, typecheck and build clean after the rewrite.
-
 ## Known gaps
 
-- The Claude fallback does not run in the deployed container: the CLI hangs until the timeout even with a valid token, a reachable API and no involvement from Tartib's code. A Codex outage therefore parks captures in the Inbox, slowly. Proved 2026-09-18; see the step 4 notes.
+- The Claude fallback does not run in the deployed container (above), so a Codex outage parks
+  captures in the Inbox, slowly.
 - Voice capture depends on the browser; it was proved with an injected engine, not real dictation.
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
   Inbox screen also shows.
-- `pushsubscriptionchange` is handled since slice 15 step 1, but unproved: it needs a push
-  service to actually retire an endpoint, and Safari never fires the event, so on the phone a
-  rotation still means reminders are silently off until Settings is next opened.
+- `pushsubscriptionchange` is handled since slice 15, but unproved: it needs a push service to
+  retire an endpoint, and Safari never fires the event.
 - Tapping a reminder on iOS opens Tartib but does not navigate to `/today`. Whether iOS runs the
   worker's `notificationclick` at all was never established; `technical.md` records what was tried.
-- Reminders depend on this machine being awake and on the private network running at both ends.
-  There is no hosting yet, so a closed laptop means no reminders. Slice 17 is what fixes it.
+- One device is subscribed to push. A desktop Chrome fails to subscribe with "Registration failed
+  - push service error", which is the browser failing to register with FCM and not a Tartib
+  problem: `pushManager.subscribe()` never contacts the server, and iOS accepted the same key.
+  Not worth chasing unless wanted -- one switch covers all three pushers, so a desktop
+  subscription means two buzzes for every reminder and digest.
+- `SW_VERSION` (now `2026-09-18.7`) must be bumped whenever the app changes, not only when
+  `sw.js` does: a browser re-installs a worker only when its bytes differ, so a bundle-only
+  release would leave the old worker active and offer no reload.
+- The service worker shows nothing when a session ends with the app on screen. Browsers allow
+  that only within a budget for `userVisibleOnly` pushes; if Chrome ever says "This site has been
+  updated in the background", make that path a silent notification instead of none.
