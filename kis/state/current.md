@@ -14,7 +14,7 @@
   if Chrome ever shows "This site has been updated in the background", switch that path to a
   silent notification instead of no notification.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (148 passed) and `uv run pytest -m eval` (16 real-Codex
+- Verify: `cd backend && uv run pytest -q` (149 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
 - Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
   that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
@@ -30,8 +30,14 @@
 ## Proof (2026-09-18) — slice 12 on real devices
 
 A 25-minute session started from the phone on a real task appeared on the desktop with the same
-countdown, which is the whole point of the session being a row rather than a tab. Its end, and
-whether the phone buzzes with the app closed, is the one thing on slice 12 still unproved.
+countdown, which is the whole point of the session being a row rather than a tab. It ended at its
+scheduled second, 07:48:32Z.
+
+No push went out for it, and the failure counter staying at 0 was mistaken for proof that one
+had: it only shows nothing failed. The desktop watching the countdown asked the server the moment
+it hit zero, that read closed the session, and the push had no claim left. Fixed by migration
+0008; the phone buzz is still unproved, and the first retry should be with every other client
+closed.
 
 Step-by-step proof for slices 11 and 12 is in the commit messages, not here: `ecd2000`,
 `8a897ad`, `7d8ffd6`, `6c5c16b`, `9a80a28`.

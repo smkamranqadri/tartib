@@ -93,6 +93,11 @@ Only task-linked sessions have a space. A session with no task counts on Today a
 - Ending the session is the claim to push about it: the row is closed with
   `WHERE ended_at IS NULL`, and only the call that wins that update pushes. Stopped by hand,
   tidied on a read, or already fired all fall out of the same check.
+  **Corrected 2026-09-18 after the first real session:** sharing one column made a read steal
+  the push. A page that watched its countdown hit zero asked the server, that read closed the
+  row, and the scheduled push found nothing to claim -- so the phone stayed quiet while the
+  desktop was the thing that silenced it. Announcing now claims `notified_at` (migration 0008);
+  closing the row no longer touches it.
 - `as_utc_iso` and `parse_iso` moved into `clock.py`, where the reminder loop's copy lived.
 
 ## Decided while building step 2

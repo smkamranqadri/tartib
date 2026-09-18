@@ -223,15 +223,22 @@ class Sessions:
             row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
             if row is None or row["outcome"] is not None:
                 return False
-            # Ending it is the claim to push about it. If the row is already ended -- stopped
-            # by hand, tidied on a read, or fired once already -- this call is not the one.
+            if row["ended_at"] is not None and row["ended_at"] < row["ends_at"]:
+                return False  # stopped by hand before its time
+            # Announcing it is its own claim, held on `notified_at`. Closing the row is not:
+            # a page that watched its countdown reach zero asks the server straight away, and
+            # that read must not take the notification with it.
             cur = conn.execute(
+                "UPDATE sessions SET notified_at = ? WHERE id = ? AND notified_at IS NULL",
+                (iso(now), session_id),
+            )
+            conn.execute(
                 "UPDATE sessions SET ended_at = ? WHERE id = ? AND ended_at IS NULL",
                 (row["ends_at"], session_id),
             )
             conn.commit()
             if cur.rowcount == 0:
-                return False
+                return False  # already announced
             if now > parse_iso(row["ends_at"]) + PUSH_GRACE:
                 log.info("session %s ended while nothing was running; not pushing", session_id)
                 return False

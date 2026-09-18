@@ -302,3 +302,25 @@ def test_the_running_app_ends_a_session_by_itself(auth, tmp_path, monkeypatch):
 
     assert sent and sent[0]["title"] == "Session done", sent
     assert row(tmp_path, session["id"])["ended_at"] is not None
+
+
+def test_a_page_watching_the_countdown_does_not_steal_the_push(auth, tmp_path):
+    """The app asks the server again the moment its countdown hits zero. If that read closes
+    the session out, the scheduled push finds nothing left to claim and the phone stays quiet
+    -- exactly when the phone is the thing that needed to buzz."""
+    subscribe(auth)
+    session = auth.post("/api/sessions", json={}).json()
+    sessions, sender = clock(tmp_path)
+    ends = datetime.fromisoformat(session["ends_at"].replace("Z", "+00:00"))
+
+    # a client sees 0:00 and asks; this runs before the scheduled fire
+    conn = db.connect(str(tmp_path / "t.db"))
+    try:
+        from tartib.sessions import close_finished
+
+        close_finished(conn, ends)
+    finally:
+        conn.close()
+
+    assert sessions.fire(session["id"], ends) is True, "the read consumed the push"
+    assert sender.titles == ["Session done"]
