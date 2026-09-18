@@ -6,9 +6,11 @@ it is far more awkward afterwards.
 
 ## Step 1 — one identity, and no secrets
 
-The history carries two people: 39 commits as `a second name and address` and 15
-as `Muhammad Kamran <smkamranqadri@yahoo.com>`. `git filter-repo` maps both to
-**Muhammad Kamran <smkamranqadri@yahoo.com>**, messages and order untouched.
+The history carries two people: 39 commits under a second name and address, and 15 as
+`Muhammad Kamran <smkamranqadri@yahoo.com>`. `git filter-repo` maps both to
+**Muhammad Kamran <smkamranqadri@yahoo.com>**, messages and order untouched. The other address
+is not written down here: naming it in the file that explains why it was removed would publish
+exactly what the rewrite took off the commits.
 
 That rewrites every SHA, and KIS cites SHAs on purpose: the step-by-step proof for slices 11 and
 12 lives in commit messages rather than in State, and `state/current.md`,
