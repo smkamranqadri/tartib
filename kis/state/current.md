@@ -17,6 +17,9 @@
 - Task: none in flight. **Slice 17 is closed and v1.0 is tagged and released.** Tartib runs on
   its own host, behind HTTPS, reachable from the phone -- which is what slices 15, 16 and 17 set
   out to achieve before it became the daily driver.
+- `TARTIB_AI_COMMAND` is back to `codex` after the fallback test, and classification is working
+  on the deployed app: captures 17 to 22 filed themselves into `tartib` and `namazee` with
+  titles, checked 2026-09-18 12:33Z. It is in real use now, which is the point of all of this.
 - Force HTTPS is on: `http://` answers 302 to the https origin, confirmed 2026-09-18.
 - Reminders are enabled on the phone against the new origin, so the push path works end to end
   there. Enabling them in a desktop Chrome fails with "Registration failed - push service error",
@@ -200,9 +203,11 @@ What was ruled out, in order:
 So the hang is in the CLI's own startup or run inside that container. `claude --version` and
 `HOME` writability are the two things left unchecked.
 
-**Because it is broken, having it configured is worse than not having it.** A Codex failure now
-costs 120s per capture and fails anyway, and captures queue serially. Unset
-`TARTIB_AI_FALLBACK_COMMAND` until the hang is understood; failures are then instant.
+**Because it is broken, having it configured is worse than not having it.** A Codex failure
+costs 120s per capture and fails anyway, and captures queue serially. Unsetting
+`TARTIB_AI_FALLBACK_COMMAND` makes failures instant instead. As of 2026-09-18 it is still
+configured on the server -- `/api/config` reports `fallback: true` -- so that cost is live
+whenever Codex has a bad minute. It is a one-field change in the dashboard when wanted.
 
 **Backups are deferred, 2026-09-18, by decision.** There is no copy of `/data/tartib.db` off the
 CapRover persistent directory, which is the same disk as everything else. Every capture, item and
