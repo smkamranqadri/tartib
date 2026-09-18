@@ -28,7 +28,7 @@ POST   /api/sessions {item_id?}      -> 201 the session; 409 while one is runnin
 GET    /api/sessions/current         -> the running session, or the one that just ended
                                         awaiting an outcome, or null
 POST   /api/sessions/{id}/outcome {outcome}
-DELETE /api/sessions/{id}            stop early; the same sheet follows
+POST   /api/sessions/{id}/stop       stop early; the same sheet follows
 ```
 
 One at a time. While a session runs the UI shows it instead of a start control, so the 409 is
@@ -84,7 +84,18 @@ Only task-linked sessions have a space. A session with no task counts on Today a
 - Done when: a session started on the phone ends while the app is closed, the phone buzzes
   once, and the sheet is waiting when the app is opened.
 
+## Decided while building step 1
+
+- Stop early is a POST, not a DELETE. Every other DELETE in this API removes a row, and a
+  stopped session is kept, counted, and still owed an outcome.
+- Stopping cancels the scheduled push, or the phone buzzes about a session you ended.
+- Only a *running* session blocks a new one. One still owed an outcome does not.
+- Ending the session is the claim to push about it: the row is closed with
+  `WHERE ended_at IS NULL`, and only the call that wins that update pushes. Stopped by hand,
+  tidied on a read, or already fired all fall out of the same check.
+- `as_utc_iso` and `parse_iso` moved into `clock.py`, where the reminder loop's copy lived.
+
 ## Status
-- [ ] migration + API + scheduler
+- [x] migration + API + scheduler (2026-09-18)
 - [ ] session bar + end sheet + Today counts
 - [ ] briefs + proof + deploy

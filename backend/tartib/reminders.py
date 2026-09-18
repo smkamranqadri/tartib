@@ -6,9 +6,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from tartib import db, push
+from tartib.clock import as_utc_iso as iso
 from tartib.clock import today_in, utcnow
 from tartib.config import Settings
 
@@ -20,11 +21,6 @@ INTERVAL = 60.0
 # older than this is marked sent without pushing; a reminder is a moment, not a backlog.
 GRACE = timedelta(hours=6)
 DIGEST_KEY = "digest_date"
-
-
-def iso(moment: datetime) -> str:
-    """The stored shape: UTC, whole seconds, trailing Z, so string comparison is time order."""
-    return moment.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def get_state(conn: sqlite3.Connection, key: str) -> str | None:

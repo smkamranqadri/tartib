@@ -5,7 +5,7 @@ How Tartib is built. Proven by the Phase 1 to 4 scaffold on 2026-09-17.
 ## Layout
 
 ```text
-backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces, queries, ask, briefs, classify, codex, runner, reminders, push, vapid, store, clock, reclassify, main
+backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces, queries, ask, briefs, classify, codex, runner, reminders, sessions, push, vapid, store, clock, reclassify, main
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
 backend/tests/      pytest + TestClient; the AI runs as a real subprocess pointed at fake_codex.py (fake_claude.py for the fallback)
 frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, push.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Waiting, Recent, Spaces, Space, SpaceDetail, Settings, ItemPage, Login), components/ (one per pattern, listed under Frontend shell)
@@ -25,7 +25,7 @@ In dev, Vite proxies `/api` to port 8000.
 SQLite, WAL, stdlib `sqlite3`, one connection per request opened in a threadpool. No ORM.
 `captures(id, raw_text, source, created_at, status, error, answer_json, classified_at)` is the stored input, one row per capture.
 `items` are classifier output: `capture_id`, own `raw_text` excerpt, nullable `space`, task fields, `stage` (attention | filed), `proposal_json`, `proposal_error`, `classified_at`. A CHECK forbids `filed` with a null space. `updated_at` (migration 0003) is internal, set by AFTER INSERT / AFTER UPDATE triggers with millisecond UTC timestamps; the update trigger fires only when the statement neither set `updated_at` itself (so it never recurses) nor changed `reminded_at` (narrowed by 0005, below).
-`briefs(space PK, fingerprint, text, item_ids JSON, created_at)` caches one AI brief per space. Fingerprint = item count and newest item id, so only adding or removing an item regenerates it; the refresh icon forces it.
+`briefs(space PK, fingerprint, text, item_ids JSON, created_at)` caches one AI brief per space. Fingerprint = item count, newest item id, and today's session count for the space, so adding or removing an item or finishing a session in it regenerates the brief; the refresh icon forces it. The prompt gains a line with that count when it is not zero. Fingerprints are only checked when a brief is opened, so a session costs a Codex call only the next time that brief is looked at.
 `spaces(name PK, position, created_at)` (migration 0004) is the list of spaces; `spaces.seed_spaces` fills it from `TARTIB_SPACES` once when empty; `store.list_spaces(conn)` is what the classifier, validation, summary, and reconcile read. Migration 0004 also dropped the item text immutability trigger and made the FTS update trigger fire on `raw_text` too.
 At startup, after migrations, `store.reconcile_spaces` moves items whose space is no longer in the `spaces` table to attention with no space. Migration 0002 (2026-09-17) created captures, backfilled one per item, rebuilt items, mapped `space='inbox'` to null + attention, dropped stage=inbox placeholders (their captures stay pending).
 `subscriptions(id, endpoint UNIQUE, p256dh, auth, created_at, last_seen_at, failures)` (the last column from 0006) and `app_state(key PK, value)` arrived with migration 0005, which also added `items.reminded_at` (UTC ISO, null = not sent) and wrote off every reminder already due, so the first tick after that deploy is silent. 0005 also narrowed `items_touch_update` to skip writes that change `reminded_at`: a fired reminder is not a human touch and must not reset the stale clock. The one write that clears `reminded_at` (`store.update_fields`, when `remind_at` actually changes) sets `updated_at` itself.
@@ -58,9 +58,15 @@ The payload is `{title, url, tag}`; `tag` is `item-<id>` per reminder and `diges
 `push.py` is the transport and the subscriptions table's owner: `broadcast` pushes to every row and deletes any endpoint answering 404 or 410 at once. Any other failure increments `subscriptions.failures` (migration 0006) and the row is dropped after `MAX_FAILURES` (8) in a row, since a push service is allowed a bad minute but not a permanent one; a delivery or a re-subscribe resets the count to 0. A tick charges at most one failure per endpoint however many notifications it sends, or a batch of reminders during one outage would spend every strike and delete a live subscription.
 `/api/config` hands out `vapid_public` only when a push could actually be delivered: keys that fail `push.check_key` leave the loop off, and the UI must not offer to switch on something that can never fire. `pywebpush` signs with the private key, which never reaches a response, a log line, or an error body. `python -m tartib.vapid` prints a fresh base64url key pair for `.env`.
 
+## Sessions
+
+`sessions(id, item_id NULL, started_at, ends_at, ended_at, outcome, created_at)` (migration 0007) is the pomodoro log. `item_id` is nullable and `ON DELETE SET NULL`: a session is about a task or about nothing, and deleting the task must not erase the time spent. `outcome` is `done | unfinished | abandoned`, null until answered; `done` ticks the task through `store.update_fields`. Only today's counts read this table -- rule 4 forbids the history screen.
+`sessions.Sessions` schedules one asyncio timer per running session for that session's own `ends_at`, not on the reminder loop's 60s tick, and re-arms everything unfinished at startup. Ending the row (`WHERE ended_at IS NULL`) is the claim to push about it, so a session stopped by hand, tidied on a read, or already fired never pushes twice; nothing is pushed if the end is more than `PUSH_GRACE` (5 min) past. One session runs at a time, but one still owed an outcome does not block the next, and it stops being offered after `OUTCOME_WINDOW` (12 h).
+`TARTIB_SESSION_MINUTES` (default 25) is the only length; there is no per-session choice.
+
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85), `TARTIB_VAPID_PUBLIC`, `TARTIB_VAPID_PRIVATE`, `TARTIB_VAPID_EMAIL` (default `mailto:tartib@localhost`), `TARTIB_SUMMARY_TIME` (default `08:00`, read in `TARTIB_TZ`, validated at load). `CODEX_HOME` is passed through to the subprocess.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85), `TARTIB_VAPID_PUBLIC`, `TARTIB_VAPID_PRIVATE`, `TARTIB_VAPID_EMAIL` (default `mailto:tartib@localhost`), `TARTIB_SUMMARY_TIME` (default `08:00`, read in `TARTIB_TZ`, validated at load), `TARTIB_SESSION_MINUTES` (default 25, at least 1). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 
@@ -68,7 +74,7 @@ The payload is `{title, url, tag}`; `tag` is `item-<id>` per reminder and `diges
 POST   /api/login {password}     POST /api/logout     GET /api/health (public)
 POST   /api/capture {text} -> 201 {id}   (a capture id)
 GET    /api/captures/{id} -> capture, its items, and the answer if it was a question
-GET    /api/today -> {date, items, recent (newest 3 captures), active_space}
+GET    /api/today -> {date, items, recent (newest 3 captures), active_space, sessions {total, by_item}}
 GET    /api/attention -> {items, stale, stale_days}   stale = open filed tasks with updated_at older than 14 days
 GET    /api/recent?limit=50&before=<id> -> {captures, next_before}   keyset paging
 GET    /api/items?q=&space=&shape=&status=&limit=&before=     GET /api/items/{id}
@@ -87,6 +93,10 @@ GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence, vapid_publ
 POST   /api/subscriptions {endpoint, keys:{p256dh, auth}} -> 201 {id}   upserts on endpoint
 DELETE /api/subscriptions {endpoint} -> {ok, removed}
 GET    /api/subscriptions -> {enabled, count}
+POST   /api/sessions {item_id?} -> 201 the session; 409 while one is running
+GET    /api/sessions/current -> {state: running | awaiting | null, session, item}
+POST   /api/sessions/{id}/stop          stop early; the row is kept and still owed an outcome
+POST   /api/sessions/{id}/outcome {outcome}
 ```
 
 ## Frontend shell

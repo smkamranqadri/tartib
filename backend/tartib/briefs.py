@@ -13,6 +13,7 @@ from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
+from tartib.sessions import space_counts_today
 from tartib.store import list_spaces, serialize_item
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
@@ -22,6 +23,18 @@ BRIEF_QUESTION = (
     " decided or noted recently. Max 5 lines."
 )
 BRIEF_NOTES = 15
+
+
+def brief_question(conn: sqlite3.Connection, space: str, settings: Settings) -> str:
+    """The fixed question, plus today's pomodoro count when there is one. A fact for the
+    summary to use, not an instruction: the prompt itself stays as written."""
+    sessions = space_counts_today(conn, settings, utcnow()).get(space, 0)
+    if not sessions:
+        return BRIEF_QUESTION
+    much = "1 pomodoro session" if sessions == 1 else f"{sessions} pomodoro sessions"
+    return f"{BRIEF_QUESTION} Today the user spent {much} on this space."
+
+
 BRIEF_MAX_ITEMS = 30
 UNFILED = "unfiled"
 
@@ -68,13 +81,16 @@ def spaces_summary(
     return {"spaces": spaces, "unfiled": entry(UNFILED, None, unfiled=True)}
 
 
-def fingerprint(conn: sqlite3.Connection, space: str) -> str:
-    """Changes only when an item is added to (or removed from) the space. Edits, done
-    ticks, and stars do not regenerate the brief; the refresh icon does."""
+def fingerprint(conn: sqlite3.Connection, space: str, settings: Settings) -> str:
+    """Changes when an item is added to (or removed from) the space, and when today's session
+    count for it changes. Edits, done ticks, and stars do not regenerate the brief; the refresh
+    icon does. Tomorrow's zero also counts as a change, which is what stops a brief carrying
+    yesterday's "3 sessions today" into today."""
     row = conn.execute(
         "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM items WHERE space = ?", (space,)
     ).fetchone()
-    return f"{row[0]}:{row[1]}"
+    sessions = space_counts_today(conn, settings, utcnow()).get(space, 0)
+    return f"{row[0]}:{row[1]}:{sessions}"
 
 
 def brief_rows(conn: sqlite3.Connection, space: str) -> list[sqlite3.Row]:
@@ -121,7 +137,7 @@ async def space_brief(
     space = space.strip().lower()
     if space not in list_spaces(conn):
         raise HTTPException(status_code=404, detail="unknown space")
-    fp = fingerprint(conn, space)
+    fp = fingerprint(conn, space, settings)
     cached = _cached(conn, space)
     if cached is not None and not refresh and cached["fingerprint"] == fp:
         return _shape(conn, cached, fresh=False)
@@ -133,7 +149,7 @@ async def space_brief(
         if not settings.ai_enabled:
             raise HTTPException(status_code=503, detail="AI not configured")
         try:
-            result = await answer_from_rows(BRIEF_QUESTION, rows, settings)
+            result = await answer_from_rows(brief_question(conn, space, settings), rows, settings)
         except AskError as e:
             raise HTTPException(status_code=502, detail=f"brief failed: {e}") from e
         text, ids = result["answer"], result["item_ids"]

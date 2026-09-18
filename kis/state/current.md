@@ -2,10 +2,24 @@
 
 - Branch: `main`, local only, working tree clean. Slice 11 is committed (three commits,
   `ecd2000`, `c38495b`, `8a897ad`) and deployed.
-- Task: slice 12, pomodoro. Plan approved 2026-09-18 in `kis/intent/slice-12-pomodoro.md`.
-  Not started. Slice 11 (push reminders) is done and deployed.
+- Task: slice 12, pomodoro. Step 1 of 3 done; step 2 (session bar, end sheet, Today counts) is
+  next. Phase Mode.
+  Plan and step status: `kis/intent/slice-12-pomodoro.md`.
+- Verification plan for step 2: `npm run typecheck && npm run build`, then the built app in
+  headless Chrome: start, reload mid-session, the bar survives, the sheet after the end, each
+  outcome, and no push while a client is visible.
+- The session push has no visible-client suppression yet: `sw.js` gets it in step 2, so until
+  then a session ending buzzes even with the app open.
+- Decided while starting step 1, where the plan was silent:
+  - Stop early is `POST /api/sessions/{id}/stop`, not `DELETE`. Every other DELETE in this API
+    removes a row, and a stopped session is kept, counted, and given an outcome.
+  - Stopping cancels the scheduled push. Otherwise the phone buzzes about a session you ended.
+  - Only a *running* session blocks a new one. A finished session still waiting for its outcome
+    must not stop you starting the next.
+  - A session waiting for an outcome follows you for 12 hours, then stops being offered. An
+    outcome sheet for something from two days ago is an ambush, not a question.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
-- Verify: `cd backend && uv run pytest -q` (127 passed) and `uv run pytest -m eval` (16 real-Codex
+- Verify: `cd backend && uv run pytest -q` (144 passed) and `uv run pytest -m eval` (16 real-Codex
   fixtures, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
 - Reminders on the phone: HTTPS comes from the private network's HTTPS, so they keep working for as long as
   that network runs on the Mac and the phone, and the Mac is awake. Nothing is exposed publicly.
@@ -16,11 +30,23 @@
 - Settings shows the installed service worker version (`DEVICE` -> Reminders worker). A phone
   silently sitting on an old worker cost a whole debugging round before that existed.
 - Backups from the deploy: `a local backup directory/` holds the pre-deploy database and `.env`.
-- Next: slice 12, step 1 of 3: migration 0007 plus the sessions API and the end-of-session
-  scheduler. Rule 4 was widened on approval to allow the session-done push, so that contradiction
-  is settled; the push stays silent while the app is on screen.
+- Next: slice 12, step 2 of 3: the session bar under the capture bar, the start control on a task
+  row and item page, the Done / Not finished / Abandoned sheet, today's counts on Today, and the
+  visible-client check in `sw.js`.
 
-## Review after the slice (2026-09-18)
+## Proof (2026-09-18) — slice 12 step 1
+
+- `uv run pytest -q` - 144 passed (was 127); ruff check and format clean. The four decisions
+  above are mutation-checked: removing the 409, the push grace, the task tick, or the 12-hour
+  window each fails a named test.
+- Migration rehearsed on a copy of the live database: 6 -> 7 clean, 47 items intact.
+- In a container built from this tree, with a one-minute session: a second start was refused,
+  the container ended the session by itself at the minute with nobody polling it, the outcome
+  was recorded, and Today counted it. A session planted to end after a restart was still
+  running afterwards and pushed at its own end, which is the scheduler being rebuilt on boot.
+- Not proved yet: anything visible. There is no UI until step 2.
+
+## Review after the slice 11 work (2026-09-18)
 
 A review of the committed slice found two real defects, both fixed and mutation-checked:
 

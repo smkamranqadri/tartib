@@ -9,10 +9,11 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from tartib import ask, auth, briefs, captures, db, items, push, queries, spaces
+from tartib import ask, auth, briefs, captures, db, items, push, queries, sessions, spaces
 from tartib.config import Settings, load_settings
 from tartib.reminders import Reminders
 from tartib.runner import Runner
+from tartib.sessions import Sessions
 from tartib.spaces import seed_spaces
 from tartib.store import list_spaces, reconcile_spaces
 
@@ -52,11 +53,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # What the UI is told. With the loop off, offering to enable reminders would earn a
         # card that says "on" over something that can never fire.
         app.state.push_ready = reminders is not None
+        # Sessions are logged whether or not anything can be pushed; only the buzz at the end
+        # needs push, and `broadcast` over zero subscriptions is a no-op.
+        clock = Sessions(settings)
+        app.state.sessions = clock
         try:
             if reminders is not None:
                 await reminders.start()
+            await clock.start()
             yield
         finally:
+            await clock.stop()
             if reminders is not None:
                 await reminders.stop()
             await runner.stop()
@@ -71,6 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(briefs.router)
     app.include_router(spaces.router)
     app.include_router(push.router)
+    app.include_router(sessions.router)
 
     @app.get("/api/health")
     def health() -> dict:

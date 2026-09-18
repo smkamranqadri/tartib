@@ -28,6 +28,7 @@ class Settings:
     vapid_private: str | None
     vapid_email: str
     summary_time: str  # "HH:MM" in `tz`; the daily digest goes out at the first tick past it
+    session_minutes: int  # every pomodoro is this long; there is no per-session choice
 
     @property
     def push_enabled(self) -> bool:
@@ -76,6 +77,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     ZoneInfo(tz)  # fail fast on an unknown zone
     summary_time = (env.get("TARTIB_SUMMARY_TIME") or "08:00").strip()
     parse_hhmm(summary_time)  # fail fast on a bad time
+    session_minutes = int(env.get("TARTIB_SESSION_MINUTES") or "25")
+    if session_minutes < 1:
+        raise RuntimeError("TARTIB_SESSION_MINUTES must be at least 1")
     spaces = tuple(
         dict.fromkeys(
             s.strip().lower() for s in env.get("TARTIB_SPACES", "").split(",") if s.strip()
@@ -98,4 +102,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         vapid_private=env.get("TARTIB_VAPID_PRIVATE") or None,
         vapid_email=env.get("TARTIB_VAPID_EMAIL") or "mailto:tartib@localhost",
         summary_time=summary_time,
+        session_minutes=session_minutes,
     )

@@ -14,6 +14,16 @@ def utcnow_iso() -> str:
     return utcnow().replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def as_utc_iso(moment: datetime) -> str:
+    """The stored shape: UTC, whole seconds, trailing Z, so string comparison is time order."""
+    return moment.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def parse_iso(value: str) -> datetime:
+    """Read a stored timestamp back. Everything stored here ends in Z."""
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def utcnow_ms_iso() -> str:
     """Millisecond precision, matching what the items touch trigger writes."""
     return utcnow().isoformat(timespec="milliseconds").replace("+00:00", "Z")

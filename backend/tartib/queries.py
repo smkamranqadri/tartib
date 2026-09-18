@@ -12,6 +12,7 @@ from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings, push_ready
+from tartib.sessions import counts_today
 from tartib.store import list_spaces, serialize_capture, serialize_item
 
 RECENT = 3
@@ -48,6 +49,8 @@ def today(
         "items": [serialize_item(r) for r in rows],
         "recent": [serialize_capture(conn, r) for r in recent],
         "active_space": active["space"] if active else None,
+        # Today's pomodoros: the total, and per task where one was attached.
+        "sessions": counts_today(conn, settings, now),
     }
 
 
