@@ -1,7 +1,7 @@
 # Current
 
-- Branch: `main`, local only, working tree clean. Slices 11 and 12 are committed and deployed;
-  git carries the detail.
+- Branch: `main`, local only, working tree clean. Slices 11 and 12 and slice 15 step 1 are
+  committed; git carries the detail. Deployed locally, not hosted anywhere yet.
 - Task: slice 15, PWA, step 1 of 3 done and proved (below). Phase Mode.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
 - The worker is `2026-09-18.6` and no longer calls `skipWaiting`, so a deploy is offered as a
@@ -42,45 +42,15 @@
   the domain CapRover will serve. Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
   verified on the GitHub account, or the rewritten commits will not link to it.
 
-## Proof (2026-09-18) — slice 12 on real devices
+## Proof
 
-A 25-minute session started from the phone on a real task appeared on the desktop with the same
-countdown, which is the whole point of the session being a row rather than a tab. It ended at its
-scheduled second, 07:48:32Z.
+Finished slices keep their step-by-step proof in the commit messages, not here: `ecd2000`,
+`8a897ad`, `7d8ffd6`, `6c5c16b`, `9a80a28`, and for the three most recent `1923c7c` (the plans),
+`70e91c6` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
+`6d78953` (slice 15 step 1).
 
-No push went out for it, and the failure counter staying at 0 was mistaken for proof that one
-had: it only shows nothing failed. The desktop watching the countdown asked the server the moment
-it hit zero, that read closed the session, and the push had no claim left. Fixed by migration
-0008; the phone buzz is still unproved, and the first retry should be with every other client
-closed.
-
-### Retry 2026-09-18 08:36Z — the server half, proved
-
-Session 2, one minute, no task, started through the API with no browser tab open anywhere.
-At 08:36:53Z, its own `ends_at` to the second:
-
-- `notified_at = 2026-09-18T08:36:53Z`. This is the thing that was NULL last time. The claim is
-  now held separately from `ended_at`, so closing the row no longer takes the notification with
-  it. Migration 0008 does what it was written to do.
-- `push.broadcast` ran and `send` did not raise. `pywebpush` raises `WebPushException` on any
-  non-2xx, `broadcast` turns that into a strike, and `subscriptions.failures` is still 0 with no
-  warning in the log. So Apple's push service accepted the notification.
-- Note for next time: `failures = 0` alone still proves nothing, and `last_seen_at` is not
-  evidence either — `mark_delivered` only clears a non-zero count and never touches it. What
-  makes this proof is `notified_at` being claimed *and* no strike recorded.
-
-The phone buzzed once, confirmed by the user. `GET /api/sessions/current` then returned
-`state: "awaiting"` for session 2, which is what the session bar renders as the Done / Not
-finished / Abandoned question -- the third part of the criterion.
-
-Seam, recorded rather than papered over: no single run covered every word of "a session started
-on the phone ends while the app is closed". Session 1 was started on the phone; session 2 was
-started through `POST /api/sessions`, which is the identical endpoint the phone's Start button
-calls, and ended with no client anywhere. Each half is proved and there is no third code path
-between them. Session 2 is still owed an outcome, so the question is sitting in the bar.
-
-Step-by-step proof for slices 11 and 12 is in the commit messages, not here: `ecd2000`,
-`8a897ad`, `7d8ffd6`, `6c5c16b`, `9a80a28`.
+Still operational from that: session 2 is owed an outcome, so the Done / Not finished /
+Abandoned question is sitting in the bar until it is answered.
 
 Earlier (v0.1): every route driven headlessly at 390px and 1280px with the fake classifier; real
 Codex exercised on the host for classification, briefs, and ask.
@@ -112,8 +82,9 @@ Not proved: `pushsubscriptionchange`. See the plan's "Found while building step 
 - Voice capture depends on the browser; it was proved with an injected engine, not real dictation.
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
   Inbox screen also shows.
-- No `pushsubscriptionchange` handler: when a push service rotates an endpoint, reminders are
-  silently off until the user next opens Settings, which re-registers it.
+- `pushsubscriptionchange` is handled since slice 15 step 1, but unproved: it needs a push
+  service to actually retire an endpoint, and Safari never fires the event, so on the phone a
+  rotation still means reminders are silently off until Settings is next opened.
 - Tapping a reminder on iOS opens Tartib but does not navigate to `/today`. Whether iOS runs the
   worker's `notificationclick` at all was never established; `technical.md` records what was tried.
 - Reminders depend on the Mac being awake and on a private network running at both ends. There is no
