@@ -12,8 +12,8 @@ as `Muhammad Kamran <smkamranqadri@yahoo.com>`. `git filter-repo` maps both to
 
 That rewrites every SHA, and KIS cites SHAs on purpose: the step-by-step proof for slices 11 and
 12 lives in commit messages rather than in State, and `state/current.md`,
-`intent/slice-12-pomodoro.md` and `intent/history.md` point at `025bf8b`, `b77dbee`, `3c7c85d`,
-`3b1d468` and `4fe05ed`. Updating those citations is part of this step, not a follow-up, or the
+`intent/slice-12-pomodoro.md` and `intent/history.md` point at `34ab011`, `fc75770`, `e2e31cc`,
+`91d7a22` and `970348e`. Updating those citations is part of this step, not a follow-up, or the
 proof on record points at nothing. After the first push a second rewrite means a force-push, so
 this happens once, now.
 
@@ -61,6 +61,14 @@ personal capture system is a screenshot of someone's errands.
 - The API list was checked against the running app's OpenAPI rather than transcribed: every
   route claimed exists, and nothing is missing.
 - Memory claim checked too: 41.26MiB of the 512MB limit at rest.
+
+## Found while scrubbing, 2026-09-18
+
+`.git/filter-repo/commit-map` is **cumulative across runs**: after a second pass its keys are
+still the *original* pre-first-rewrite SHAs, mapping straight to the current ones, not the SHAs
+that existed when that pass started. Looking up the intermediate SHAs finds nothing, which reads
+like the map is broken when it is simply keyed from further back. If this is ever done a third
+time, map from the originals.
 
 ## Step 3 — push
 

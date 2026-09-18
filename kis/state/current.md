@@ -5,8 +5,10 @@
   file carries the substance without the specifics, and points there.
 
 - Branch: `main`, local only, working tree clean. Deployed locally, not hosted anywhere yet.
-  History was rewritten on 2026-09-18 to one identity, `Muhammad Kamran
-  <smkamranqadri@yahoo.com>`, author and committer, across all 63 commits. Every SHA changed;
+  History was rewritten twice on 2026-09-18: once to one identity, `Muhammad Kamran
+  <smkamranqadri@yahoo.com>` as author and committer, and once to scrub the domain, the private
+  network setup and the backup paths out of blobs and commit messages both. Every SHA changed
+  each time;
   the citations below are the new ones. A copy of the repository as it was before that is kept
   locally; the path is in `private.md`, and it is the undo button until the push has happened.
 - Task: slice 16, the public repo, steps 1 and 2 of 3 done (below). Standard Mode.
@@ -58,10 +60,10 @@
 
 ## Proof
 
-Finished slices keep their step-by-step proof in the commit messages, not here: `025bf8b`,
-`b77dbee`, `3c7c85d`, `3b1d468`, `4fe05ed`, and for the three most recent `9ead0c8` (the plans),
-`5b73d55` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
-`e1fbd94` (slice 15 step 1).
+Finished slices keep their step-by-step proof in the commit messages, not here: `34ab011`,
+`fc75770`, `e2e31cc`, `91d7a22`, `970348e`, and for the three most recent `3643d11` (the plans),
+`a78f998` (slice 12 proved on the phone, including why `failures = 0` proves nothing) and
+`a86baf1` (slice 15 step 1).
 
 Still operational from that: session 2 is owed an outcome, so the Done / Not finished /
 Abandoned question is sitting in the bar until it is answered.
