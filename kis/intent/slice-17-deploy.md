@@ -12,8 +12,9 @@ iOS Shortcut needs no login flow. Rate limiting `POST /api/login` alone would be
 attacker guesses against `/api/today` with a bearer header and never touches the login route. The
 backoff therefore hangs off the password comparison itself, wherever it is reached from.
 
-Global, with no IP, as decided: behind CapRover the client address only arrives in
-`X-Forwarded-For`, and trusting that header wrongly either collapses every attacker into one
+Global, with no IP, as decided -- and Cloudflare in front of CapRover adds a second hop to
+trust, which is one more reason not to. Behind them the client address only arrives in
+`X-Forwarded-For` and `CF-Connecting-IP`, and trusting that header wrongly either collapses every attacker into one
 bucket or lets one attacker lock out the whole app. One password is one account, so a global
 count is coherent and there is no header to get wrong.
 
@@ -28,7 +29,27 @@ count is coherent and there is no header to get wrong.
   captures, for up to five minutes at a time. That is the price of not trusting the proxy header,
   and it was chosen with that known.
 
-Proved by tests before anything is deployed.
+### The session cookie is not Secure behind the proxy
+
+Found 2026-09-18 by checking rather than reading. `auth.py` sets `secure=request.url.scheme ==
+"https"`, and the Dockerfile already runs uvicorn with `--proxy-headers` -- but that option
+trusts `X-Forwarded-Proto` only from `forwarded-allow-ips`, which defaults to `127.0.0.1`. Behind
+CapRover the peer is the Docker network, not localhost, so the header is ignored, the app sees
+`http`, and the cookie goes out without `Secure`. Proved locally: a login carrying
+`X-Forwarded-Proto: https` came back `HttpOnly; Max-Age=2592000; Path=/; SameSite=lax` and no
+`Secure`.
+
+On a public HTTPS site that is a session cookie a downgrade can carry in the clear. Two things
+both have to be true, or it stays broken quietly:
+
+- `FORWARDED_ALLOW_IPS` set so uvicorn trusts the proxy. `*` is defensible here and only here,
+  because CapRover reaches the container over an internal network and the port is not published
+  anywhere else -- the header is trustworthy exactly because nothing untrusted can set it.
+- Cloudflare's SSL mode on Full (strict), with CapRover holding a real certificate. On Flexible,
+  Cloudflare talks to the origin over plain HTTP, `X-Forwarded-Proto` is honestly `http`, and
+  fixing uvicorn changes nothing.
+
+Proved by tests before anything is deployed, and re-checked on the live domain in step 4.
 
 ## Step 2 — the image
 
@@ -73,6 +94,8 @@ The database starts empty. The Mac's is archived to `a local backup directory` a
 
 - Log in at `https://the domain` on a valid certificate. Six wrong passwords return
   429, and the right one works after the window.
+- The session cookie comes back with `Secure` on it. This is the one that will pass by default
+  if nobody looks, because everything else about the login still works without it.
 - A capture typed on the phone over cellular files itself within about fifteen seconds: the
   copied Codex login working from that address.
 - Break Codex deliberately; a capture still files through the Claude fallback.
@@ -107,6 +130,7 @@ Review: `/security-review` on step 1, `/code-review` on the diff before step 2 b
 
 ## Status
 - [ ] global login backoff covering the bearer path, counters in app_state, tests
+- [ ] FORWARDED_ALLOW_IPS so the session cookie is Secure behind the proxy
 - [ ] buildx amd64, push to Docker Hub, captain-definition, deploy script
 - [ ] CapRover app: persistent dirs, Codex login, Claude token, env, HTTPS, health, empty DB
 - [ ] prove on real devices, backup cron with a restore, tag v1.0

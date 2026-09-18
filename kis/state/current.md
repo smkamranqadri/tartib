@@ -39,7 +39,11 @@
   the existing capture instead of making a second. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve `https://the domain` from `smkamranqadri/tartib` on Docker
-  Hub, tagged per version with no `latest`. Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
+  Hub, tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and
+  CapRover already answers there with its placeholder page, so the path is wired end to end.
+  Carried into slice 17: the session cookie will not be `Secure` behind that proxy until
+  `FORWARDED_ALLOW_IPS` is set and Cloudflare is on Full (strict) -- proved locally, written up
+  in the plan. Before slice 16 step 1, confirm `smkamranqadri@yahoo.com` is
   verified on the GitHub account, or the rewritten commits will not link to it.
 
 ## Proof
