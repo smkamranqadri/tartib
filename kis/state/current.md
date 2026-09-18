@@ -1,6 +1,7 @@
 # Current
 
-- Branch: `main`, local only. Slice 11 is complete in the working tree, not in git.
+- Branch: `main`, local only, working tree clean. Slice 11 is committed (three commits,
+  `ecd2000`, `c38495b`, `8a897ad`) and deployed.
 - Task: none in flight. Slice 11 (push reminders) is done and deployed; slices 12 to 14 are
   approved but unplanned, in `kis/intent/backlog.md`.
 - Run it: `docker compose up -d --build`, then http://localhost:8000. Password in `.env`.
