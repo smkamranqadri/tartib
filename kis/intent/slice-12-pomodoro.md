@@ -114,4 +114,4 @@ Only task-linked sessions have a space. A session with no task counts on Today a
 ## Status
 - [x] migration + API + scheduler (2026-09-18)
 - [x] session bar + end sheet + Today counts (2026-09-18)
-- [ ] briefs + proof + deploy
+- [x] briefs + proof + deploy (2026-09-18)

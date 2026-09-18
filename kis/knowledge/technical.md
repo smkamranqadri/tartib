@@ -9,7 +9,7 @@ backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
 backend/tests/      pytest + TestClient; the AI runs as a real subprocess pointed at fake_codex.py (fake_claude.py for the fallback)
 frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, push.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Waiting, Recent, Spaces, Space, SpaceDetail, Settings, ItemPage, Login), components/ (one per pattern, listed under Frontend shell)
-frontend/public/    manifest.webmanifest, sw.js (app shell + push; hand-bumped SW_VERSION), icons
+frontend/public/    manifest.webmanifest, sw.js (app shell + push; hand-bumped SW_VERSION), icons 180/192/512
 Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex + @anthropic-ai/claude-code runs uvicorn
 docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
 ```
@@ -57,6 +57,12 @@ One digest per local day at the first tick past `TARTIB_SUMMARY_TIME`, skipped w
 The payload is `{title, url, tag}`; `tag` is `item-<id>` per reminder and `digest` for the digest, so one notification replaces only itself.
 Tapping a reminder on iOS opens Tartib but does not route to the notification's URL. Three approaches were tried and each was confirmed installed on the phone before being ruled out: `WindowClient.navigate()` after `focus()` (does nothing to a frozen client), `postMessage` with a reply and a `navigate()` fallback (a home-screen app is frozen while the worker runs and cannot answer in time), and the worker writing the URL into the shell cache for the app to pick up on waking, read on mount, `visibilitychange`, `focus`, `pageshow` and a short burst of retries. The third is what ships: it is correct, proved on desktop, and costs nothing. Whether iOS dispatches `notificationclick` to the worker at all was never established, and is the first thing to check if this is picked up again.
 `push.py` is the transport and the subscriptions table's owner: `broadcast` pushes to every row and deletes any endpoint answering 404 or 410 at once. Any other failure increments `subscriptions.failures` (migration 0006) and the row is dropped after `MAX_FAILURES` (8) in a row, since a push service is allowed a bad minute but not a permanent one; a delivery or a re-subscribe resets the count to 0. A tick charges at most one failure per endpoint however many notifications it sends, or a batch of reminders during one outage would spend every strike and delete a live subscription.
+Neither column is evidence that a push arrived. `mark_delivered` only clears a non-zero count and
+never touches `last_seen_at`, so a good delivery leaves both looking exactly as they did before;
+`failures = 0` equally describes "nothing failed" and "nothing was ever sent". What proves a send
+is the caller's own claim (`items.reminded_at`, `sessions.notified_at`) together with the absence
+of a strike: `pywebpush` raises `WebPushException` on any non-2xx, and `broadcast` turns that into
+a counted failure and a log line.
 `/api/config` hands out `vapid_public` only when a push could actually be delivered: keys that fail `push.check_key` leave the loop off, and the UI must not offer to switch on something that can never fire. `pywebpush` signs with the private key, which never reaches a response, a log line, or an error body. `python -m tartib.vapid` prints a fresh base64url key pair for `.env`.
 
 ## Sessions
