@@ -49,6 +49,19 @@ themes: Home, Inbox, a space with its brief, the item page, Settings. **Against 
 database seeded with invented captures.** The real one holds real notes, and a screenshot of a
 personal capture system is a screenshot of someone's errands.
 
+## Found while building step 2
+
+- `.env.example` was missing `TARTIB_DB_PATH`, `TARTIB_SESSION_MINUTES` and
+  `TARTIB_STATIC_DIR`. `CLAUDE_CODE_OAUTH_TOKEN` is in it and not in `config.py`, which is
+  correct: the Claude CLI reads it from the environment itself.
+- The README's "Not planned" section still listed pomodoro and push notifications, both of
+  which have shipped. That is the kind of line that makes a reader distrust the rest of a
+  document.
+- It also claimed 15 eval fixtures. There are 16.
+- The API list was checked against the running app's OpenAPI rather than transcribed: every
+  route claimed exists, and nothing is missing.
+- Memory claim checked too: 41.26MiB of the 512MB limit at rest.
+
 ## Step 3 — push
 
 Push to the remote, confirm the rendered README and that nothing was blocked. `kis/`, `.agents/`,
@@ -81,5 +94,5 @@ Review: `/security-review` before the push. It is the last moment the repository
 ## Status
 - [x] filter-repo to one identity, update the KIS commit citations, secret scan, confirm the
       email is verified on GitHub (2026-09-18; the test-key item was void)
-- [ ] README, .env.example, CONTRIBUTING, screenshots from a seeded database
+- [x] README, .env.example, CONTRIBUTING, screenshots from a seeded database (2026-09-18)
 - [ ] push

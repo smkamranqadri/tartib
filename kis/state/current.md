@@ -6,7 +6,7 @@
   the citations below are the new ones. A copy of the repository as it was before that sits at
   `a local backup directory` (165MB, includes node_modules and .venv,
   so delete it once the push has happened).
-- Task: slice 16, the public repo, step 1 of 3 done (below). Standard Mode.
+- Task: slice 16, the public repo, steps 1 and 2 of 3 done (below). Standard Mode.
   Plan and step status: `kis/intent/slice-16-public-repo.md`. Slice 15 is closed.
   Plan and step status: `kis/intent/slice-15-pwa.md`. Slice 12 is closed.
 - The worker is `2026-09-18.7` and no longer calls `skipWaiting`, so a deploy is offered as a
@@ -43,8 +43,9 @@
   every client closed on purpose. Nothing is pushed to a desktop browser unless that browser
   enables reminders in Settings, so what this would check is that the desktop's read no longer
   steals the phone's push.
-- Next: slice 16 step 2 -- the README rewritten against SPEC, `.env.example` completed,
-  CONTRIBUTING, and screenshots from a seeded database. Not started.
+- Next: slice 16 step 3 -- push to `https://github.com/smkamranqadri/tartib.git`. That is the
+  point of no return for the rewrite: after it, any further history change is a force-push to a
+  public repository. Not started.
   Then slice 16 (public repo) and slice 17 (harden, image, deploy, v1.0).
   Slice 17 will serve `https://the domain` from `smkamranqadri/tartib` on Docker
   Hub, tagged per version with no `latest`. DNS is live and proxied through Cloudflare, and
@@ -130,6 +131,23 @@ The run before that one failed three ways and one was a real bug: pending rows w
 seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
 
 154 backend tests pass, ruff clean, typecheck and build clean.
+
+### Slice 16 step 2, 2026-09-18 — documentation that is true
+
+- `.env.example` now matches `config.py` in both directions; it was missing `TARTIB_DB_PATH`,
+  `TARTIB_SESSION_MINUTES` and `TARTIB_STATIC_DIR`.
+- README rewritten against SPEC. It had claimed three screens, listed routes that no longer
+  exist, and still had pomodoro and push under "Not planned" after both shipped. Its API list
+  was verified against the running app's OpenAPI rather than transcribed, its memory claim
+  against `docker stats` (41.26MiB of 512MB), and its eval count corrected from 15 to 16.
+- `CONTRIBUTING.md` written: how to run it, the verification commands, house style, and the
+  part that matters -- rule 4 is a hard constraint, so a patch adding tags or a pomodoro history
+  screen is declined on principle, and the route to changing that starts with an argument in an
+  issue rather than a diff.
+- Eight screenshots in `docs/screenshots/`, 1280px light and 390px dark, from a **throwaway
+  database seeded with invented captures** driven through the fake classifier. Confirmed by
+  query that none of that text exists in the real database, and the real one is still 32/47.
+  Each screenshot was looked at, not just produced.
 
 ### Slice 16 step 1, 2026-09-18 — one identity, and no secrets
 
