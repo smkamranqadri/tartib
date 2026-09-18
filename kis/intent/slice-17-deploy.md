@@ -215,5 +215,7 @@ Review: `/security-review` on step 1, `/code-review` on the diff before step 2 b
 - [x] global login backoff covering the bearer path, counters in app_state, tests (2026-09-18)
 - [x] FORWARDED_ALLOW_IPS so the session cookie is Secure behind the proxy (2026-09-18)
 - [x] buildx amd64, push to Docker Hub, captain-definition, deploy script (2026-09-18)
-- [ ] CapRover app: persistent dirs, Codex login, Claude token, env, HTTPS, health, empty DB
+- [x] CapRover app: persistent dirs, Codex login, Claude token, env, health, empty DB
+      (2026-09-18). Container HTTP Port must be 8000, not CapRover's default 80.
+      **Force HTTPS still off** -- `http://` answers 200 rather than redirecting.
 - [ ] prove on real devices, backup cron with a restore, tag v1.0

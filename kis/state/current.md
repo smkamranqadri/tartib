@@ -14,7 +14,14 @@
   each time;
   the citations below are the new ones. A copy of the repository as it was before that is kept
   locally; the path is in `private.md`, and it is the undo button until the push has happened.
-- Task: slice 17, deploy, steps 1 and 2 of 4 done and proved (below). Phase Mode.
+- Task: slice 17, deploy, step 3 done -- the app is deployed and serving on the domain. Step 4,
+  proving it, is next. Phase Mode.
+- **Open on the deployment: force HTTPS is off.** `http://` answers 200 rather than redirecting,
+  so plaintext is served for an app whose password is the whole security model. CapRover's HTTP
+  Settings, or Cloudflare's "Always Use HTTPS".
+- Container HTTP Port has to be 8000 in CapRover, not the default 80: uvicorn binds 8000 and the
+  image exposes it. No host port mapping -- that would bypass nginx, and with it TLS and
+  `X-Forwarded-Proto`, which is what the `Secure` cookie depends on.
   Plan and step status: `kis/intent/slice-17-deploy.md`. No blocker.
 - `smkamranqadri/tartib:v1.0` is on Docker Hub, linux/amd64. Tags are immutable: the next deploy
   is `v1.1`, and `deploy.sh` refuses to overwrite one that exists.
@@ -145,6 +152,19 @@ The run before that one failed three ways and one was a real bug: pending rows w
 seen. Screenshot of the fixed offline state confirmed by eye, not just by selector count.
 
 154 backend tests pass, ruff clean, typecheck and build clean.
+
+### Slice 17 step 3, 2026-09-18 — deployed
+
+Serving on the domain: `/api/health` answers `{"ok":true,"ai":true,"fallback":true}`, the page
+title is Tartib rather than CapRover's placeholder, TLS verifies over HTTP/2, and the manifest,
+service worker and icons all return 200.
+
+`"ai": true` reflects configuration only -- it means `TARTIB_AI_COMMAND` is not `off`, not that
+the Codex login works. That needs a real capture, which is step 4.
+
+The Codex login was made on the server with a device code rather than copied, and the persistent
+directory question turned out to matter: a CapRover-labelled volume is not the host's `~/.codex`,
+so a host login is invisible to the container unless the directory is a bind mount instead.
 
 ### Slice 17 step 2, 2026-09-18 — the image cross-builds and runs
 
