@@ -177,8 +177,8 @@ memory limit 512MB, matching what `docker-compose.yml` carried. Force HTTPS on. 
   429, and the right one works after the window.
 - The session cookie comes back with `Secure` on it. This is the one that will pass by default
   if nobody looks, because everything else about the login still works without it.
-- A capture typed on the phone over cellular files itself within about fifteen seconds: the
-  server's own Codex login working.
+- [x] A capture files itself into a space on the deployed app: the server's own Codex login
+  working, 2026-09-18. The device-code login removed the risk rather than mitigating it.
 - Break Codex deliberately; a capture still files through the Claude fallback.
 - The phone re-enables reminders against the new origin. Every existing subscription is bound to
   the old origin and is dead; `push.py` prunes them on the first 404 or 410. A reminder

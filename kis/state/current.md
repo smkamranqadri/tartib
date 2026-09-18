@@ -159,6 +159,21 @@ seen. Screenshot of the fixed offline state confirmed by eye, not just by select
 
 154 backend tests pass, ruff clean, typecheck and build clean.
 
+### Slice 17 step 4, 2026-09-18 — in progress
+
+Proved on the deployed app: a capture classifies and files itself into a space, which means the
+**Codex login made on the server with a device code is accepted from the VPS's own address**.
+That was the largest standing risk in this plan -- a copied login being refused from a
+datacentre -- and making the login there rather than carrying it is what removed it. Sessions run
+on the deployed app too.
+
+Force HTTPS confirmed: `http://` answers 302 to the https origin.
+
+Still to prove: the session cookie carrying `Secure`; a session ending buzzing the phone from the
+new origin, ideally with a desktop tab open on the countdown, which is the migration 0008 case
+that has never been tested on real devices; the Claude fallback with Codex broken deliberately;
+and a backup that has actually been restored from once. Then v1.0.
+
 ### Slice 17 step 3, 2026-09-18 — deployed
 
 Serving on the domain: `/api/health` answers `{"ok":true,"ai":true,"fallback":true}`, the page
