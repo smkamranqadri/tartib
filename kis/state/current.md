@@ -176,10 +176,20 @@ Checked twice: a login over the domain returns `...; SameSite=lax; Secure`, and 
 deployment that fails completely silently -- everything works without it -- which is why it is
 an acceptance check rather than a hope.
 
-Still to prove: a session ending buzzing the phone from the new origin, ideally with a desktop
-tab open on the countdown, which is the migration 0008 case that has never been tested on real
-devices; the Claude fallback with Codex broken deliberately; and a backup that has actually been
-restored from once. Then v1.0.
+**A session ending pushed from the new origin.** `ends_at`, `ended_at` and `notified_at` all
+11:58:56Z, the claim taken, and the subscription still present afterwards rather than pruned by a
+404 or 410 -- so the push service accepted it. Whether the phone rang is the user's half.
+
+**The Claude fallback is wired but not working.** With `TARTIB_AI_COMMAND=codex1` the error is
+`cannot run 'codex1': [Errno 2] No such file or directory; fallback: timed out after 120s`: the
+fallback is invoked, then hangs for the full timeout instead of failing. `stdin` is DEVNULL, so
+it is authenticating rather than waiting for input -- `CLAUDE_CODE_OAUTH_TOKEN` is not set on the
+server, or is not valid. Two captures are in Needs Attention carrying that error;
+`python -m tartib.reclassify --attention` rebuilds them once the token is in.
+That slow failure is now a backlog item in its own right.
+
+Still to prove: the fallback actually filing a capture with Codex broken, and a backup that has
+been restored from once. Then v1.0.
 
 ### Slice 17 step 3, 2026-09-18 — deployed
 
