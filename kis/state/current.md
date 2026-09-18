@@ -16,9 +16,15 @@
   locally; the path is in `private.md`, and it is the undo button until the push has happened.
 - Task: slice 17, deploy, step 3 done -- the app is deployed and serving on the domain. Step 4,
   proving it, is next. Phase Mode.
-- **Open on the deployment: force HTTPS is off.** `http://` answers 200 rather than redirecting,
-  so plaintext is served for an app whose password is the whole security model. CapRover's HTTP
-  Settings, or Cloudflare's "Always Use HTTPS".
+- Force HTTPS is on: `http://` answers 302 to the https origin, confirmed 2026-09-18.
+- Reminders are enabled on the phone against the new origin, so the push path works end to end
+  there. Enabling them in a desktop Chrome fails with "Registration failed - push service error",
+  which is the browser failing to register with FCM and not a Tartib problem:
+  `pushManager.subscribe()` never contacts the server, and the same VAPID key from the same
+  `/api/config` was accepted by iOS. Check `chrome://gcm-internals` for the connection state; a
+  VPN or exit node, or a Chromium derivative with Google push disabled, are the usual causes.
+  Not worth chasing unless wanted: one switch covers all three pushers, so a desktop
+  subscription means two buzzes for every reminder and every digest.
 - Container HTTP Port has to be 8000 in CapRover, not the default 80: uvicorn binds 8000 and the
   image exposes it. No host port mapping -- that would bypass nginx, and with it TLS and
   `X-Forwarded-Proto`, which is what the `Secure` cookie depends on.

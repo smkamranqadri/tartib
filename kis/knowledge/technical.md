@@ -65,6 +65,10 @@ never touches `last_seen_at`, so a good delivery leaves both looking exactly as 
 is the caller's own claim (`items.reminded_at`, `sessions.notified_at`) together with the absence
 of a strike: `pywebpush` raises `WebPushException` on any non-2xx, and `broadcast` turns that into
 a counted failure and a log line.
+A failure to subscribe in the browser is not a server problem: `pushManager.subscribe()` talks to
+the browser's own push service and the app only POSTs the resulting endpoint afterwards, so
+Chrome's "Registration failed - push service error" means it could not register with FCM. The
+same VAPID key working on another browser is enough to rule the key out.
 `/api/config` hands out `vapid_public` only when a push could actually be delivered: keys that fail `push.check_key` leave the loop off, and the UI must not offer to switch on something that can never fire. `pywebpush` signs with the private key, which never reaches a response, a log line, or an error body. `python -m tartib.vapid` prints a fresh base64url key pair for `.env`.
 
 ## Sessions
