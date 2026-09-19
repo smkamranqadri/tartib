@@ -61,6 +61,15 @@ tests for all three against high and low confidence; browser.
 
 ## Step 4 — search lands on the line
 
+**Done 2026-09-19.** Marked in the browser rather than by FTS5's `highlight()`: the item page
+already has the text, and the terms come from the query, so no API field was needed. `Highlight`
+marks every term case-insensitively and by prefix, matching how the server searches. Rows from a
+search (Spaces results, a space page with a query) link to `/items/{id}?q=...`; the item page
+scrolls the first mark to the centre. Proof: headless Chrome at 390px, an 89-line note with the
+match on line 60: searching "boiler press" on Spaces links with `?q=boiler%20press`, the page
+opens scrolled (scrollY 3307) with "boiler" and "press" marked and the first in view; the same
+item opened without `q` marks nothing and stays at the top. Typecheck and build pass.
+
 A search result opens `/items/{id}?q=...`; the item page scrolls to the first match and marks
 every match. Proof: browser with a long note.
 

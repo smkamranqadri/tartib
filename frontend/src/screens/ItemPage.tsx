@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, approveItem, deleteItem, editItem, getCapture, getItem } from "../api";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import Confirm from "../components/Confirm";
+import Highlight from "../components/Highlight";
 import ItemEditor from "../components/ItemEditor";
 import Menu from "../components/Menu";
 import { ErrorLine, Loading } from "../components/Status";
@@ -16,6 +17,8 @@ import { useSpaces } from "../useSpaces";
 export default function ItemPage({ version }: { version: number }) {
   const session = useSession();
   const { id } = useParams();
+  const [params] = useSearchParams();
+  const query = params.get("q");
   const itemId = Number(id);
   const navigate = useNavigate();
   const { data: item, setData, error, loading } = useLoad(() => getItem(itemId), [itemId, version]);
@@ -35,6 +38,12 @@ export default function ItemPage({ version }: { version: number }) {
     if (open === null) setOpen({ file: item.stage === "attention", proposal: item.stage === "attention" });
     getCapture(item.capture_id).then(setCapture).catch(() => setCapture(null));
   }, [item?.id, item?.stage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opened from a search: land on the first match rather than the top of a long note.
+  useEffect(() => {
+    if (!query || !item) return;
+    document.querySelector("mark.hit")?.scrollIntoView({ block: "center" });
+  }, [item?.id, query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return <ErrorLine>{error}</ErrorLine>;
   if (loading || !item)
@@ -152,7 +161,7 @@ export default function ItemPage({ version }: { version: number }) {
           </div>
         ) : (
           <p className="raw big" onDoubleClick={() => setEditingText(true)}>
-            {item.raw_text}
+            <Highlight text={item.raw_text} query={query} />
           </p>
         )}
         {confirmDelete && (

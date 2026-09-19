@@ -130,7 +130,7 @@ export default function SpaceDetail({
           {taskRows.length > 0 && (
             <ul className="rows flat">
               {taskRows.map((item) => (
-                <ItemRow key={item.id} item={item} onChange={updateTask} />
+                <ItemRow key={item.id} item={item} onChange={updateTask} query={debounced || undefined} />
               ))}
             </ul>
           )}
@@ -148,7 +148,7 @@ export default function SpaceDetail({
           {noteRows.length > 0 && (
             <ul className="rows flat">
               {noteRows.map((item) => (
-                <ItemRow key={item.id} item={item} onChange={() => {}} />
+                <ItemRow key={item.id} item={item} onChange={() => {}} query={debounced || undefined} />
               ))}
             </ul>
           )}

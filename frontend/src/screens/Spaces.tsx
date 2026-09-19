@@ -71,7 +71,7 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
               <p className="section-label muted">{g ? <Link to={`/spaces/${g}`}>{g}</Link> : "Unfiled"}</p>
               <ul className="rows flat">
                 {items.map((item) => (
-                  <ItemRow key={item.id} item={item} onChange={update} />
+                  <ItemRow key={item.id} item={item} onChange={update} query={debounced} />
                 ))}
               </ul>
             </div>

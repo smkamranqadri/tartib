@@ -395,3 +395,6 @@ button:disabled { opacity: .5; cursor: default; }
 .add-item-top, .add-item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .add-item textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; }
 .add-item input[type="date"] { margin-left: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); color: var(--fg); }
+
+/* What a search matched, on the item it opened. */
+mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
