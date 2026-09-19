@@ -4,7 +4,7 @@ import { getBrief, listItems } from "../api";
 import Card from "../components/Card";
 import { CheckSquareIcon, LayersIcon, NoteIcon, RefreshIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
-import { Empty, ErrorLine } from "../components/Status";
+import { Empty, ErrorLine, Loading } from "../components/Status";
 import { formatRelative } from "../format";
 import type { Brief, Item } from "../types";
 import { useLoad } from "../useLoad";
@@ -125,6 +125,7 @@ export default function SpaceDetail({
       {filter !== "note" && (
         <Card icon={<CheckSquareIcon />} label="Tasks" aside={taskRows.length} collapsible open={open.tasks} onToggle={() => toggle("tasks")}>
           {tasks.error && <ErrorLine>{tasks.error}</ErrorLine>}
+          {!tasks.data && tasks.loading && <Loading />}
           {tasks.data && taskRows.length === 0 && <Empty>No open tasks.</Empty>}
           {taskRows.length > 0 && (
             <ul className="rows flat">
@@ -142,6 +143,7 @@ export default function SpaceDetail({
       {filter !== "task" && (
         <Card icon={<NoteIcon />} label="Notes" aside={noteRows.length} collapsible open={open.notes} onToggle={() => toggle("notes")}>
           {notes.error && <ErrorLine>{notes.error}</ErrorLine>}
+          {!notes.data && notes.loading && <Loading />}
           {notes.data && noteRows.length === 0 && <Empty>No notes.</Empty>}
           {noteRows.length > 0 && (
             <ul className="rows flat">

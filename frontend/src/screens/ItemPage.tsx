@@ -37,7 +37,14 @@ export default function ItemPage({ version }: { version: number }) {
   }, [item?.id, item?.stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return <ErrorLine>{error}</ErrorLine>;
-  if (loading || !item) return <Loading />;
+  if (loading || !item)
+    return (
+      <div className="screen item-page">
+        <div className="card">
+          <Loading rows={4} />
+        </div>
+      </div>
+    );
 
   const isTask = item.shape === "task";
   const waiting = item.stage === "attention";

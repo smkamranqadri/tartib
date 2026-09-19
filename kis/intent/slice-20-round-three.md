@@ -13,6 +13,13 @@ Decided while planning:
 
 ## Step 1 — skeleton rows
 
+**Done 2026-09-19.** `Loading` in `Status.tsx` now renders grey rows (title and meta bars, varied
+widths, a gentle pulse that stops under reduced motion) instead of "Loading...". Added where a
+card showed nothing while loading: Home's Needs attention and Recent, the space page's Tasks and
+Notes, and the item page. Settings' inline "..." values are left as they are -- single values,
+not rows. Proof: headless Chrome at 390px with every `/api/` response held 2 s: skeletons on
+Home (3 cards), a space (2) and an item (1) while loading, none after. Typecheck and build pass.
+
 Cards show grey rows in the shape of their content while loading, instead of a bare `...` and a
 jump when data lands. Proof: browser with the API slowed, rows hold the layout.
 

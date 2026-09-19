@@ -81,6 +81,7 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
           )}
         </Card>
         <Card className="area-attention" icon={<AlertIcon />} label="Needs attention" aside={waiting ?? "…"}>
+          {!attention.data && !attention.error && <Loading />}
           {attention.data && waiting === 0 && <Empty>All caught up.</Empty>}
           {needing.length > 0 && (
             <ul className="rows flat">
@@ -107,6 +108,7 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
           {(data || pending.length > 0) && (
             <RecentList captures={data?.recent ?? []} pending={pending} />
           )}
+          {!data && pending.length === 0 && loading && <Loading />}
           <p className="view-all">
             <Link to="/inbox/recent">View all →</Link>
           </p>

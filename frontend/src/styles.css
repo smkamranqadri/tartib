@@ -381,3 +381,11 @@ button:disabled { opacity: .5; cursor: default; }
   .session-outcomes { width: 100%; }
   .session-outcomes button { flex: 1; }
 }
+
+/* Loading placeholders: the shape of rows, gently pulsing, still under reduced motion. */
+.skeleton-row { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-top: 1px solid var(--line); }
+.skeleton-row:first-child { border-top: 0; }
+.skeleton .bar { display: block; height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--fg) 9%, transparent); animation: skeleton-pulse 1.4s ease-in-out infinite; }
+.skeleton .bar.short { height: 10px; background: color-mix(in srgb, var(--fg) 6%, transparent); }
+@keyframes skeleton-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .skeleton .bar { animation: none; } }
