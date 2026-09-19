@@ -94,6 +94,17 @@ Proof: browser at 390px and 1280px: tabs, counts, URLs, the redirect, Back.
 
 ## Step 5 — a ring when a session ends
 
+**Done in the browser 2026-09-19; hearing it on the phone is still owed.** `chime.ts`: two sine
+tones a fifth apart (880 Hz, 1318.5 Hz) with a fade, one lazily made AudioContext, unlocked by a
+silent blip inside the Start tap. The session provider rings once per session, only when this
+tab's countdown reaches zero -- a session stopped by hand never does, and one that ended while
+the app was away is the push's. Settings > Device > Session chime, On/Off, `tartib-chime` in
+localStorage, default on; choosing On plays it. Proof: headless Chrome with AudioContext stubbed
+to record each tone started, a real session started from Home, its `ends_at` moved to 3s out in
+the throwaway DB: switch on -> `[0, 880, 1318.5]` (the unlock blip, then the chime) and the bar
+turned to "Session done"; switch off -> `[]`. The Settings switch reads On by default, stores
+`off`, and stays Off after a reload. Typecheck and build pass.
+
 The open tab plays a short chime made with Web Audio -- no sound file. A per-device switch in
 Settings (localStorage), default on. The audio context is unlocked on the Start press, since iOS
 plays nothing before a gesture. Rule 4 is unchanged: the session-end push is already the third

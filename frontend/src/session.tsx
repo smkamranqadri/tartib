@@ -3,8 +3,9 @@
  * The server owns the truth: this only renders a countdown against the session's `ends_at`
  * and asks again when the app comes back. Closing the tab loses nothing.
  */
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { answerSession, getCurrentSession, startSession, stopSession } from "./api";
+import { playChime, unlockChime } from "./chime";
 import type { Outcome, SessionState } from "./types";
 
 interface SessionContextValue {
@@ -35,6 +36,9 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
   const [current, setCurrent] = useState<SessionState | null>(null);
   const [remaining, setRemaining] = useState(0);
   const [busy, setBusy] = useState(false);
+  // The session this tab has already rung for: the countdown can read zero on more than one tick
+  // before the server confirms the end.
+  const rung = useRef<number | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -57,7 +61,16 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
     const tick = () => {
       const left = secondsLeft(current.session?.ends_at);
       setRemaining(left);
-      if (left === 0) void reload();
+      if (left === 0) {
+        // Only a countdown watched to zero rings. A session stopped by hand never gets here, and
+        // one that ended while the app was away is the push notification's to announce.
+        const id = current.session?.id ?? null;
+        if (id !== null && rung.current !== id) {
+          rung.current = id;
+          playChime();
+        }
+        void reload();
+      }
     };
     tick();
     const id = window.setInterval(tick, 1000);
@@ -93,7 +106,10 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
     remaining,
     busy,
     reload,
-    start: (itemId) => act(() => startSession(itemId)),
+    start: (itemId) => {
+      unlockChime(); // inside the tap, or iOS will not play the chime at the end
+      return act(() => startSession(itemId));
+    },
     stop: () => act(() => (current?.session ? stopSession(current.session.id) : Promise.resolve())),
     answer: (outcome) =>
       act(async () => {
