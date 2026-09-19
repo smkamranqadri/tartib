@@ -37,6 +37,15 @@ Proof: tests for the probe, the after-success pass, the cap, and the touched-ite
 
 ## Step 2 — an undated task gets a proposed date
 
+**Done 2026-09-19.** Six eval fixtures added: four concrete dateless tasks with a due window
+(follow up with the dentist, pick up the dry cleaning, reply to an email: 1-2 days; organise the
+bookshelf: 1-7) and two that must stay undated ("learn to play the oud one day", "drink more
+water"; task or note accepted). Run against the old prompt first: the four dated cases failed
+with `due None`, the two undated passed -- the fixtures detect the change. After the prompt
+change, `uv run pytest -m eval` passed 3 runs out of 3 (22 fixtures, about 30s each; the
+docs' "about 3 minutes" was stale and is corrected), existing due fixtures unchanged; pytest 167
+passed; ruff clean.
+
 The classifier returns `due: null` when the text has no date, so "follow up with the dentist" is
 filed undated and never reaches Today. The prompt proposes a near-term date instead: a day or
 two for time-sensitive follow-ups and errands, up to a week for lower urgency, relative to now.

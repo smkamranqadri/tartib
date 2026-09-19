@@ -24,7 +24,7 @@ From the app, a capture is written to a local queue before it is sent, so the bo
 
 ## Classify
 
-A background call to `classify(text, context)` returns a list of proposals `{text, shape, space, title, due, remind_at, confidence}`, one per independent item in the capture. Context: current datetime in `TARTIB_TZ` and the configured spaces.
+A background call to `classify(text, context)` returns a list of proposals `{text, shape, space, title, due, remind_at, confidence}`, one per independent item in the capture. Context: current datetime in `TARTIB_TZ` and the configured spaces. A task with no date in its text is given a proposed near-term one -- a day or two for follow-ups and errands, within a week otherwise -- so it reaches Today; open-ended and someday tasks, habits, and notes stay undated (since 2026-09-19).
 
 - shape `question`: no item. The runner answers it from existing items and stores the answer on the capture.
 - space outside the configured list: null, confidence capped at 0.6.

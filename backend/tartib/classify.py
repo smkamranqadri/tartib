@@ -90,7 +90,11 @@ Each proposal has:
 - "space": exactly one of the existing spaces below, or null. Never invent a space. If none
   clearly fits, return null and lower confidence.
 - "title": for a task, a short imperative title (max 80 chars); otherwise null.
-- "due": for a task with a date, "YYYY-MM-DD" resolved from the current datetime; else null.
+- "due": for a task, "YYYY-MM-DD" resolved from the current datetime. A date in the text always
+  wins. When the text names none, propose one so the task reaches the person's day: tomorrow
+  or the day after for follow-ups, errands and anything time-sensitive; within the next week for
+  other concrete tasks. Leave it null for open-ended or someday tasks ("one day", "someday",
+  "eventually") and for ongoing habits with no finish. Notes and questions: null.
 - "remind_at": only when the text asks to be reminded at a particular time — ISO 8601 with
   timezone offset; else null.
 - "confidence": 0 to 1 for this proposal, all fields together. Below 0.85 means a human should

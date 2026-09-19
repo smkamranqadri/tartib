@@ -195,7 +195,7 @@ over published history. Scrub by commit going forward, never by rewrite.
 
 ```sh
 cd backend && uv run pytest -q && uv run ruff check .
-cd backend && uv run pytest -m eval        # 16 fixtures through real Codex, ~3 min
+cd backend && uv run pytest -m eval        # 22 fixtures through real Codex, ~30s
 cd frontend && npm run typecheck && npm run build
 docker compose build && docker compose up -d && curl localhost:8000/api/health && docker stats --no-stream
 ```

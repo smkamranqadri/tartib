@@ -101,7 +101,7 @@ cd backend
 uv sync
 TARTIB_PASSWORD=dev TARTIB_DB_PATH=./dev.db uv run uvicorn --factory tartib.main:create_app --reload
 uv run pytest              # fast, offline, fake Codex
-uv run pytest -m eval      # 16 real captures through the real Codex CLI, about 3 minutes
+uv run pytest -m eval      # 22 real captures through the real Codex CLI, about 30 seconds
 uv run ruff check .
 
 # frontend (proxies /api to :8000)

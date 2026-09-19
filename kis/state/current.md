@@ -5,7 +5,7 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 19, small items round two** -- approved 2026-09-19. Step 1 done; step 2 next. Plan:
+- Task: **slice 19, small items round two** -- approved 2026-09-19. Steps 1 and 2 done; step 3 next. Plan:
   `kis/intent/slice-19-small-items-2.md`. Mode: Standard.
 - Slice 18, small fixes, closed 2026-09-19, not deployed:
   `kis/intent/slice-18-small-fixes.md`. When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`,
@@ -36,7 +36,7 @@
 
 ## Commands
 
-- Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (16 real-Codex fixtures,
+- Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (22 real-Codex fixtures,
   needs a Codex login); `cd frontend && npm run typecheck && npm run build`. As of 2026-09-19
   pytest is **159 passed** (slice 18 removed the 5 fallback tests and added 1); any red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".

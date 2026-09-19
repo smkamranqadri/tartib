@@ -32,7 +32,7 @@ cd backend  && uv run pytest -q && uv run ruff check .
 cd frontend && npm run typecheck && npm run build
 ```
 
-`uv run pytest -m eval` additionally runs 16 captures through the real Codex CLI and needs a `codex login`. It is not required for a pull request.
+`uv run pytest -m eval` additionally runs 22 captures through the real Codex CLI and needs a `codex login`. It is not required for a pull request.
 
 Tests drive a fake Codex script as a real subprocess, so the default suite never needs `codex` itself and never reaches the network.
 

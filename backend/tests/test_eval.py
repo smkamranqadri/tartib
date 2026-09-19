@@ -1,8 +1,10 @@
-"""Classifier eval against the real Codex CLI. Run with `uv run pytest -m eval` (about 3 min).
+"""Classifier eval against the real Codex CLI. Run with `uv run pytest -m eval` (about 30s, the captures run concurrently).
 
-16 captures: 4 multi-item, 2 questions, 2 with no clear space, 2 verb-less tasks, 1 timed
-reminder, 5 plain. Asserts shape, split count, space where unambiguous, and that no proposal
-carries a space outside TARTIB_SPACES. Failures are collected and reported together.
+22 captures: 4 multi-item, 2 questions, 2 with no clear space, 2 verb-less tasks, 1 timed
+reminder, 5 plain, and 6 dateless: 4 concrete tasks that should be given a near-term date and 2
+open-ended ones that should stay undated. Asserts shape, split count, space where unambiguous,
+due dates where expected, and that no proposal carries a space outside TARTIB_SPACES. Failures
+are collected and reported together.
 """
 
 from __future__ import annotations
@@ -78,7 +80,23 @@ FIXTURES = [
     ("The office wifi password is written on the whiteboard", ["note"], ["work"], {}),
     ("Move the emergency fund to the Meezan savings account", ["task"], ["finance"], {}),
     ("Standup moved to 10:30", ["note"], ["work"], {}),
+    # dateless tasks: concrete ones get a near-term date, open-ended ones stay undated
+    ("follow up with the dentist about the crown", ["task"], ["health"], {"due_in": (1, 2)}),
+    ("pick up the dry cleaning", ["task"], ["home"], {"due_in": (1, 2)}),
+    (
+        "reply to Ahmed's email about the invoice",
+        ["task"],
+        [{"work", "finance"}],
+        {"due_in": (1, 2)},
+    ),
+    ("organise the bookshelf", ["task"], ["home"], {"due_in": (1, 7)}),
+    ("learn to play the oud one day", [{"task", "note"}], [ANY], {"undated": True}),
+    ("drink more water", [{"task", "note"}], [{"health", None}], {"undated": True}),
 ]
+
+
+def _shape_ok(expected, got) -> bool:
+    return got in expected if isinstance(expected, set) else got == expected
 
 
 def _space_ok(expected, got) -> bool:
@@ -107,7 +125,7 @@ def test_classifier_eval():
         if len(proposals) != len(shapes):
             failures.append(f"{tag} -> expected {len(shapes)} proposals")
             continue
-        if got_shapes != shapes:
+        if not all(_shape_ok(e, g) for e, g in zip(shapes, got_shapes, strict=True)):
             failures.append(f"{tag} -> expected shapes {shapes}")
         for exp, got in zip(spaces, got_spaces, strict=True):
             if not _space_ok(exp, got):
@@ -124,6 +142,13 @@ def test_classifier_eval():
             )
         if "due" in flags and (p0.due.isoformat() if p0.due else None) != flags["due"]:
             failures.append(f"{tag} -> due {p0.due} expected {flags['due']}")
+        if "due_in" in flags:
+            lo, hi = flags["due_in"]
+            days = (p0.due - NOW.date()).days if p0.due else None
+            if days is None or not lo <= days <= hi:
+                failures.append(f"{tag} -> due {p0.due} expected {lo} to {hi} days out")
+        if flags.get("undated") and any(p.due for p in proposals):
+            failures.append(f"{tag} -> due {[p.due for p in proposals]} expected none")
         last = proposals[-1]
         if (
             "due_last" in flags
