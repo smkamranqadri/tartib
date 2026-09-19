@@ -36,6 +36,8 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--fg); }
+/* The nav's glass reaches past the content column; clip, unlike hidden, keeps it sticky. */
+html { overflow-x: clip; }
 body {
   font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   padding-bottom: env(safe-area-inset-bottom);
@@ -44,6 +46,12 @@ a { color: var(--accent); }
 button, input, textarea, select { font: inherit; color: inherit; }
 /* Mobile Safari zooms in on focusing any field under 16px and does not zoom back out. */
 input, textarea, select { font-size: 16px; }
+/* One arrow for every select, with room around it: the browser's own sits against the edge. */
+select {
+  -webkit-appearance: none; appearance: none; padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%238d9793' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; background-size: 12px;
+}
 .muted { color: var(--muted); }
 .error { color: var(--danger); font-size: 14px; }
 .small { font-size: 13px; }
@@ -59,10 +67,13 @@ input, textarea, select { font-size: 16px; }
 /* The nav stays put while the page scrolls under it, glass like the ask bar. It bleeds into the
    gutters so what scrolls beneath is blurred edge to edge, and clears the status bar and notch. */
 .top {
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: 0; z-index: 10; isolation: isolate;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   margin: 0 calc(-1 * max(var(--gutter), env(safe-area-inset-right))) 0 calc(-1 * max(var(--gutter), env(safe-area-inset-left)));
   padding: calc(14px + env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) 12px max(var(--gutter), env(safe-area-inset-left));
+}
+.top::before {
+  content: ""; position: absolute; inset: 0 auto; left: 50%; width: 100vw; margin-left: -50vw; z-index: -1;
   background: color-mix(in srgb, var(--bg) 55%, transparent);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
 }
@@ -254,7 +265,8 @@ button:disabled { opacity: .5; cursor: default; }
 .toggles { display: flex; gap: 6px; }
 .editor { display: flex; flex-direction: column; gap: 10px; padding: 8px 16px 12px; }
 .editor label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); flex: 1; }
-.editor input, .editor select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); color: var(--fg); }
+.editor input, .editor select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background-color: var(--field); color: var(--fg); }
+.editor select { padding-right: 32px; }
 .editor-row { display: flex; gap: 10px; }
 .editor-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
 .editor-actions button[type="submit"] { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 6px 14px; }
@@ -263,17 +275,16 @@ button:disabled { opacity: .5; cursor: default; }
 /* chat bar + toast */
 .app.has-askbar { padding-bottom: 120px; }
 .askbar {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 20;
-  width: min(100% - 40px, 720px);
+  /* Edge to edge like the nav; what it holds stays in a 720px column. */
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
   background: color-mix(in srgb, var(--panel) 60%, transparent);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  padding: 10px max(16px, env(safe-area-inset-right), calc((100% - 720px) / 2)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left), calc((100% - 720px) / 2));
 }
 .askbar .answer { margin: 0 0 10px; max-height: 40vh; overflow: auto; }
 .ask { display: flex; gap: 8px; margin: 0; flex-wrap: wrap; }
-.ask input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--field) 70%, transparent); color: var(--fg); }
-.ask select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--field) 70%, transparent); color: var(--fg); }
+.ask input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--field) 35%, transparent); color: var(--fg); }
+.ask select { padding: 9px 32px 9px 10px; border: 1px solid var(--line); border-radius: 10px; background-color: color-mix(in srgb, var(--field) 35%, transparent); color: var(--fg); }
 .ask button[type="submit"] { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 8px 16px; cursor: pointer; }
 .toast {
   position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%);
@@ -311,8 +322,8 @@ button:disabled { opacity: .5; cursor: default; }
   .page-head h1 { font-size: 22px; }
   .pref { flex-direction: column; align-items: flex-start; }
   .pref-ctl { text-align: left; }
-  .askbar { width: min(100% - 32px, 720px); }
   .app.has-askbar { padding-bottom: 170px; }
+  .ask input { flex-basis: 100%; }
   .has-askbar .toast { bottom: calc(140px + env(safe-area-inset-bottom)); }
 }
 

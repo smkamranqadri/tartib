@@ -136,6 +136,13 @@ was 82%, with its field and select at 70%) and the `...` menus (panel at 62%, pr
 Screenshots at 390px, light and dark, show the Inbox card menu over the next card, the nav and the
 ask bar with content blurred through, text readable. The phone checks above now include these.
 
+Second look, same day: the glass stopped short. The nav's glass now sits on a full-bleed
+`::before` layer (100vw, with `html { overflow-x: clip }`, which unlike `hidden` keeps the nav
+sticky); the ask bar is fixed edge to edge with no border, its contents in a 720px column, and its
+field and select at 35%. Every `select` drops the browser's arrow for one chevron with 32px of
+room. On phones the ask field takes its own row. Screenshots at 390px light and dark and 1600px
+dark: nav and ask bar span the viewport, no horizontal overflow, selects spaced.
+
 ## Out of scope
 
 Backups, slices 13 and 14, the due-date prompt, the notification key, the rest of UI polish
