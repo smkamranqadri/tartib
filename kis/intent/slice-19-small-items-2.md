@@ -102,6 +102,11 @@ committed, and deleted after. Kitchen: 6.3 kHz / 9.9 strikes/s / 3.6 s against t
 recording, still brighter than the reference. Wood is unchanged. Provenance in
 `frontend/src/sounds/SOURCES.md`. Whether they are right is the user's ear.
 
+Bell, third round: the user supplied their own pick, Pixabay's "Bel Sekolah" (153453), under the
+Pixabay Content License -- use inside a project allowed, no attribution required, no
+redistribution as a standalone sound. Made mono, trimmed to 3.6 s, loudness-normalised; licence
+noted in `SOURCES.md`.
+
 After a look on the device, same day: the tabs moved into the title row, right of "Inbox", in
 the nav's pill style (`.pills`); under 640px they wrap to a full-width row below the subtitle.
 Screenshots at 390px light and 1280px dark, no horizontal overflow.
