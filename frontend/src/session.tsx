@@ -67,7 +67,7 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
         const id = current.session?.id ?? null;
         if (id !== null && rung.current !== id) {
           rung.current = id;
-          playChime();
+          void playChime();
         }
         void reload();
       }

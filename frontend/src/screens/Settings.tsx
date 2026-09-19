@@ -2,7 +2,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { getConfig, logout } from "../api";
 import { speechSupported } from "../Capture";
-import { chimeEnabled, playChime, setChimeEnabled } from "../chime";
+import { type ChimeSound, chimeSound, playChime, SOUNDS, setChimeSound } from "../chime";
 import Card from "../components/Card";
 import { AlertIcon, BellIcon, HomeIcon, LayersIcon, SettingsIcon } from "../components/Icons";
 import PageHead from "../components/PageHead";
@@ -62,7 +62,7 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
         <Row title="Voice capture" desc="On-device speech recognition through the mic button.">
           <span className="muted">{speechSupported() ? "Available" : "Not in this browser"}</span>
         </Row>
-        <Row title="Session chime" desc="A short sound in this tab when a session ends. Just this device.">
+        <Row title="Session sound" desc="Plays in this tab when a session ends. Just this device.">
           <ChimeSwitch />
         </Row>
         <Row title="Timezone" desc="Used for due dates, reminders, and today.">
@@ -95,20 +95,19 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
 }
 
 function ChimeSwitch() {
-  const [on, setOn] = useState(chimeEnabled);
-  function choose(next: boolean) {
-    setChimeEnabled(next);
-    setOn(next);
-    if (next) playChime(); // a tap, so it plays even on iOS, and you hear what you chose
+  const [sound, setSound] = useState<ChimeSound>(chimeSound);
+  function choose(next: ChimeSound) {
+    setChimeSound(next);
+    setSound(next);
+    void playChime(next); // a tap, so it plays even on iOS, and you hear what you chose
   }
   return (
     <div className="seg">
-      <button type="button" className={on ? "on" : ""} onClick={() => choose(true)}>
-        On
-      </button>
-      <button type="button" className={on ? "" : "on"} onClick={() => choose(false)}>
-        Off
-      </button>
+      {SOUNDS.map((s) => (
+        <button key={s.value} type="button" className={sound === s.value ? "on" : ""} onClick={() => choose(s.value)}>
+          {s.label}
+        </button>
+      ))}
     </div>
   );
 }

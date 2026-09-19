@@ -113,6 +113,22 @@ pusher, and a sound in the page is not a fourth.
 Proof: browser, the chime is scheduled at session end with the switch on and not with it off;
 hearing it on the phone is the user's check.
 
+**Amended 2026-09-19, at the user's request: real alarm sounds.** The user pointed at
+Pomofocus's kitchen, bell and wood alarms. Those files are Pomofocus's own and this repo is
+public, so they were neither copied nor hotlinked; the user chose free-licensed recordings
+instead. The three sounds are arranged from CC0 recordings in Kenney's *Impact Sounds* 1.0 --
+bell strikes, wood knocks, and alternating metal and tin dings for the kitchen timer -- with
+ffmpeg, about 110 KB together, provenance in `frontend/src/sounds/SOURCES.md`. (Wikimedia's
+mechanical alarm clock was CC BY-SA, so not used; its CC0 door bell was not needed.) Imported
+through Vite so they land in `/assets/` and the worker caches them on first fetch; the Start tap
+preloads the chosen one. Settings > Device > Session sound: Bell (default, and what an old "on"
+reads as), Kitchen, Wood, Off; choosing one plays it. If a file cannot be loaded, the generated
+two-note chime plays instead. Proof: headless Chrome with AudioContext stubbed -- a real session
+ending with each choice decodes and plays its own file (`bell-*.mp3` 44,870 bytes, `kitchen-*`
+44,556, `wood-*` 20,106) and fetches nothing else, Off plays and fetches nothing; the picker
+previews and stores its choice; with the service worker blocked and the MP3 aborted, the
+fallback tones play. Typecheck and build pass. Whether they sound right is the user's call.
+
 ## Step 6 — refuse a stale save
 
 **Done 2026-09-19.** `expected_updated_at` on the PATCH body, excluded from the applied fields;
