@@ -41,11 +41,9 @@ Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
   and over-application -- a correction applied where it did not belong -- went 1/2 to 0/6 only
   after a prompt fix, so test for that specifically. Decided 2026-09-19.
 
-Slice 19 (`slice-19-small-items-2.md`, planned 2026-09-19) takes: failed-capture retry (from the
-candidates), proposed due dates, "Say why an item needs you", Inbox tabs, the session-end ring,
-and "Refuse a stale save". Those leave this file when it closes. Dropped the same day: "a
-notification key that cannot fire twice" -- all three pushers already hold a once-only guard
-(`reminded_at`, `digest_date`, `notified_at`).
+Slices 18 and 19 (`slice-1{8,9}-*.md`) closed on 2026-09-19 and their entries have left this
+file. Dropped the same day as already true: "a notification key that cannot fire twice" --
+all three pushers hold a once-only guard (`reminded_at`, `digest_date`, `notified_at`).
 
 Approved on 2026-09-19, not yet planned and none of it sized. "Link, don't duplicate" is scope for 14
 rather than work beside it:
@@ -90,22 +88,11 @@ Deferred from a slice rather than never planned:
   on disk, keeping the last good copy when a fetch fails (models.dev publishes one as JSON, USD
   per million tokens). Counts are the feature; the cost is a derived number and should read
   as one.
-- **A ring when a session ends**, the way Pomofocus does it. This needs no change to rule 4: the
-  session-end push is already the third allowed pusher, and a sound is not a fourth one. Most of
-  it is in-page audio from the running tab rather than the notification, because a web push
-  cannot carry a custom sound. It would also cover a known gap: today the service worker shows
-  nothing when a session ends with the app on screen, so a ring is the honest signal for exactly
-  that case.
 - **An item graph.** Notes and tasks as nodes, the links between them as edges, clustered by
   space and sized by how often an item is referenced. This is the whole point of linking, and it
   is blocked on "Link, don't duplicate" above: with no links there are no edges and the graph is
   a scatter of unconnected dots. A deterministic force layout drawn as plain SVG is enough, so
   this needs no charting or graph dependency.
-- **Refuse a stale save instead of overwriting it.** An item edit carries the timestamp the
-  editor loaded, and the server rejects a write whose timestamp is behind the stored one rather
-  than taking it; the UI then offers Reload or Overwrite. One user is not one device: an item
-  left open on the phone while the desktop edits it loses one of the two edits today, with
-  nothing said. This gets worse with 13, because live editing means items stay open.
 - **Search that lands on the line.** An FTS5 hit carries the line or offset it matched, and the
   item page opens scrolled to it with the match marked, instead of opening at the top and leaving
   you to find it. Short notes hide the need for this; markdown bodies and thought logs end that.
@@ -123,11 +110,6 @@ Deferred from a slice rather than never planned:
   7 says the classifier never invents a space, and it says that because a classifier free to
   invent sprays one-off spaces across the database; this narrows the rule rather than dropping it,
   and the wording needs updating when it ships.
-- **Say why an item needs you.** An item waits in Needs Attention for at least four different
-  reasons -- confidence under the threshold, no space matched, the AI call failed
-  (`proposal_error`), or a task has gone 14 days stale -- and all four look identical on the card.
-  Each item should carry its cause. It pairs with the two entries above: the cause is what tells
-  you whether to answer a question, edit the proposal, or send it back with a reason.
 - **A filing policy per space.** A column on `spaces` that overrides the confidence rule in both
   directions: a space that never auto-files and always asks, and a space that always auto-files
   whatever the confidence. Today one global 0.85 threshold decides everything. A rule the database
@@ -150,8 +132,9 @@ Deferred from a slice rather than never planned:
   so the screens need to say what they are showing and how old it is rather than quietly serving
   yesterday. And slice 15 argued conflict resolution was unnecessary because captures are
   append-only and `raw_text` is immutable -- true for captures, false for edits, which have been
-  editable since 2026-09-17. A queue of offline edits lands exactly on "Refuse a stale save"
-  above; plan the two together or the second one will fight the first.
+  editable since 2026-09-17. A queue of offline edits lands exactly on the stale-save check
+  slice 19 shipped (`expected_updated_at`, a 409 on a moved item): a replayed edit must carry the
+  version it was made against, and a refused one needs somewhere to show Reload or Overwrite.
   Keep classification on the server when this is built. An earlier build let each device classify
   what it had queued, and one capture became a note on the laptop and a task on the phone at the
   same time. Tartib's runner is already the only classifier; an offline queue must replay raw
@@ -173,13 +156,6 @@ Deferred from a slice rather than never planned:
   space is one click per item and the list never moves; phones keep the page they have, because a
   split does not fit 390px. The space page already collapses Tasks and Notes and remembers which
   was open -- that state has to survive the new layout, not be rebuilt by it.
-- **Inbox becomes tabs, not a vertical stack.** Needs attention, Stale tasks and Recent are three
-  cards stacked down one screen, so the lower two are a scroll away and the counts are invisible
-  until you reach them. One tab strip with the count on each tab, one section at a time. Two
-  routes already exist from slice 10, `/inbox/attention` and `/inbox/recent`, so decide whether
-  the tabs *are* those routes or replace them -- do not end up with both. Slice 18 already keeps
-  waiting items out of Recent -- server side on `/inbox/recent`, client side on the Inbox card --
-  so the tabs inherit that rather than rebuilding it.
 - **Photo and voice on the capture box.** The mic already dictates into the text field with the
   browser's speech recognition, so speech-to-text is not the ask; keeping the audio itself is, and
   it raises the same question a photo does. Neither has anywhere to go today: captures are text,
@@ -200,14 +176,6 @@ Deferred from a slice rather than never planned:
   on charts, streaks, cycles and long-break logic stands, and rule 4 gets the narrower wording
   when this ships. Sessions already reach the space indirectly, since the brief is given per-task
   session counts, so this is the same data made visible rather than new data.
-- **Propose a due date for a task that names none.** The classifier returns `due: null` when the
-  text has no date, so "follow up with the dentist" is filed undated and never reaches Today --
-  the one screen built to surface it. Propose a near-term date instead: a day or two for
-  time-sensitive follow-ups and errands, up to a week for lower-urgency ones, relative to now. An
-  explicit date in the text always wins, and notes stay undated unless a date is named. A prompt
-  change only; the field already exists. The failure to watch for is the opposite one -- Today
-  filling with dates you never chose -- so the eval fixtures need dateless tasks that should stay
-  undated as well as ones that should not.
 - **Backups for the deployed database.** Slice 17 step 4 called for a cron copying
   `/data/tartib.db` off the persistent directory and one restore actually performed; deferred
   2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so it is
@@ -216,6 +184,5 @@ Deferred from a slice rather than never planned:
 Unscheduled candidates:
 
 - Image was 1.62GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras, plus cryptography and aiohttp via pywebpush since slice 11). Not a stated constraint (memory is, and runtime is 42MiB). Slice 18 dropped the Claude CLI (1.07GB built locally on arm64, 2026-09-19; not measured on the x86_64 deploy build). A slimmer route: download the Codex release binary instead of npm. Worth more after slice 17: every deploy cross-builds this image under QEMU, where size is time.
-- Automatic retry for `proposal_error` items after a Codex outage or usage-limit block. Today they wait for a human, or for `python -m tartib.reclassify --attention`. Worth more since slice 18 removed the Claude fallback: Codex is now the only classifier, so every outage parks captures. Seen for real on 2026-09-17 when the ChatGPT usage limit hit mid-deploy.
 - Codex takes about 10s per item on the host. Fine for personal volume; a burst of captures queues serially.
 - Ask retrieval is keyword-only FTS5. The cheap next step is letting Codex propose 3 to 5 search terms first, still no embeddings. Slice 14 needs this, not just wants it: a follow-up like "what about the second one?" has no content words, so the OR-query returns nothing.

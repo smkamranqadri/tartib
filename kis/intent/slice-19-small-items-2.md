@@ -1,5 +1,9 @@
 # Slice 19: small items, round two (approved 2026-09-19)
 
+**Closed 2026-09-19; not deployed.** All six steps proved locally; the user tried the rebuilt
+local container and accepted it ("good") after asking for the Inbox tabs in the title row, a
+highlighted running session, and different sounds -- ending on a school bell they supplied.
+
 Six independent steps from the backlog, each proved on its own. No deploy in this slice.
 
 Settled while planning, from the code rather than the backlog: "a notification key that cannot
