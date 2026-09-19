@@ -5,7 +5,7 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 18, small fixes** -- planned and approved 2026-09-19, no step started. Plan:
+- Task: **slice 18, small fixes** -- approved 2026-09-19. Step 1 done; step 2 next. Plan:
   `kis/intent/slice-18-small-fixes.md`. Six independent steps: remove the Claude fallback (rule 3
   becomes Codex-only), Settings shows why it is stuck, Recent stops repeating Needs Attention, a
   new space reaches the pickers, 16px fields, a sticky glass nav with safe areas. Mode: Standard.
@@ -28,15 +28,11 @@
 
 ## Open
 
-- **The Claude fallback does not run on the deployed host.** With Codex broken deliberately the
-  fallback is invoked and hangs for the full 120s timeout. Ruled out: the token (present in the
-  container), Tartib's invocation (running the CLI there by hand hangs identically), and the
-  network (`api.anthropic.com` and `console.anthropic.com` both connect over IPv4). IPv6 is
-  unreachable from the container but cannot be the cause -- an unreachable network errors
-  instantly. The hang is inside the CLI's own startup there.
-  It is still configured on the server as of 2026-09-18, so a Codex failure costs 120s per
-  capture and fails anyway; captures queue serially. Unsetting `TARTIB_AI_FALLBACK_COMMAND`
-  makes those failures instant, and is a one-field change in the dashboard.
+- **The deployed `v1.0` still carries the Claude fallback**, which hangs for the full 120s
+  timeout on that host, so a Codex failure there costs 120s per capture and fails anyway. Removed
+  from the code in slice 18 step 1; gone from the server at `v1.1`. Until then, unsetting
+  `TARTIB_AI_FALLBACK_COMMAND` in the dashboard makes those failures instant. Why it hung was
+  never found and no longer matters.
 - No backups of the deployed database. See Next.
 
 ## Commands
@@ -65,8 +61,6 @@ Maintenance).
 
 ## Known gaps
 
-- The Claude fallback does not run in the deployed container (above), so a Codex outage parks
-  captures in the Inbox, slowly.
 - **The app shows no data offline.** The shell opens and a capture still queues, but Today,
   Needs Attention and Recent are all empty, because the service worker never caches an `/api/`
   response. Deliberate -- slice 15 scoped offline *read* out -- and proved in Chrome on

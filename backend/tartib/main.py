@@ -82,11 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict:
-        return {
-            "ok": True,
-            "ai": settings.ai_enabled,
-            "fallback": bool(settings.ai_fallback_command),
-        }
+        return {"ok": True, "ai": settings.ai_enabled}
 
     static_dir = (Path(settings.static_dir) if settings.static_dir else DEFAULT_STATIC).resolve()
     if static_dir.is_dir():

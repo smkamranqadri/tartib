@@ -6,6 +6,13 @@ locally, and `v1.1` ships when asked for.
 
 ## Step 1 — Codex is the only classifier
 
+**Done 2026-09-19.** pytest 158 passed (163 less the 5 fallback tests); ruff clean; frontend
+typecheck and build pass; `git grep -i "claude\|ai_fallback"` outside KIS and agent config finds
+only `.dockerignore`; `docker build` succeeds, `command -v claude` in the image finds nothing,
+`codex --version` is 0.153.2, image 1.07GB locally (arm64, so not comparable with the backlog's
+1.62GB). README's fallback sentence now points at `python -m tartib.reclassify --attention`, the
+existing way to rerun parked captures -- there is no retry in the UI.
+
 The Claude fallback goes, all of it. Decided 2026-09-19 instead of fixing the hang: it has never
 run on the deployed host (State, Open), and while it is configured a Codex failure costs 120s and
 fails anyway. Rule 3 becomes Codex-only when this step lands.

@@ -1,7 +1,7 @@
 """The one AI transport: run a CLI non-interactively and get back a JSON object.
 
-Primary is the Codex CLI. An optional fallback (the Claude CLI) is tried when the primary
-fails for any reason: missing binary, non-zero exit, usage limit, timeout, unusable reply.
+The Codex CLI is the only classifier; when it fails for any reason -- missing binary, non-zero
+exit, usage limit, timeout, unusable reply -- the error goes back to the caller.
 Both classify() and ask() go through here. Nothing in this module touches storage.
 """
 
@@ -9,18 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
-import os
 import shlex
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-log = logging.getLogger("tartib.ai")
-
 
 class CodexError(Exception):
-    """The CLI (primary and, if configured, fallback) failed or returned something unusable."""
+    """The CLI failed or returned something unusable."""
 
 
 @dataclass(frozen=True)
@@ -28,14 +24,6 @@ class CodexConfig:
     command: str  # e.g. "codex"; split with shlex
     model: str | None = None
     timeout: float = 120.0
-    fallback_command: str | None = None  # e.g. "claude"; None disables the fallback
-    fallback_model: str | None = None
-
-
-def dialect(command: str) -> str:
-    """'claude' when any token of the command names it (binary or script), otherwise 'codex'."""
-    names = [Path(p).name.lower() for p in shlex.split(command)]
-    return "claude" if any("claude" in n for n in names) else "codex"
 
 
 def build_args(
@@ -70,36 +58,14 @@ def _codex_args(
     return args
 
 
-def _claude_args(command: str, model: str | None, schema: dict, prompt: str) -> list[str]:
-    args = shlex.split(command) + [
-        "--print",
-        "--no-session-persistence",
-        "--output-format",
-        "json",
-        "--json-schema",
-        json.dumps(schema),
-        "--tools",
-        "",
-        "--max-turns",
-        "3",  # structured output is a tool call, so the reply takes two turns
-    ]
-    if model:
-        args += ["--model", model]
-    args.append(prompt)
-    return args
-
-
-async def _run(
-    args: list[str], workdir: Path, timeout: float, env: dict | None, *, check: bool = True
-) -> tuple[int, bytes, bytes]:
+async def _run(args: list[str], workdir: Path, timeout: float) -> None:
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
-            stdin=asyncio.subprocess.DEVNULL,  # both CLIs block reading a non-tty stdin
+            stdin=asyncio.subprocess.DEVNULL,  # the CLI blocks reading a non-tty stdin
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=workdir,
-            env=env,
         )
     except (FileNotFoundError, PermissionError) as e:
         raise CodexError(f"cannot run {args[0]!r}: {e}") from e
@@ -109,11 +75,10 @@ async def _run(
         proc.kill()
         await proc.wait()
         raise CodexError(f"timed out after {timeout:.0f}s") from e
-    if check and proc.returncode != 0:
+    if proc.returncode != 0:
         text = (stderr or stdout).decode(errors="replace").strip()
         tail = text.splitlines()[-1:] or ["no output"]
         raise CodexError(f"exit {proc.returncode}: {tail[0][:300]}")
-    return proc.returncode or 0, stdout, stderr
 
 
 def _parse_object(raw: str) -> dict:
@@ -135,7 +100,7 @@ async def _run_codex(
         output = workdir / "reply.json"
         schema_path.write_text(json.dumps(schema))
         args = _codex_args(command, model, workdir, schema_path, output, prompt)
-        await _run(args, workdir, timeout, None)
+        await _run(args, workdir, timeout)
         try:
             raw = output.read_text()
         except FileNotFoundError as e:
@@ -143,45 +108,6 @@ async def _run_codex(
     return _parse_object(raw)
 
 
-async def _run_claude(
-    command: str, model: str | None, prompt: str, schema: dict, timeout: float
-) -> dict:
-    # A nested-session marker from a parent Claude Code process would make the CLI refuse.
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-    with tempfile.TemporaryDirectory(prefix="tartib-claude-") as tmp:
-        code, stdout, stderr = await _run(
-            _claude_args(command, model, schema, prompt), Path(tmp), timeout, env, check=False
-        )
-    try:
-        envelope = _parse_object(stdout.decode(errors="replace"))
-    except CodexError:
-        if code != 0:
-            tail = (stderr or stdout).decode(errors="replace").strip().splitlines()[-1:]
-            raise CodexError(f"claude exit {code}: {(tail or ['no output'])[0][:300]}") from None
-        raise
-    if code != 0 or envelope.get("is_error"):
-        detail = envelope.get("result") or envelope.get("subtype") or f"exit {code}"
-        raise CodexError(f"claude error: {str(detail)[:300]}")
-    structured = envelope.get("structured_output")
-    if isinstance(structured, dict):
-        return structured
-    return _parse_object(str(envelope.get("result", "")))
-
-
 async def run_json(prompt: str, schema: dict, cfg: CodexConfig) -> dict:
-    """Run the primary CLI with `prompt`, constrained to `schema`; fall back if configured."""
-    runners = {"codex": _run_codex, "claude": _run_claude}
-    try:
-        return await runners[dialect(cfg.command)](
-            cfg.command, cfg.model, prompt, schema, cfg.timeout
-        )
-    except CodexError as primary:
-        if not cfg.fallback_command:
-            raise
-        log.warning("primary AI failed (%s); trying fallback %s", primary, cfg.fallback_command)
-        try:
-            return await runners[dialect(cfg.fallback_command)](
-                cfg.fallback_command, cfg.fallback_model, prompt, schema, cfg.timeout
-            )
-        except CodexError as fallback:
-            raise CodexError(f"{primary}; fallback: {fallback}") from fallback
+    """Run the CLI with `prompt`, constrained to `schema`."""
+    return await _run_codex(cfg.command, cfg.model, prompt, schema, cfg.timeout)

@@ -4,7 +4,7 @@ Hard constraints. Do not relax without an explicit decision recorded here.
 
 1. The AI never rewrites text. A capture's `raw_text` is immutable (what was typed, kept for comparison). A filed item's text belongs to the user and is editable (since 2026-09-17).
 2. Capture never waits on AI. A capture request returns as soon as the row is stored.
-3. (An approved replacement is planned in `../intent/slice-18-small-fixes.md`, step 1: the Claude fallback is removed and Codex is the only classifier. The rule below is what the code does today.) One set of prompts and schemas, run through CLIs as subprocesses. Primary: Codex CLI. Optional fallback when Codex fails: Claude Code CLI, same prompts (added 2026-09-17 after a Codex usage-limit outage). No HTTP provider.
+3. One set of prompts and schemas, run through the Codex CLI as a subprocess. No second CLI and no HTTP provider. A Claude Code CLI fallback existed from 2026-09-17 to 2026-09-19; it was removed because it never ran on the deployed host and made every Codex failure cost the full timeout. When Codex fails, the capture parks in Needs Attention with `proposal_error`.
 4. (An approved narrowing waits in `../intent/backlog.md`: a space may list its own sessions, which is history without being a history screen. Charts, streaks, cycles and long-break logic stay banned. The rule below is what the code does today.) No projects, no tags. One read-only "ask" over existing items is allowed since 2026-09-17; it never writes.
    Push is allowed since 2026-09-17, for three things only: a reminder the user set on a task, one daily
    digest at a time you configure, and, since 2026-09-18, a session the user started, when it ends. Nothing

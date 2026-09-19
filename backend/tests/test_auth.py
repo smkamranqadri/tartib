@@ -4,7 +4,7 @@ from tests.conftest import PASSWORD
 def test_health_is_public(client):
     r = client.get("/api/health")
     assert r.status_code == 200
-    assert r.json() == {"ok": True, "ai": False, "fallback": False}
+    assert r.json() == {"ok": True, "ai": False}
 
 
 def test_capture_requires_auth(client):

@@ -7,10 +7,10 @@ How Tartib is built. Proven by the Phase 1 to 4 scaffold on 2026-09-17.
 ```text
 backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces, queries, ask, briefs, classify, codex, runner, reminders, sessions, push, vapid, store, clock, reclassify, main
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
-backend/tests/      pytest + TestClient; the AI runs as a real subprocess pointed at fake_codex.py (fake_claude.py for the fallback)
+backend/tests/      pytest + TestClient; the AI runs as a real subprocess pointed at fake_codex.py
 frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, push.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Waiting, Recent, Spaces, Space, SpaceDetail, Settings, ItemPage, Login), components/ (one per pattern, listed under Frontend shell)
 frontend/public/    manifest.webmanifest, sw.js (app shell + push; hand-bumped SW_VERSION), icons 180/192/512
-Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex + @anthropic-ai/claude-code runs uvicorn
+Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex runs uvicorn
 docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
 ```
 
@@ -43,7 +43,7 @@ The image runs uvicorn with `--proxy-headers --forwarded-allow-ips "*"`. `--prox
 
 ## Classification runtime
 
-`codex.py` is the one AI transport: `run_json(prompt, schema, cfg)` runs the primary CLI and, on any `CodexError`, the fallback if `TARTIB_AI_FALLBACK_COMMAND` is set (dialect by executable name: `claude` -> `claude --print --no-session-persistence --output-format json --json-schema <schema> --tools "" --max-turns 1 [--model M] <prompt>`, reply read from the envelope's `structured_output`; the `CLAUDECODE` env var is stripped so a parent Claude Code session cannot block it). Codex runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. Timeout kills the process.
+`codex.py` is the one AI transport: `run_json(prompt, schema, cfg)` runs the Codex CLI and raises `CodexError` on any failure; there is no fallback. Codex runs `codex exec --ephemeral --skip-git-repo-check --ignore-user-config --sandbox read-only --output-schema <tmp> --output-last-message <tmp> [--model M] <prompt>` with stdin closed (Codex blocks reading stdin otherwise), in a temp working dir so no AGENTS.md leaks in. Timeout kills the process.
 `classify.py` builds the filing prompt (user-authored, verbatim, plus a `text` excerpt bullet), validates `{"proposals": [...]}`, and normalizes: questions carry nothing, unknown spaces become null and cap confidence at 0.6, notes drop task fields, naive reminder times are converted from `TARTIB_TZ` to UTC.
 `runner.py` queues capture ids. Per capture: classify, insert one item per non-question proposal (excerpt as raw_text, filed or attention by space + threshold), answer the first question proposal via `ask.answer_question` and store it on the capture, mark done. Any failure: one null-space note in attention, capture status error.
 `ask.py`: `answer_from_rows(question, rows, settings)` is the Codex step; `answer_question` (POST /api/ask and the runner) retrieves up to 20 items by FTS5 OR-query over the question's content words (stopwords dropped, prefix on words of 4+ chars), falls back to the 20 most recent in the space, sends them to Codex with the user-authored answer prompt (includes current datetime, task status in headers) and a `{answer, item_ids}` schema, then filters cited ids to the retrieved set. Read-only; about 7 to 10s per question.
@@ -79,7 +79,7 @@ same VAPID key working on another browser is enough to rule the key out.
 
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL`, `CLAUDE_CODE_OAUTH_TOKEN` (passed through to the fallback CLI in Docker), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85), `TARTIB_VAPID_PUBLIC`, `TARTIB_VAPID_PRIVATE`, `TARTIB_VAPID_EMAIL` (default `mailto:tartib@localhost`), `TARTIB_SUMMARY_TIME` (default `08:00`, read in `TARTIB_TZ`, validated at load), `TARTIB_SESSION_MINUTES` (default 25, at least 1). `CODEX_HOME` is passed through to the subprocess.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL`, `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85), `TARTIB_VAPID_PUBLIC`, `TARTIB_VAPID_PRIVATE`, `TARTIB_VAPID_EMAIL` (default `mailto:tartib@localhost`), `TARTIB_SUMMARY_TIME` (default `08:00`, read in `TARTIB_TZ`, validated at load), `TARTIB_SESSION_MINUTES` (default 25, at least 1). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 
@@ -104,7 +104,7 @@ GET    /api/spaces/summary -> {spaces:[{name, open, notes, overdue, total, last_
 GET    /api/spaces/{space}/brief[?refresh=true] -> {space, text, item_ids, items, updated_at, fresh}
        briefs.py; feeds open tasks + 15 newest notes, cap 30, fixed question;
        404 unknown space, 503 AI off, 502 Codex failure; empty space -> "Nothing here yet." with no call
-GET    /api/config -> {tz, spaces, ai, fallback, autofile_confidence, vapid_public}   read-only
+GET    /api/config -> {tz, spaces, ai, autofile_confidence, vapid_public}   read-only
 POST   /api/subscriptions {endpoint, keys:{p256dh, auth}} -> 201 {id}   upserts on endpoint
 DELETE /api/subscriptions {endpoint} -> {ok, removed}
 GET    /api/subscriptions -> {enabled, count}

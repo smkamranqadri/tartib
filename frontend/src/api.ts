@@ -64,7 +64,6 @@ export const getConfig = () =>
     tz: string;
     spaces: string[];
     ai: boolean;
-    fallback: boolean;
     autofile_confidence: number;
     vapid_public: string | null;
   }>("/api/config");

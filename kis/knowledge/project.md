@@ -8,4 +8,4 @@ Stage: v1.0, released and deployed 2026-09-18 from a public repository, and in d
 
 ## Stack
 
-FastAPI + SQLite (FTS5) backend, React + Vite PWA frontend, one Docker container, one password from env, classification by the Codex CLI with the Claude Code CLI as fallback (the Codex login mounted or made on the host, Claude's by token). Details in `technical.md`.
+FastAPI + SQLite (FTS5) backend, React + Vite PWA frontend, one Docker container, one password from env, classification by the Codex CLI, the only classifier (the login mounted or made on the host). Details in `technical.md`.

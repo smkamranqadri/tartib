@@ -91,7 +91,6 @@ def config(
         "tz": settings.tz,
         "spaces": list_spaces(conn),
         "ai": settings.ai_enabled,
-        "fallback": bool(settings.ai_fallback_command),
         "autofile_confidence": settings.autofile_confidence,
         # The public key only, and only when a push could actually be delivered. The private
         # one never leaves the process.

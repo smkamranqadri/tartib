@@ -164,6 +164,6 @@ def test_attention_lists_stale_open_tasks(auth, settings):
 def test_config_is_read_only_view_of_settings(auth):
     body = auth.get("/api/config").json()
     assert body["tz"] == "UTC" and body["spaces"] == SPACES.split(",")
-    assert body["ai"] is False and body["fallback"] is False
+    assert body["ai"] is False and "fallback" not in body
     assert body["autofile_confidence"] == 0.85
     assert auth.patch("/api/config", json={"tz": "x"}).status_code == 405

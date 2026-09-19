@@ -32,7 +32,7 @@ docker compose up -d
 open http://localhost:8000
 ```
 
-No Codex? Set `TARTIB_AI_COMMAND=off` and every capture goes to Needs Attention for you to file by hand. With `TARTIB_AI_FALLBACK_COMMAND=claude`, any Codex failure is retried once through the Claude Code CLI with the same prompt and schema; both CLIs are in the image.
+No Codex? Set `TARTIB_AI_COMMAND=off` and every capture goes to Needs Attention for you to file by hand. If Codex fails — an outage, a usage limit — the capture is kept and parks in Needs Attention the same way; `python -m tartib.reclassify --attention` runs them again once it is back.
 
 Spaces are managed on the Spaces screen and live in the database. `TARTIB_SPACES` only seeds the table once, when it is empty.
 
@@ -121,7 +121,7 @@ If you want to know why something is the way it is, that is where the answer is.
 
 ## Not planned
 
-Projects, tags, multi-user, offline reading, a chat history for ask. Push and pomodoro were out of scope until they were argued in, under carve-outs recorded in `kis/knowledge/rules.md`; the bar for a fourth is higher than the third. The Claude CLI is a fallback for the same prompts, not a second classifier with its own behaviour.
+Projects, tags, multi-user, offline reading, a chat history for ask. Push and pomodoro were out of scope until they were argued in, under carve-outs recorded in `kis/knowledge/rules.md`; the bar for a fourth is higher than the third.
 
 ## License
 

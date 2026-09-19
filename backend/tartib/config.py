@@ -21,8 +21,6 @@ class Settings:
     ai_command: str  # "codex", a path, or "off"
     ai_model: str | None
     ai_timeout: float
-    ai_fallback_command: str | None  # e.g. "claude"; unset disables the fallback
-    ai_fallback_model: str | None
     autofile_confidence: float
     vapid_public: str | None
     vapid_private: str | None
@@ -50,8 +48,6 @@ class Settings:
             command=self.ai_command,
             model=self.ai_model,
             timeout=self.ai_timeout,
-            fallback_command=self.ai_fallback_command,
-            fallback_model=self.ai_fallback_model,
         )
 
     @property
@@ -95,8 +91,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ai_command=env.get("TARTIB_AI_COMMAND", "codex"),
         ai_model=env.get("TARTIB_AI_MODEL") or None,
         ai_timeout=float(env.get("TARTIB_AI_TIMEOUT") or "120"),
-        ai_fallback_command=env.get("TARTIB_AI_FALLBACK_COMMAND") or None,
-        ai_fallback_model=env.get("TARTIB_AI_FALLBACK_MODEL") or None,
         autofile_confidence=float(env.get("TARTIB_AUTOFILE_CONFIDENCE") or "0.85"),
         vapid_public=env.get("TARTIB_VAPID_PUBLIC") or None,
         vapid_private=env.get("TARTIB_VAPID_PRIVATE") or None,

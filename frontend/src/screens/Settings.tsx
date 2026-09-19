@@ -43,9 +43,6 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
         <Row title="Codex CLI" desc="Files every capture in the background.">
           <span className="muted">{config ? (config.ai ? "enabled" : "off") : "…"}</span>
         </Row>
-        <Row title="Claude fallback" desc="Used when Codex fails or hits its limit.">
-          <span className="muted">{config ? (config.fallback ? "enabled" : "off") : "…"}</span>
-        </Row>
         <Row title="Auto-file threshold" desc="Proposals at or above this confidence file without asking.">
           <span className="muted">{config ? `${Math.round(config.autofile_confidence * 100)}%` : "…"}</span>
         </Row>

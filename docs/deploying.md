@@ -47,15 +47,7 @@ It has to be a persistent directory at `/root/.codex`, or the login is wiped by 
 
 Either way the mount is read-write, because the refresh has to go somewhere.
 
-**The Claude fallback token**, which unlike the others is a single string rather than a login:
-
-```sh
-claude setup-token
-```
-
-Run it where you are already signed in, and put the result in `CLAUDE_CODE_OAUTH_TOKEN`. A container login would work too, but nothing persists Claude's credentials across a redeploy, and an environment variable survives one.
-
-Without this the fallback is inert, and a Codex outage means captures pile up in Needs Attention with `proposal_error` set. Nothing is lost and nothing is announced — you find out by noticing the Inbox growing.
+**When Codex fails.** There is no second classifier. A Codex outage or usage limit means captures pile up in Needs Attention with `proposal_error` set. Nothing is lost and nothing is announced — you find out by noticing the Inbox growing.
 
 ## Environment
 
@@ -70,9 +62,6 @@ Without this the fallback is inert, and a Codex outage means captures pile up in
 | `TARTIB_AI_COMMAND` | no | `codex` | Command that runs the Codex CLI. `off` disables classification. |
 | `TARTIB_AI_MODEL` | no | | Passed as `codex --model`. Unset uses Codex's default. |
 | `TARTIB_AI_TIMEOUT` | no | `120` | Seconds allowed per classification. |
-| `TARTIB_AI_FALLBACK_COMMAND` | no | | `claude` to use the Claude Code CLI when Codex fails. Same prompts and schemas. |
-| `TARTIB_AI_FALLBACK_MODEL` | no | | Passed as `claude --model`. |
-| `CLAUDE_CODE_OAUTH_TOKEN` | no | | Read by the Claude CLI itself. Needed for the fallback inside Docker. |
 | `TARTIB_AUTOFILE_CONFIDENCE` | no | `0.85` | Proposals at or above this are filed without asking. |
 | `TARTIB_VAPID_PUBLIC` | no | | Web Push key pair. Without both keys the reminder loop does not run. |
 | `TARTIB_VAPID_PRIVATE` | no | | Generate with `cd backend && uv run python -m tartib.vapid`. |
