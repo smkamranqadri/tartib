@@ -4,7 +4,7 @@ import AnswerView from "../components/AnswerView";
 import Card from "../components/Card";
 import { AlertIcon, ClockIcon, StarIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
-import { StartSession } from "../components/SessionBar";
+import SessionBar from "../components/SessionBar";
 import PageHead from "../components/PageHead";
 import RecentList from "../components/RecentList";
 import type { Pending } from "../offline";
@@ -71,12 +71,9 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
               ))}
             </ul>
           )}
-          {data && (
+          {data && sessions > 0 && (
             <p className="session-total">
-              <span className="muted">
-                {sessions === 0 ? "No sessions yet today" : sessions === 1 ? "1 session today" : `${sessions} sessions today`}
-              </span>
-              <StartSession itemId={null} className="ghost" label="Start a session" />
+              <span className="muted">{sessions === 1 ? "1 session today" : `${sessions} sessions today`}</span>
             </p>
           )}
         </Card>
@@ -101,6 +98,7 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
             </p>
           )}
         </Card>
+        <SessionBar placement="card" />
         <Card className="area-recent" icon={<ClockIcon />} label="Recent" aside={<span className="muted">last 3</span>}>
           {/* Also when there is no `data`: offline the server call fails, and a capture waiting
               to send is exactly what you want to see then. Hiding it behind the load was how

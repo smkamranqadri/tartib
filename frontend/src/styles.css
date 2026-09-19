@@ -127,9 +127,9 @@ button:disabled { opacity: .5; cursor: default; }
 .dash {
   display: grid; gap: 18px; align-items: start;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  grid-template-areas: "today attention" "recent attention";
+  grid-template-areas: "today attention" "today session" "recent session";
 }
-.area-today { grid-area: today; } .area-attention { grid-area: attention; } .area-recent { grid-area: recent; }
+.area-today { grid-area: today; } .area-attention { grid-area: attention; } .area-recent { grid-area: recent; } .area-session { grid-area: session; }
 .side-note { margin: 10px 16px 8px; font-size: 13px; }
 .side-note a { color: var(--fg); text-decoration: none; font-weight: 600; }
 
@@ -312,7 +312,7 @@ button:disabled { opacity: .5; cursor: default; }
   .row.revealed .row-actions { display: inline-flex; }
 }
 @media (max-width: 900px) {
-  .dash { grid-template-columns: 1fr; grid-template-areas: "today" "attention" "recent"; }
+  .dash { grid-template-columns: 1fr; grid-template-areas: "today" "attention" "session" "recent"; }
 }
 @media (max-width: 640px) {
   .app { --gutter: 16px; }
@@ -370,7 +370,7 @@ button:disabled { opacity: .5; cursor: default; }
    different kind of thing. Muted, because it is an offer and not news. */
 .update-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -12px 0 16px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; color: var(--muted); }
 /* The session card: red, a tomato's colour, so a pomodoro never reads as the app's own teal. */
-.session-bar { position: sticky; z-index: 15; bottom: calc(max(var(--askbar-h, 0px), env(safe-area-inset-bottom)) + 12px); box-shadow: 0 6px 20px rgba(0,0,0,.12); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 0; padding: 12px 14px; background: color-mix(in srgb, var(--session) 9%, var(--panel)); border: 1px solid color-mix(in srgb, var(--session) 45%, var(--line)); border-radius: 14px; }
+.session-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 0; padding: 12px 14px; background: color-mix(in srgb, var(--session) 9%, var(--panel)); border: 1px solid color-mix(in srgb, var(--session) 45%, var(--line)); border-radius: 14px; }
 .session-ring { flex: none; width: 48px; height: 48px; color: var(--session); }
 .session-ring .track { stroke: color-mix(in srgb, var(--session) 18%, transparent); }
 .session-ring .left { stroke: var(--session); transition: stroke-dashoffset 1s linear; }
@@ -432,3 +432,9 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .session-bar.idle .session-ring { width: 36px; height: 36px; }
 .session-again { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .session-again .icon-btn { width: 28px; height: 28px; color: var(--session); }
+
+/* Off Home, a live session floats: pinned just above the ask bar while the page scrolls. */
+.session-bar.floating { position: sticky; z-index: 15; bottom: calc(max(var(--askbar-h, 0px), env(safe-area-inset-bottom)) + 12px); box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+/* On Home it is the body of an ordinary card: the card draws the edge. */
+.card .session-bar { margin: 0; border: 0; border-radius: 0 0 12px 12px; }
+.card .session-bar.idle { background: none; }

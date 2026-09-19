@@ -1,15 +1,21 @@
+import type { ReactElement } from "react";
 import { getRecentSessions } from "../api";
 import { formatRemaining, useSession } from "../session";
 import { useLoad } from "../useLoad";
+import Card from "./Card";
+import { ClockIcon } from "./Icons";
 import { describe } from "./SessionPast";
 
-/** The running session, or the question that follows it. It sits under the capture bar on
- *  every screen, so a session is never something you have to go and look for.
+/** The session: running, waiting for its outcome, or none with the recent ones to run again.
+ *
+ *  `card` is Home's: an ordinary dashboard card, in every state. `float` is every other page's:
+ *  pinned above the ask bar, and only while a session is live -- running, or ended and waiting
+ *  for its outcome -- so a session is never something you have to go and look for.
  *
  *  The outcome is asked inline rather than in a modal: this product has no dialogs, and a
  *  sheet that blocks the app to ask about 25 minutes that already happened would be the
  *  nagging rule 4 exists to prevent. */
-export default function SessionBar() {
+export default function SessionBar({ placement }: { placement: "card" | "float" }) {
   const { current, remaining, busy, stop, answer, start } = useSession();
   const state = current?.state ?? null;
   // The last few: under the question once a session stops, and on their own when none runs.
@@ -18,11 +24,20 @@ export default function SessionBar() {
     [!!current, state, current?.session?.id],
   );
   if (!current) return null; // not loaded yet
+  if (placement === "float" && state === null) return null; // quiet pages show only a live one
+  const wrap = (body: ReactElement) =>
+    placement === "card" ? (
+      <Card className="area-session" icon={<ClockIcon />} label="Session">
+        {body}
+      </Card>
+    ) : (
+      body
+    );
 
   if (state === null) {
     const recent = (past.data?.sessions ?? []).slice(0, 3);
-    return (
-      <div className="session-bar idle">
+    return wrap(
+      <div className={`session-bar idle${placement === "float" ? " floating" : ""}`}>
         <Ring fraction={0} />
         <div className="session-main">
           <span className="session-time">No session running</span>
@@ -65,8 +80,8 @@ export default function SessionBar() {
   if (state === "running") {
     const s = current.session;
     const total = s ? Math.max(1, (new Date(s.ends_at).getTime() - new Date(s.started_at).getTime()) / 1000) : 1;
-    return (
-      <div className="session-bar running" role="status">
+    return wrap(
+      <div className={`session-bar running${placement === "float" ? " floating" : ""}`} role="status">
         <Ring fraction={remaining / total} />
         <div className="session-main">
           <span className="session-time">{formatRemaining(remaining)}</span>
@@ -81,8 +96,8 @@ export default function SessionBar() {
 
   // The one being asked about is itself the newest finished session; the list is the ones before.
   const earlier = (past.data?.sessions ?? []).filter((p) => p.id !== current.session?.id).slice(0, 3);
-  return (
-    <div className="session-bar done">
+  return wrap(
+    <div className={`session-bar done${placement === "float" ? " floating" : ""}`}>
       <Ring fraction={0} />
       <div className="session-main">
         <span className="session-time">Session done</span>

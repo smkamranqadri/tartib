@@ -116,6 +116,14 @@ with ▶ to run the same task again. Proof: headless Chrome at 390px after closi
 session: the idle card lists three with ▶; ▶ on a task's row started a running session on that
 task and the card turned red with its countdown.
 
+Then, same day, where it lives settled: on Home the session is an ordinary dashboard card,
+"Session", under Needs attention (the right column on a wide screen; after it on a phone), in
+every state; Today's own Start button went, its session count stays. Everywhere else it floats,
+pinned above the ask bar, only while a session is live -- running, or ended and waiting for its
+outcome, which was read as live so the question is not hidden until Home. Proof: headless
+Chrome -- Home idle at 1280px and running at 390px: inside the Session card, not sticky; Inbox
+idle: no card; Inbox running at 390px and Settings running at 1280px: floating and sticky.
+
 ## Step 6 — the space page split view
 
 **Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an
