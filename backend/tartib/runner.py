@@ -16,13 +16,19 @@ from tartib.store import SpaceError, insert_item, list_spaces
 
 log = logging.getLogger("tartib.runner")
 
+RETRY_INTERVAL = 15 * 60  # seconds between probes of failed captures
+MAX_RETRIES = 3
+NOT_CONFIGURED = "AI not configured"
+
 
 class Runner:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, retry: bool = True) -> None:
         self.settings = settings
         self.queue: asyncio.Queue[int] = asyncio.Queue()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._task: asyncio.Task[None] | None = None
+        self._retry = retry  # False for the reclassify CLI, which picks its own captures
+        self._probe: asyncio.Task[None] | None = None
 
     def enqueue(self, capture_id: int) -> None:
         """Safe to call from request handlers running in the threadpool."""
@@ -35,15 +41,37 @@ class Runner:
         for capture_id in await asyncio.to_thread(self._pending_ids):
             self.queue.put_nowait(capture_id)
         self._task = asyncio.create_task(self._consume())
+        if self._retry and self.settings.ai_enabled:
+            self._probe = asyncio.create_task(self._probe_loop())
 
     async def stop(self) -> None:
-        if self._task is not None:
-            self._task.cancel()
-            try:
-                await self._task
-            except asyncio.CancelledError:
-                pass
+        for task in (self._task, self._probe):
+            if task is not None:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        self._probe = None
         self._loop = None
+
+    async def _probe_loop(self) -> None:
+        """Every so often, try the failed captures again: an outage ends without telling anyone."""
+        while True:
+            await asyncio.sleep(RETRY_INTERVAL)
+            try:
+                await self.retry_failed()
+            except Exception:
+                log.exception("retry probe failed")
+
+    async def retry_failed(self) -> list[int]:
+        """Put retryable failed captures back in the queue. Returns their ids."""
+        ids = await asyncio.to_thread(self._reset_failed)
+        for capture_id in ids:
+            self.queue.put_nowait(capture_id)
+        if ids:
+            log.info("retrying %d failed capture(s): %s", len(ids), ids)
+        return ids
 
     async def _consume(self) -> None:
         while True:
@@ -63,7 +91,7 @@ class Runner:
         text, created_at, spaces = loaded
         s = self.settings
         if not s.ai_enabled:
-            await asyncio.to_thread(self._fallback, capture_id, "AI not configured")
+            await asyncio.to_thread(self._fallback, capture_id, NOT_CONFIGURED)
             return
         context = Context(
             now=utcnow().astimezone(s.zone),
@@ -82,6 +110,9 @@ class Runner:
             question = questions[0].text if len(proposals) > 1 and questions[0].text else text
             await self._answer(capture_id, question)
         await asyncio.to_thread(self._finish, capture_id, "done", None)
+        # A capture just classified, so the classifier is up: whatever failed earlier can go again.
+        if self._retry:
+            await self.retry_failed()
 
     async def _answer(self, capture_id: int, question: str) -> None:
         conn = self._connect()
@@ -121,6 +152,43 @@ class Runner:
                 "SELECT id FROM captures WHERE status = 'pending' ORDER BY id"
             ).fetchall()
             return [r["id"] for r in rows]
+        finally:
+            conn.close()
+
+    def _reset_failed(self) -> list[int]:
+        """Failed captures that can go again, reset to pending with the attempt counted.
+
+        Only while the one item is still exactly what the fallback wrote -- a note, no space, no
+        title, date or reminder, unstarred, open, text as captured. Anything else means a person
+        has started on it, and a retry would throw their work away. "AI not configured" is not a
+        failure a retry can fix."""
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                """
+                SELECT c.id FROM captures c
+                WHERE c.status = 'error' AND c.attempts < ? AND COALESCE(c.error, '') != ?
+                  AND (SELECT COUNT(*) FROM items i WHERE i.capture_id = c.id) = 1
+                  AND EXISTS (
+                    SELECT 1 FROM items i WHERE i.capture_id = c.id
+                      AND i.stage = 'attention' AND i.shape = 'note' AND i.space IS NULL
+                      AND i.title IS NULL AND i.due IS NULL AND i.remind_at IS NULL
+                      AND i.starred = 0 AND i.status = 'open' AND i.raw_text = c.raw_text
+                      AND i.proposal_json IS NULL AND i.proposal_error IS NOT NULL)
+                ORDER BY c.id
+                """,
+                (MAX_RETRIES, NOT_CONFIGURED),
+            ).fetchall()
+            ids = [r["id"] for r in rows]
+            for capture_id in ids:
+                conn.execute("DELETE FROM items WHERE capture_id = ?", (capture_id,))
+                conn.execute(
+                    "UPDATE captures SET status = 'pending', error = NULL, classified_at = NULL,"
+                    " attempts = attempts + 1 WHERE id = ?",
+                    (capture_id,),
+                )
+            conn.commit()
+            return ids
         finally:
             conn.close()
 

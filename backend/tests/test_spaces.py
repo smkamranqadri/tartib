@@ -198,7 +198,7 @@ def test_migration_0003_backfills_updated_at(tmp_path):
     path = str(tmp_path / "v1.db")
     build_v1(path)
     conn = db.connect(path)
-    assert db.migrate(conn) == 9
+    assert db.migrate(conn) == 10
     rows = conn.execute("SELECT id, updated_at, created_at FROM items").fetchall()
     assert rows and all(r["updated_at"] == r["created_at"] for r in rows)
     assert conn.execute("SELECT COUNT(*) FROM briefs").fetchone()[0] == 0

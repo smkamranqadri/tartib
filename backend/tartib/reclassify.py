@@ -99,7 +99,7 @@ async def reclassify(settings: Settings, scope: str, dry_run: bool = False) -> R
     finally:
         conn.close()
 
-    runner = Runner(settings)
+    runner = Runner(settings, retry=False)
     await runner.start()  # picks up everything pending
     await runner.queue.join()
     await runner.stop()

@@ -11,6 +11,16 @@ when classify gains item context.
 
 ## Step 1 — a failed capture is retried
 
+**Done 2026-09-19.** "Touched" is judged by content, not timestamps: the one item must still be
+exactly what the fallback wrote. `classified_at` has second precision and the touch trigger
+stamps milliseconds, so comparing them would misjudge; the content check also covers failures
+from before migration 0010. The count is of retries: the original attempt plus at most 3.
+Proof: new `tests/test_retry.py`, 8 tests -- a success sends a failed capture again (fallback
+note replaced, `attempts` 1), the probe finds one with no new capture, one that always fails
+stops at 3, an item starred, retitled, reshaped or given a space is left alone, and AI-off is
+never picked -- passing 5 runs out of 5; the migration-count asserts moved from 9 to 10. Full
+suite 167 passed, ruff clean.
+
 A capture that failed (`status = 'error'`, one fallback item in attention with
 `proposal_error`) waits for a human today, or for `python -m tartib.reclassify --attention`.
 With Codex the only classifier since slice 18, every outage parks captures.
