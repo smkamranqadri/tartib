@@ -127,6 +127,15 @@ treatment. This replaces the backlog's "opaque menus": the menus were already op
 Proof: at 390px the nav stays pinned and content blurs under it; on the phone, installed, the
 header clears the notch (the user checks). Watch for scroll jank with two blurred layers.
 
+## After the first phone look, 2026-09-19
+
+Asked for on the device: the nav more transparent, and every menu drawn like the iOS space picker
+in a proposal (a native `<select>`, so iOS's own glass). One `--glass-blur` token (`blur(20px)
+saturate(180%)`) now drives the nav (page background at 55%, was 78%), the ask bar (panel at 60%,
+was 82%, with its field and select at 70%) and the `...` menus (panel at 62%, previously solid).
+Screenshots at 390px, light and dark, show the Inbox card menu over the next card, the nav and the
+ask bar with content blurred through, text readable. The phone checks above now include these.
+
 ## Out of scope
 
 Backups, slices 13 and 14, the due-date prompt, the notification key, the rest of UI polish

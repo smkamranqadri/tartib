@@ -13,6 +13,8 @@
   --field: #ffffff;
   --pill: #e8eeeb;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  /* Glass, the way iOS draws its own menus: mostly see-through, heavily blurred, colour kept. */
+  --glass-blur: blur(20px) saturate(180%);
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -61,8 +63,8 @@ input, textarea, select { font-size: 16px; }
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   margin: 0 calc(-1 * max(var(--gutter), env(safe-area-inset-right))) 0 calc(-1 * max(var(--gutter), env(safe-area-inset-left)));
   padding: calc(14px + env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) 12px max(var(--gutter), env(safe-area-inset-left));
-  background: color-mix(in srgb, var(--bg) 78%, transparent);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--fg); text-decoration: none; }
 .brand-mark { width: 28px; height: 28px; border-radius: 8px; display: block; border: 1px solid var(--line); }
@@ -183,9 +185,9 @@ button:disabled { opacity: .5; cursor: default; }
 .word-input { font: inherit; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--fg); }
 .decisions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .more { position: relative; margin-left: auto; }
-.menu { position: absolute; right: 0; top: 34px; display: flex; flex-direction: column; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.14); z-index: 5; }
+.menu { position: absolute; right: 0; top: 34px; display: flex; flex-direction: column; min-width: 170px; background: color-mix(in srgb, var(--panel) 62%, transparent); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.14); z-index: 5; }
 .menu button, .menu a { background: none; border: 0; text-align: left; padding: 8px 10px; border-radius: 6px; color: var(--fg); text-decoration: none; cursor: pointer; font: inherit; }
-.menu button:hover, .menu a:hover { background: var(--head); }
+.menu button:hover, .menu a:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
 .menu button.danger { color: var(--danger); }
 .menu button:disabled { color: var(--muted); cursor: default; }
 
@@ -263,15 +265,15 @@ button:disabled { opacity: .5; cursor: default; }
 .askbar {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 20;
   width: min(100% - 40px, 720px);
-  background: color-mix(in srgb, var(--panel) 82%, transparent);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
 }
 .askbar .answer { margin: 0 0 10px; max-height: 40vh; overflow: auto; }
 .ask { display: flex; gap: 8px; margin: 0; flex-wrap: wrap; }
-.ask input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }
-.ask select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }
+.ask input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--field) 70%, transparent); color: var(--fg); }
+.ask select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--field) 70%, transparent); color: var(--fg); }
 .ask button[type="submit"] { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 8px 16px; cursor: pointer; }
 .toast {
   position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%);
