@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from tartib.queries import fts_query
-from tests.conftest import SPACES, capture, one_item
+from tests.conftest import SPACES, capture, one_item, proposal, set_classify_reply
 
 
 def add(auth, text, **fields):
@@ -48,8 +48,11 @@ def test_today_rules(auth, settings):
 
 
 def test_today_recent_is_newest_three_and_recent_page_is_fifty(auth):
-    caps = [capture(auth, f"note {i}")["id"] for i in range(12)]
+    made = [capture(auth, f"note {i}") for i in range(12)]
+    caps = [c["id"] for c in made]
     recent = auth.get("/api/today").json()["recent"]
+    for c in made:  # file them: the page leaves out what is waiting in Needs Attention
+        auth.post(f"/api/items/{c['items'][0]['id']}/approve", json={"space": "work"})
     assert [c["id"] for c in recent] == list(reversed(caps))[:3]
     page = auth.get("/api/recent").json()
     assert [c["id"] for c in page["captures"]] == list(reversed(caps)) and page[
@@ -67,6 +70,28 @@ def test_today_recent_is_newest_three_and_recent_page_is_fifty(auth):
     assert recent[0]["raw_text"] == "note 11"
     assert recent[0]["status"] == "error" and len(recent[0]["items"]) == 1
     assert recent[0]["items"][0]["stage"] == "attention"
+
+
+def test_recent_page_leaves_out_what_is_waiting(ai_client, monkeypatch):
+    """Needs Attention sits above Recent in the Inbox; the same item should not be in both."""
+    set_classify_reply(monkeypatch, proposal(space="work"), proposal(confidence=0.3))
+    mixed = capture(ai_client, "one filed, one unsure")
+    filed, waiting = sorted(mixed["items"], key=lambda i: i["stage"] != "filed")
+    assert (filed["stage"], waiting["stage"]) == ("filed", "attention")
+    set_classify_reply(monkeypatch, proposal(confidence=0.3))
+    parked = capture(ai_client, "only unsure")
+
+    page = ai_client.get("/api/recent").json()["captures"]
+    assert [c["id"] for c in page] == [mixed["id"]]
+    assert [i["id"] for i in page[0]["items"]] == [filed["id"]]
+    # Today's three are unchanged: Home has no Needs Attention to repeat
+    assert parked["id"] in [c["id"] for c in ai_client.get("/api/today").json()["recent"]]
+
+    ai_client.post(f"/api/items/{parked['items'][0]['id']}/approve", json={"space": "home"})
+    assert [c["id"] for c in ai_client.get("/api/recent").json()["captures"]] == [
+        parked["id"],
+        mixed["id"],
+    ]
 
 
 def test_attention_oldest_first(auth):

@@ -49,6 +49,15 @@ Proof: in a browser with `/api/config` blocked, the page shows the error and Ret
 
 ## Step 3 — Recent does not repeat Needs Attention
 
+**Done 2026-09-19.** New test `test_recent_page_leaves_out_what_is_waiting` (a mixed capture lists
+only its filed item, an all-attention capture is absent until approved, Today's three unchanged)
+fails on the old query and passes on the new; pytest 159 passed. Headless Chrome at 390px, one
+filed and one waiting capture: the Inbox Recent card and `/inbox/recent` show only the filed one,
+Needs Attention shows the waiting one, Home's Recent shows both.
+`test_a_queued_capture_is_safe_to_send_twice` counted rows through `/api/recent` with AI off, so
+its capture is now hidden there; it counts through `/api/today` instead. The Inbox card can show
+fewer than three while its header still says "last 3" -- left as is.
+
 Applies to the `/inbox/recent` page (server side, `/api/recent` in `queries.py`) and the Inbox
 Recent card (which reads `/api/today`, shared with Home, so filter it in `Inbox.tsx`). Home's
 Recent card is unchanged: Needs Attention is not on that screen, and a capture you just typed

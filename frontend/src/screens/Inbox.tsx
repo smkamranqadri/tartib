@@ -17,7 +17,17 @@ const SHOW = 3;
 export default function Inbox({ version, onDecided }: { version: number; onDecided: () => void }) {
   const { data, setData, error, loading } = useLoad(getAttention, [version]);
   const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
-  const recent = useLoad(getToday, [version]).data?.recent ?? [];
+  const today = useLoad(getToday, [version]).data;
+  // Needs Attention is right above, so Recent leaves out what is already waiting there. Today's
+  // list is shared with Home, which has no Needs Attention, so the filter lives here.
+  const recent = useMemo(
+    () =>
+      (today?.recent ?? []).flatMap((cap) => {
+        const items = cap.items.filter((i) => i.stage !== "attention");
+        return cap.items.length > 0 && items.length === 0 ? [] : [{ ...cap, items }];
+      }),
+    [today],
+  );
   const [order, setOrder] = useState<number[]>([]);
 
   const items = useMemo(() => data?.items ?? [], [data]);

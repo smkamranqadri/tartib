@@ -104,21 +104,27 @@ def recent_captures(
     before: int | None = None,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> dict:
-    """Captures newest first, keyset-paged by id: pass next_before back as before."""
-    if before is None:
-        rows = conn.execute(
-            "SELECT * FROM captures ORDER BY id DESC LIMIT ?", (limit + 1,)
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT * FROM captures WHERE id < ? ORDER BY id DESC LIMIT ?", (before, limit + 1)
-        ).fetchall()
+    """Captures newest first, keyset-paged by id: pass next_before back as before.
+
+    What is waiting in Needs Attention is not repeated here: those items are dropped, and so is
+    a capture left with none. A capture with no items at all (still filing, or answered) stays.
+    The exclusion is in the SQL so a page is still `limit` long."""
+    rows = conn.execute(
+        f"""
+        SELECT * FROM captures
+        WHERE {"id < ? AND" if before is not None else ""}
+          (NOT EXISTS (SELECT 1 FROM items WHERE capture_id = captures.id)
+           OR EXISTS (SELECT 1 FROM items WHERE capture_id = captures.id AND stage != 'attention'))
+        ORDER BY id DESC LIMIT ?
+        """,
+        (*([before] if before is not None else []), limit + 1),
+    ).fetchall()
     has_more = len(rows) > limit
     rows = rows[:limit]
-    return {
-        "captures": [serialize_capture(conn, r) for r in rows],
-        "next_before": rows[-1]["id"] if has_more and rows else None,
-    }
+    captures = [serialize_capture(conn, r) for r in rows]
+    for cap in captures:
+        cap["items"] = [i for i in cap["items"] if i["stage"] != "attention"]
+    return {"captures": captures, "next_before": rows[-1]["id"] if has_more and rows else None}
 
 
 def fts_query(q: str) -> str:

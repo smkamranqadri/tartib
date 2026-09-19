@@ -89,7 +89,9 @@ def test_a_queued_capture_is_safe_to_send_twice(auth):
     assert again.json()["id"] == first.json()["id"]
 
     # And there is genuinely one row, not two that merely share an id in the response.
-    recent = auth.get("/api/recent").json()["captures"]
+    # (Today's list, not /api/recent: with AI off this capture waits in Needs Attention, which
+    # the Recent page leaves out.)
+    recent = auth.get("/api/today").json()["recent"]
     assert [c["raw_text"] for c in recent].count("call the dentist") == 1
 
 
