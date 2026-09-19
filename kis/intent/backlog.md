@@ -7,12 +7,6 @@ Slices 15, 16 and 17 -- PWA, public repo, deploy -- were put ahead of everything
 2026-09-18 and all closed that day; their plans stay in `slice-1{5,6,7}-*.md`. Nothing below is
 ordered yet.
 
-Slice 18 (`slice-18-small-fixes.md`, planned 2026-09-19) takes: both reported defects with a
-known cause, the unreproduced space-picker defect, "Keep Needs Attention out of the Inbox Recent
-list", the safe areas from "UI polish", and "opaque menus" -- reversed into a sticky translucent
-nav. It also removes the Claude fallback, which voids the "fails slowly" candidate. Those entries
-leave this file when the slice closes.
-
 Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 
 - **13 presentation** — markdown on the item page, note bodies and briefs, rendered and edited
@@ -151,17 +145,12 @@ rather than work beside it:
   what it had queued, and one capture became a note on the laptop and a task on the phone at the
   same time. Tartib's runner is already the only classifier; an offline queue must replay raw
   captures and edits to it, never decide anything locally.
-- **UI polish, phone first.** Four specifics, each independent of the others:
-  *Safe areas* -- `styles.css` pads only the bottom (`env(safe-area-inset-bottom)`), so installed
-  on a phone the header can sit under the notch or camera cutout and run into the rounded corners;
-  the top and the sides need the same treatment.
-  *Opaque menus and sheets* -- a menu or confirm over a busy list should be a near-solid surface,
-  not a translucent one, so its text stays readable.
+- **UI polish, phone first.** Two specifics, independent of each other (safe areas and the nav surface shipped in slice 18):
   *Skeleton rows* -- every card shows a bare `...` while it loads and then jumps when data lands;
   placeholder rows in the shape of the content hold the layout still.
   *Typography and controls* -- one bundled sans and one bundled mono, self-hosted with no CDN so
   the app looks the same on every device and still works offline; one button scale; the nav pill
-  bar reserving its own height so nothing hides behind it; background colour coming from the theme
+  bar reserving its own height so nothing hides behind it (the top nav is sticky since slice 18, the ask bar was already fixed); background colour coming from the theme
   tokens rather than per-screen values.
   Note what is already done: slice 10 was the consistency pass -- one header convention, extracted
   `Row`, `Menu`, `Confirm`, `NameForm`, `Status`, one primary button class. This entry is the
@@ -177,9 +166,9 @@ rather than work beside it:
   cards stacked down one screen, so the lower two are a scroll away and the counts are invisible
   until you reach them. One tab strip with the count on each tab, one section at a time. Two
   routes already exist from slice 10, `/inbox/attention` and `/inbox/recent`, so decide whether
-  the tabs *are* those routes or replace them -- do not end up with both. Related: "Keep Needs
-  Attention out of the Inbox Recent list" above still applies, since an item can otherwise appear
-  under two tabs at once.
+  the tabs *are* those routes or replace them -- do not end up with both. Slice 18 already keeps
+  waiting items out of Recent -- server side on `/inbox/recent`, client side on the Inbox card --
+  so the tabs inherit that rather than rebuilding it.
 - **Photo and voice on the capture box.** The mic already dictates into the text field with the
   browser's speech recognition, so speech-to-text is not the ask; keeping the audio itself is, and
   it raises the same question a photo does. Neither has anywhere to go today: captures are text,
@@ -215,43 +204,6 @@ rather than work beside it:
   without anyone deciding it. Shared rules live once; each prompt adds only what genuinely
   differs. Do this before or with 14 -- an editable override is far more dangerous laid over two
   copies that have already diverged.
-- **Keep Needs Attention out of the Inbox Recent list.** Recent shows everything captured,
-  including items that are also sitting in Needs Attention above it, so the same item is on the
-  screen twice. Recent should show what is not already waiting for a decision.
-
-Defects, reported 2026-09-19:
-
-- **Every field is 15px, and iOS zooms anything under 16px.** `styles.css` sets `body { font:
-  15px/1.5 ... }` and then `button, input, textarea, select { font: inherit }`, so every control
-  inherits 15px; the capture box sets `font-size: 15px` explicitly as well. Mobile Safari zooms
-  the viewport in on focusing a field below 16px and does not zoom back out, which means the most
-  used control in the app -- the capture box, on the phone this app was built for -- shifts the
-  page every time it is tapped. Two fields already opt out at 16px (`.search-row.large input`,
-  `.text-edit textarea`), which is the same fix applied twice by hand. Found by reading the CSS on
-  2026-09-19, not by reproducing on a device: verify on the phone first, then fix globally rather
-  than field by field.
-
-- **Settings says "Checking this browser and this install..." forever, and never says why.**
-  Reproduced in Chrome at 1280px on 2026-09-19, two ways: with `/api/config` aborted, and with the
-  browser simply offline. Both leave every field on the page at "..." and the reminders card in
-  its `loading` wording, with no error anywhere on screen. Healthy, the same page resolves
-  correctly to "off / Push notifications", so this is the failure path only.
-  Cause: `frontend/src/screens/Settings.tsx:24` keeps only `.data` from `useLoad` and discards
-  `error` and `loading`, so a config load that failed is indistinguishable from one still running;
-  `vapidPublic` stays `undefined`, and `pushState` maps that to `loading` for good. `useLoad`
-  already computes the right sentence -- "You're offline." or "Can't reach Tartib." -- and Settings
-  throws it away. There is also no retry.
-  Consequence beyond the wording: the page never reaches the enable button, so a real push problem
-  underneath is invisible. Do not read "Checking..." on a desktop as evidence about push until
-  this is fixed. It also compounds the offline entry above -- offline, `/api/config` can never
-  succeed, so Settings is permanently stuck rather than merely dataless.
-
-Defects, reported 2026-09-19, neither reproduced nor diagnosed:
-
-- **A new space does not appear where Needs Attention is deciding.** Reported as: the space list
-  in Needs Attention does not update when a space is created. The likely mechanism, unconfirmed,
-  is that the spaces are fetched once and the decision card holds the stale list, so a space
-  created during the session is missing from the picker until a reload. Confirm before fixing.
 
 Deferred from a slice rather than never planned:
 
@@ -262,17 +214,7 @@ Deferred from a slice rather than never planned:
 
 Unscheduled candidates:
 
-- Image is 1.62GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras, plus cryptography and aiohttp via pywebpush since slice 11). Not a stated constraint (memory is, and runtime is 42MiB). A slimmer route: download the Codex release binary instead of npm. Worth more after slice 17: every deploy cross-builds this image under QEMU, where size is time.
-- The AI fallback fails slowly when it cannot authenticate. Proved on the deployed app
-  2026-09-18: with `TARTIB_AI_COMMAND` broken deliberately and no `CLAUDE_CODE_OAUTH_TOKEN` set,
-  Codex failed instantly and correctly, then the Claude leg burned the full `TARTIB_AI_TIMEOUT`
-  of 120s before giving up -- `stdin` is already DEVNULL, so it was authenticating, not waiting
-  for input. Captures queue serially, so a burst during a real outage stalls for minutes and
-  files nothing. The fallback exists to cover an outage quickly and currently does the opposite.
-  Either give the fallback leg its own shorter timeout, or check the token is present before
-  spending a capture on it. The deeper problem -- the CLI hangs on the deployed host even with a
-  valid token -- is current reality and diagnosed in State, Open; settle that before relying on
-  the fallback as insurance.
-- Automatic retry for `proposal_error` items after a Codex outage or usage-limit block. Today they wait for a human. Seen for real on 2026-09-17 when the ChatGPT usage limit hit mid-deploy.
+- Image was 1.62GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras, plus cryptography and aiohttp via pywebpush since slice 11). Not a stated constraint (memory is, and runtime is 42MiB). Slice 18 dropped the Claude CLI (1.07GB built locally on arm64, 2026-09-19; not measured on the x86_64 deploy build). A slimmer route: download the Codex release binary instead of npm. Worth more after slice 17: every deploy cross-builds this image under QEMU, where size is time.
+- Automatic retry for `proposal_error` items after a Codex outage or usage-limit block. Today they wait for a human, or for `python -m tartib.reclassify --attention`. Worth more since slice 18 removed the Claude fallback: Codex is now the only classifier, so every outage parks captures. Seen for real on 2026-09-17 when the ChatGPT usage limit hit mid-deploy.
 - Codex takes about 10s per item on the host. Fine for personal volume; a burst of captures queues serially.
 - Ask retrieval is keyword-only FTS5. The cheap next step is letting Codex propose 3 to 5 search terms first, still no embeddings. Slice 14 needs this, not just wants it: a follow-up like "what about the second one?" has no content words, so the OR-query returns nothing.

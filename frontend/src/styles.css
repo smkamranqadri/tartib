@@ -48,10 +48,21 @@ input, textarea, select { font-size: 16px; }
 .sep { opacity: .6; }
 
 /* shell */
-.app { max-width: 1240px; margin: 0 auto; padding: 0 20px 64px; }
+/* --gutter is the side padding, never less than a notch or rounded corner on that side. */
+.app {
+  --gutter: 20px;
+  max-width: 1240px; margin: 0 auto;
+  padding: 0 max(var(--gutter), env(safe-area-inset-right)) 64px max(var(--gutter), env(safe-area-inset-left));
+}
+/* The nav stays put while the page scrolls under it, glass like the ask bar. It bleeds into the
+   gutters so what scrolls beneath is blurred edge to edge, and clears the status bar and notch. */
 .top {
+  position: sticky; top: 0; z-index: 10;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
-  padding: 14px 0 12px;
+  margin: 0 calc(-1 * max(var(--gutter), env(safe-area-inset-right))) 0 calc(-1 * max(var(--gutter), env(safe-area-inset-left)));
+  padding: calc(14px + env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) 12px max(var(--gutter), env(safe-area-inset-left));
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--fg); text-decoration: none; }
 .brand-mark { width: 28px; height: 28px; border-radius: 8px; display: block; border: 1px solid var(--line); }
@@ -285,7 +296,7 @@ button:disabled { opacity: .5; cursor: default; }
   .dash { grid-template-columns: 1fr; grid-template-areas: "today" "attention" "recent"; }
 }
 @media (max-width: 640px) {
-  .app { padding: 0 16px 64px; }
+  .app { --gutter: 16px; }
   .top { grid-template-columns: 1fr; row-gap: 10px; }
   .top-actions { display: none; }
   .pills { justify-self: stretch; }

@@ -1,5 +1,10 @@
 # Slice 18: small fixes (approved 2026-09-19)
 
+**Status 2026-09-19: all six steps done and proved locally; not deployed.** Owed before the slice
+counts as closed: on the phone, that tapping the capture box no longer zooms (step 5) and that
+the installed app's header clears the notch and scrolls smoothly (step 6). Both need `v1.1` on
+the server, or the local container reached from the phone.
+
 Picked for being small: the cause is known, one or two files each, no migration, no prompt
 change. Six independent steps, each proved on its own. No deploy in this slice -- it ends green
 locally, and `v1.1` ships when asked for.
@@ -104,6 +109,16 @@ Proof: computed font-size 16px on every field at 390px; on the phone, tapping th
 does not zoom (the user checks).
 
 ## Step 6 — a sticky glass nav, clear of the notch
+
+**Done in the browser 2026-09-19; the phone check is still owed.** `.top` is `position: sticky`
+with the page background at 78% and a 14px blur, bleeding into the gutters; the gutters became a
+`--gutter` variable floored at `env(safe-area-inset-left/right)`, and the nav's top padding adds
+`env(safe-area-inset-top)`. Headless Chrome, scrolled 500px on `/inbox/recent` with 16 seeded
+captures: the nav stays at y=0 at 390px light and dark and at 1280px dark, content blurs under
+it, and the document is never wider than the viewport. With insets emulated through CDP
+(`Emulation.setSafeAreaInsetsOverride`, top 47, bottom 34) the nav's top padding grows from 14px
+to 61px and the brand sits below the notch line. Typecheck passes; pytest 159 passed. Scroll
+smoothness with two blurred layers, and the real notch, can only be judged on the phone.
 
 The top bar (`.top`) sticks while the page scrolls, translucent with a blur -- the ask bar's
 treatment. This replaces the backlog's "opaque menus": the menus were already opaque, and the
