@@ -104,6 +104,12 @@ screen edge where there is none. Proof: headless Chrome with a session running, 
 and 1280px, a space and Recent at 390px: the card is in view at the top and at the end of each
 page and always clears the ask bar.
 
+Then, same day: one behaviour everywhere -- the ask bar is on every page, not only Home and the
+Inbox, with the session card held just above it; the split view's pane now also leaves room for
+the bar. Proof: headless Chrome with a session running, seven pages (Home, Inbox, Recent, Spaces,
+a space with an item open, an item, Settings) at 390px and 1280px, at the top and the end of
+each: the ask bar in view, the card above it and in view, no horizontal overflow.
+
 ## Step 6 — the space page split view
 
 **Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an

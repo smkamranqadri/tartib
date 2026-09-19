@@ -136,7 +136,6 @@ export default function App() {
   );
   const spaces = useSpaces(`${authed}:${version}`);
   const onSearchPage = location.pathname.startsWith("/spaces") || location.pathname.startsWith("/search");
-  const showChat = location.pathname === "/" || location.pathname === "/inbox" || location.pathname.startsWith("/inbox/");
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthed(false));
@@ -216,7 +215,7 @@ export default function App() {
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       <SessionProvider onFinish={bump}>
-      <div className={`app ${showChat ? "has-askbar" : ""}`}>
+      <div className="app has-askbar">
         <header className="top">
           <NavLink to="/" className="brand" end>
             <img className="brand-mark" src="/icon-192.png" alt="" width={28} height={28} />
@@ -267,7 +266,7 @@ export default function App() {
         {/* At the foot of every page, held just above the ask bar (or the screen edge) while
             the page scrolls, so a running timer is always in view without leading the page. */}
         <SessionBar />
-        {showChat && <AskBar spaces={spaces} />}
+        <AskBar spaces={spaces} />
         <Toast toast={toast} />
       </div>
       </SessionProvider>

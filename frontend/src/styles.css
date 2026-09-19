@@ -410,7 +410,7 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 
 /* A space on a wide screen: the list, and the open item beside it. */
 .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
-.split-item { position: sticky; top: 96px; max-height: calc(100vh - 110px); overflow-y: auto; }
+.split-item { position: sticky; top: 96px; max-height: calc(100vh - 110px - var(--askbar-h, 0px)); overflow-y: auto; }
 .split-item .screen { padding: 0; }
 .split-empty { padding: 40px 20px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
 
