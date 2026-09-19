@@ -13,7 +13,7 @@ from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings, push_ready
 from tartib.sessions import counts_today
-from tartib.store import list_spaces, serialize_capture, serialize_item
+from tartib.store import items_by_thoughts, list_spaces, serialize_capture, serialize_item
 
 RECENT = 3
 RECENT_PAGE = 50
@@ -182,6 +182,12 @@ def list_items(
     params.append(limit + 1)
 
     rows = conn.execute(sql, params).fetchall()
+    if match and len(rows) <= limit:
+        # Then items found through their thoughts, after the ones their own text matched.
+        filters = params[1:-1]  # the where-clause values, without the match and the limit
+        rows += items_by_thoughts(
+            conn, match, where, filters, [r["id"] for r in rows], limit + 1 - len(rows)
+        )
     has_more = len(rows) > limit
     rows = rows[:limit]
     items = [serialize_item(r) for r in rows]

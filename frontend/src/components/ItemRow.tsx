@@ -46,6 +46,7 @@ export default function ItemRow({
 
   const meta: string[] = [waiting ? waitingReason(item, true) : (item.space ?? "no space"), formatRelative(item.updated_at ?? item.created_at)];
   if (sessions) meta.push(sessions === 1 ? "1 session" : `${sessions} sessions`);
+  if (item.thought_count) meta.push(item.thought_count === 1 ? "1 thought" : `${item.thought_count} thoughts`);
 
   return (
     <Row

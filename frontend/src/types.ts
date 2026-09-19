@@ -28,6 +28,8 @@ export interface Item {
   proposal_error: string | null;
   classified_at: string | null;
   updated_at: string | null;
+  /** Entries in the item's thought log. */
+  thought_count: number;
 }
 
 export interface Answer {
@@ -106,4 +108,12 @@ export interface SessionState {
   state: "running" | "awaiting" | null;
   session: Session | null;
   item: Item | null;
+}
+
+/** One entry in an item's thought log. Append-only: never edited, never removed on its own. */
+export interface Thought {
+  id: number;
+  item_id: number;
+  body: string;
+  created_at: string;
 }

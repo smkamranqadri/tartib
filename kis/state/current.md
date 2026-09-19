@@ -5,7 +5,7 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 20, round three** -- approved 2026-09-19. Steps 1 to 7 done; step 8 next. Plan:
+- Task: **slice 20, round three** -- approved 2026-09-19. All eight steps done locally; waiting on the user to try it. Plan:
   `kis/intent/slice-20-round-three.md`. Mode: Phase, eight steps.
 - Slice 19, small items round two, closed 2026-09-19, not deployed:
   `kis/intent/slice-19-small-items-2.md`. Migration 0010 (`captures.attempts`) runs on the next

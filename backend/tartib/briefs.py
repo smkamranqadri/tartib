@@ -14,7 +14,7 @@ from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
 from tartib.sessions import space_counts_today
-from tartib.store import list_spaces, serialize_item
+from tartib.store import list_spaces, serialize_item, thoughts_for
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -87,10 +87,13 @@ def fingerprint(conn: sqlite3.Connection, space: str, settings: Settings) -> str
     icon does. Tomorrow's zero also counts as a change, which is what stops a brief carrying
     yesterday's "3 sessions today" into today."""
     row = conn.execute(
-        "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM items WHERE space = ?", (space,)
+        "SELECT COUNT(*), COALESCE(MAX(id), 0), COALESCE(SUM(thought_count), 0) FROM items"
+        " WHERE space = ?",
+        (space,),
     ).fetchone()
     sessions = space_counts_today(conn, settings, utcnow()).get(space, 0)
-    return f"{row[0]}:{row[1]}:{sessions}"
+    # A new thought is new material for the brief, the way a new item is.
+    return f"{row[0]}:{row[1]}:{sessions}:{row[2]}"
 
 
 def brief_rows(conn: sqlite3.Connection, space: str) -> list[sqlite3.Row]:
@@ -149,7 +152,10 @@ async def space_brief(
         if not settings.ai_enabled:
             raise HTTPException(status_code=503, detail="AI not configured")
         try:
-            result = await answer_from_rows(brief_question(conn, space, settings), rows, settings)
+            thoughts = thoughts_for(conn, [r["id"] for r in rows])
+            result = await answer_from_rows(
+                brief_question(conn, space, settings), rows, settings, thoughts
+            )
         except AskError as e:
             raise HTTPException(status_code=502, detail=f"brief failed: {e}") from e
         text, ids = result["answer"], result["item_ids"]

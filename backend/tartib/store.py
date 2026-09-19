@@ -234,3 +234,42 @@ def file_item(
     params.append(item_id)
     conn.execute(f"UPDATE items SET {', '.join(sets)} WHERE id = ?", params)
     conn.commit()
+
+
+def thoughts_for(conn: sqlite3.Connection, item_ids: Sequence[int]) -> dict[int, list[sqlite3.Row]]:
+    """Each item's thought entries, oldest first."""
+    if not item_ids:
+        return {}
+    marks = ", ".join("?" * len(item_ids))
+    out: dict[int, list[sqlite3.Row]] = {}
+    for r in conn.execute(
+        f"SELECT * FROM item_thoughts WHERE item_id IN ({marks}) ORDER BY id", list(item_ids)
+    ):
+        out.setdefault(r["item_id"], []).append(r)
+    return out
+
+
+def items_by_thoughts(
+    conn: sqlite3.Connection,
+    match: str,
+    where: Sequence[str],
+    params: Sequence[object],
+    exclude: Sequence[int],
+    limit: int,
+) -> list[sqlite3.Row]:
+    """Items whose thoughts match an FTS5 query, newest first, under the same filters -- the
+    ones their own text did not already bring up."""
+    sql = (
+        "SELECT items.* FROM items WHERE items.id IN (SELECT t.item_id FROM thoughts_fts"
+        " JOIN item_thoughts t ON t.id = thoughts_fts.rowid WHERE thoughts_fts MATCH ?)"
+    )
+    args: list[object] = [match]
+    for clause in where:
+        sql += f" AND {clause}"
+    args += list(params)
+    if exclude:
+        sql += f" AND items.id NOT IN ({', '.join('?' * len(exclude))})"
+        args += list(exclude)
+    sql += " ORDER BY items.id DESC LIMIT ?"
+    args.append(limit)
+    return conn.execute(sql, args).fetchall()

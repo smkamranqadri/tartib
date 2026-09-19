@@ -417,3 +417,11 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 /* Tell it why: one line of reason under the proposal, sent back to the classifier. */
 .why { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
 .why input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }
+
+/* An item's thought log: dated entries, oldest first, and a box for the next one. */
+.thoughts { list-style: none; margin: 0; padding: 4px 16px; display: flex; flex-direction: column; }
+.thoughts li { padding: 10px 0; border-top: 1px solid var(--line); }
+.thoughts li:first-child { border-top: 0; }
+.thoughts p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thought-add { display: flex; gap: 8px; align-items: flex-end; padding: 10px 16px 14px; }
+.thought-add textarea { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; }

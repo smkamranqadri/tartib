@@ -25,6 +25,7 @@ from tartib.store import (
     serialize_item,
     should_file,
     space_policies,
+    thoughts_for,
     update_fields,
 )
 
@@ -289,6 +290,39 @@ async def redo(
         )
         conn.commit()
     return serialize_item(fetch_item(conn, item_id))
+
+
+class ThoughtBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    body: str = Field(min_length=1, max_length=10_000)
+
+
+@router.get("/items/{item_id}/thoughts")
+def list_thoughts(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """The item's thought log, oldest first."""
+    fetch_item(conn, item_id)
+    rows = thoughts_for(conn, [item_id]).get(item_id, [])
+    return {"thoughts": [dict(r) for r in rows]}
+
+
+@router.post("/items/{item_id}/thoughts", status_code=201)
+def add_thought(
+    item_id: int, body: ThoughtBody, conn: sqlite3.Connection = Depends(get_db)
+) -> dict:
+    """Append one entry. There is no editing or deleting one: the log is append-only."""
+    fetch_item(conn, item_id)
+    text = body.body.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="the thought is empty")
+    cur = conn.execute(
+        "INSERT INTO item_thoughts (item_id, body, created_at) VALUES (?, ?, ?)",
+        (item_id, text, utcnow_iso()),
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM item_thoughts WHERE id = ?", (cur.lastrowid,)).fetchone()
+    count = fetch_item(conn, item_id)["thought_count"]
+    return {"thought": dict(row), "thought_count": count}
 
 
 @router.delete("/items/{item_id}")

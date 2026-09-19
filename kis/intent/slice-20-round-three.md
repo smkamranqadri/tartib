@@ -1,5 +1,8 @@
 # Slice 20: round three (approved 2026-09-19)
 
+**All eight steps done and proved locally, 2026-09-19; not deployed.** Open until the user has
+tried it. Migrations 0011-0014. Rules 4 and 8 rewritten.
+
 Eight steps from the backlog, each proved on its own and committed on its own. One slice by the
 user's choice, over a proposed split into two. Phase mode. No deploy in this slice.
 
@@ -136,6 +139,20 @@ Rule 8 is rewritten when this lands. One AI call per disagreement. Proof: tests 
 CLI; eval fixtures that a reason moves the answer the right way.
 
 ## Step 8 — a thought section
+
+**Done 2026-09-19.** Migration 0014 (0013 in the plan, see step 2): `item_thoughts`, append-only
+by trigger, cascading with its item, `thoughts_fts` for search, `items.thought_count` by trigger.
+One thing the plan did not foresee: the count is an update of `items`, and the touch trigger would
+have moved `updated_at` on every thought -- so an editor open beside the log would be refused as
+stale on its next save. The trigger is narrowed to skip `thought_count`, as 0005 did for
+`reminded_at`. Search and Ask add items matched only by their thoughts after the ones their own
+text matched; Ask and the brief see each item's thoughts under it; a new thought refreshes the
+brief. Item page: a Thoughts card, oldest first, add box; rows show "2 thoughts". Proof:
+`tests/test_thoughts.py`, 7 tests (append and count, rewrite refused, `updated_at` unmoved and a
+stale-checked save still lands, search order, Ask prompt carries the thought, brief regenerated
+and reading it, cascade on delete); pytest 193 passed, ruff clean. Headless Chrome at 390px: two
+thoughts added and listed, the row says "2 thoughts", searching "Aldi" (only in a thought) finds
+the item. Typecheck and build pass.
 
 An append-only log of dated entries on each item, the count on its rows. New `item_thoughts`
 table with its own FTS5 index (migration 0013). Search, Ask and the space brief read the

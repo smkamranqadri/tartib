@@ -1,4 +1,4 @@
-import type { Answer, Brief, Capture, Edit, Item, Outcome, PastSession, Session, SessionState, SpaceSummary } from "./types";
+import type { Answer, Brief, Capture, Edit, Item, Outcome, PastSession, Session, SessionState, SpaceSummary, Thought } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -111,6 +111,9 @@ export const addItem = (item: { shape: "task" | "note"; space: string; text: str
 export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/items/${id}`, edit);
 export const approveItem = (id: number, edit?: Edit) =>
   send<Item>("POST", `/api/items/${id}/approve`, edit);
+export const getThoughts = (id: number) => api<{ thoughts: Thought[] }>(`/api/items/${id}/thoughts`);
+export const addThought = (id: number, body: string) =>
+  send<{ thought: Thought; thought_count: number }>("POST", `/api/items/${id}/thoughts`, { body });
 export const redoItem = (id: number, reason: string) => send<Item>("POST", `/api/items/${id}/redo`, { reason });
 export const deleteItem = (id: number) => send<{ ok: true; id: number }>("DELETE", `/api/items/${id}`);
 export const getRecent = (limit = 50, before?: number) =>

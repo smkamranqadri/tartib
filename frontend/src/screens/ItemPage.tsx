@@ -5,6 +5,7 @@ import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import Confirm from "../components/Confirm";
 import Highlight from "../components/Highlight";
+import Thoughts from "../components/Thoughts";
 import ItemEditor from "../components/ItemEditor";
 import Menu from "../components/Menu";
 import { ErrorLine, Loading } from "../components/Status";
@@ -211,6 +212,8 @@ export default function ItemPage({
           </div>
         )}
       </Card>
+
+      <Thoughts itemId={item.id} onAdded={onChanged} />
 
       <Card
         className="accordion"

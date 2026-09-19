@@ -15,7 +15,7 @@ from tartib.clock import utcnow
 from tartib.codex import CodexError, run_json
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
-from tartib.store import serialize_item
+from tartib.store import items_by_thoughts, serialize_item, thoughts_for
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -61,6 +61,11 @@ def retrieve(conn: sqlite3.Connection, question: str, space: str | None) -> tupl
             f" WHERE items_fts MATCH ?{space_sql} ORDER BY items_fts.rank, items.id DESC LIMIT ?",
             [match, *params, MAX_ITEMS],
         ).fetchall()
+        if len(rows) < MAX_ITEMS:  # and what only an item's thoughts mention
+            where = [space_sql.removeprefix(" AND ")] if space_sql else []
+            rows += items_by_thoughts(
+                conn, match, where, params, [r["id"] for r in rows], MAX_ITEMS - len(rows)
+            )
         if rows:
             return rows, True
     rows = conn.execute(
@@ -90,6 +95,8 @@ Rules:
 - For status questions, state what is open and what is done, using the task status in
   each header. Do not guess dates; "as of" means the current datetime below.
 - "item_ids" lists every item you relied on, most relevant first.
+- Lines under "Thoughts:" are the person's own dated notes on that item, added later; they are
+  part of the item.
 - A few sentences, plain text, no markdown. Do not run commands or read files.
 
 Current datetime: {now} ({zone})
@@ -99,7 +106,7 @@ Items ({count}):
 {items}"""
 
 
-def format_item(row: sqlite3.Row) -> str:
+def format_item(row: sqlite3.Row, thoughts: list | None = None) -> str:
     space = row["space"] or "(none)"
     head = f"[id {row['id']}] {row['created_at'][:10]} · space: {space} · {row['shape']}"
     if row["shape"] == "task":
@@ -107,17 +114,24 @@ def format_item(row: sqlite3.Row) -> str:
         if row["due"]:
             head += f" · due {row['due']}"
         head += f" · {row['status']}"
-    return f"{head}\n{row['raw_text']}"
+    text = f"{head}\n{row['raw_text']}"
+    if thoughts:
+        text += "\nThoughts:\n" + "\n".join(
+            f"- {t['created_at'][:10]}: {t['body']}" for t in thoughts
+        )
+    return text
 
 
-def build_prompt(question: str, rows: list, settings: Settings) -> str:
+def build_prompt(
+    question: str, rows: list, settings: Settings, thoughts: dict | None = None
+) -> str:
     now = utcnow().astimezone(settings.zone)
     return PROMPT.format(
         now=now.isoformat(),
         zone=settings.tz,
         question=question.strip(),
         count=len(rows),
-        items="\n\n".join(format_item(r) for r in rows),
+        items="\n\n".join(format_item(r, (thoughts or {}).get(r["id"])) for r in rows),
     )
 
 
@@ -129,11 +143,14 @@ EMPTY = {
 }
 
 
-async def answer_from_rows(question: str, rows: list, settings: Settings) -> dict:
-    """Ask Codex about exactly these rows and shape the reply. Raises AskError on failure."""
+async def answer_from_rows(
+    question: str, rows: list, settings: Settings, thoughts: dict | None = None
+) -> dict:
+    """Ask Codex about exactly these rows (and their thoughts) and shape the reply. Raises
+    AskError on failure."""
     try:
         data = await run_json(
-            build_prompt(question, rows, settings), ANSWER_SCHEMA, settings.codex()
+            build_prompt(question, rows, settings, thoughts), ANSWER_SCHEMA, settings.codex()
         )
     except CodexError as e:
         raise AskError(str(e)) from e
@@ -155,7 +172,8 @@ async def answer_question(
     rows, matched = await asyncio.to_thread(retrieve, conn, question, space)
     if not rows:
         return dict(EMPTY)
-    result = await answer_from_rows(question, rows, settings)
+    thoughts = await asyncio.to_thread(thoughts_for, conn, [r["id"] for r in rows])
+    result = await answer_from_rows(question, rows, settings, thoughts)
     return {**result, "matched": matched}
 
 
