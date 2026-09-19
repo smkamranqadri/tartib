@@ -55,62 +55,68 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
       <PageHead eyebrow="Dashboard" title={formatLongDate()} subtitle="Today, what needs you, and what you captured." />
       {answer && <AnswerView result={answer} onClose={onCloseAnswer} />}
       <div className="dash">
-        <Card className="area-today" icon={<StarIcon />} label="Today" aside={data ? items.length : "…"}>
-          {error && <ErrorLine>{error}</ErrorLine>}
-          {loading && !data && <Loading />}
-          {data && items.length === 0 && <Empty>Nothing due today.</Empty>}
-          {items.length > 0 && (
-            <ul className="rows flat">
-              {items.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  onChange={update}
-                  sessions={data?.sessions.by_item[String(item.id)] ?? 0}
-                />
-              ))}
-            </ul>
-          )}
-          {data && sessions > 0 && (
-            <p className="session-total">
-              <span className="muted">{sessions === 1 ? "1 session today" : `${sessions} sessions today`}</span>
-            </p>
-          )}
-        </Card>
-        <Card className="area-attention" icon={<AlertIcon />} label="Needs attention" aside={waiting ?? "…"}>
-          {!attention.data && !attention.error && <Loading />}
-          {attention.data && waiting === 0 && <Empty>All caught up.</Empty>}
-          {needing.length > 0 && (
-            <ul className="rows flat">
-              {needing.map((item) => (
-                <ItemRow key={item.id} item={item} onChange={updateAttention} />
-              ))}
-            </ul>
-          )}
-          {waiting !== null && waiting > 3 && (
+        {/* Two columns that stack on their own, so a long one never leaves a gap in the
+            other. On a phone the columns dissolve and the cards take their own order. */}
+        <div className="dash-col">
+          <Card className="area-today" icon={<StarIcon />} label="Today" aside={data ? items.length : "…"}>
+            {error && <ErrorLine>{error}</ErrorLine>}
+            {loading && !data && <Loading />}
+            {data && items.length === 0 && <Empty>Nothing due today.</Empty>}
+            {items.length > 0 && (
+              <ul className="rows flat">
+                {items.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    onChange={update}
+                    sessions={data?.sessions.by_item[String(item.id)] ?? 0}
+                  />
+                ))}
+              </ul>
+            )}
+            {data && sessions > 0 && (
+              <p className="session-total">
+                <span className="muted">{sessions === 1 ? "1 session today" : `${sessions} sessions today`}</span>
+              </p>
+            )}
+          </Card>
+          <Card className="area-recent" icon={<ClockIcon />} label="Recent" aside={<span className="muted">last 3</span>}>
+            {/* Also when there is no `data`: offline the server call fails, and a capture waiting
+                to send is exactly what you want to see then. Hiding it behind the load was how
+                the queue became invisible in the one situation it exists for. */}
+            {(data || pending.length > 0) && (
+              <RecentList captures={data?.recent ?? []} pending={pending} />
+            )}
+            {!data && pending.length === 0 && loading && <Loading />}
             <p className="view-all">
-              <Link to="/inbox">View all →</Link>
+              <Link to="/inbox/recent">View all →</Link>
             </p>
-          )}
-          {data?.active_space && (
-            <p className="side-note muted">
-              <Link to={`/spaces/${data.active_space}`}>{data.active_space}</Link> is the most recently touched space.
-            </p>
-          )}
-        </Card>
-        <SessionBar placement="card" />
-        <Card className="area-recent" icon={<ClockIcon />} label="Recent" aside={<span className="muted">last 3</span>}>
-          {/* Also when there is no `data`: offline the server call fails, and a capture waiting
-              to send is exactly what you want to see then. Hiding it behind the load was how
-              the queue became invisible in the one situation it exists for. */}
-          {(data || pending.length > 0) && (
-            <RecentList captures={data?.recent ?? []} pending={pending} />
-          )}
-          {!data && pending.length === 0 && loading && <Loading />}
-          <p className="view-all">
-            <Link to="/inbox/recent">View all →</Link>
-          </p>
-        </Card>
+          </Card>
+        </div>
+        <div className="dash-col">
+          <Card className="area-attention" icon={<AlertIcon />} label="Needs attention" aside={waiting ?? "…"}>
+            {!attention.data && !attention.error && <Loading />}
+            {attention.data && waiting === 0 && <Empty>All caught up.</Empty>}
+            {needing.length > 0 && (
+              <ul className="rows flat">
+                {needing.map((item) => (
+                  <ItemRow key={item.id} item={item} onChange={updateAttention} />
+                ))}
+              </ul>
+            )}
+            {waiting !== null && waiting > 3 && (
+              <p className="view-all">
+                <Link to="/inbox">View all →</Link>
+              </p>
+            )}
+            {data?.active_space && (
+              <p className="side-note muted">
+                <Link to={`/spaces/${data.active_space}`}>{data.active_space}</Link> is the most recently touched space.
+              </p>
+            )}
+          </Card>
+          <SessionBar placement="card" />
+        </div>
       </div>
     </div>
   );

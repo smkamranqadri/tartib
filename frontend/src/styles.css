@@ -124,12 +124,8 @@ button:disabled { opacity: .5; cursor: default; }
 .screen { display: flex; flex-direction: column; gap: 16px; }
 
 /* dashboard */
-.dash {
-  display: grid; gap: 18px; align-items: start;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  grid-template-areas: "today attention" "today session" "recent session";
-}
-.area-today { grid-area: today; } .area-attention { grid-area: attention; } .area-recent { grid-area: recent; } .area-session { grid-area: session; }
+.dash { display: grid; gap: 18px; align-items: start; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.dash-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .side-note { margin: 10px 16px 8px; font-size: 13px; }
 .side-note a { color: var(--fg); text-decoration: none; font-weight: 600; }
 
@@ -279,7 +275,7 @@ button:disabled { opacity: .5; cursor: default; }
 .card-body .when { font-size: inherit; }
 
 /* chat bar + toast */
-.app.has-askbar { padding-bottom: 120px; }
+.app.has-askbar { padding-bottom: calc(var(--askbar-h, 120px) + 24px); }
 .askbar {
   /* Edge to edge like the nav; what it holds stays in a 720px column. */
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
@@ -297,7 +293,7 @@ button:disabled { opacity: .5; cursor: default; }
   background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 999px; font-size: 14px;
   box-shadow: 0 4px 16px rgba(0,0,0,.18); z-index: 30; animation: toast-in .15s ease-out;
 }
-.has-askbar .toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
+.has-askbar .toast { bottom: calc(var(--askbar-h, 96px) + 12px); }
 .toast.final { animation: toast-in .15s ease-out, toast-out .3s ease-in 3.7s forwards; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes toast-out { to { opacity: 0; } }
@@ -312,7 +308,10 @@ button:disabled { opacity: .5; cursor: default; }
   .row.revealed .row-actions { display: inline-flex; }
 }
 @media (max-width: 900px) {
-  .dash { grid-template-columns: 1fr; grid-template-areas: "today" "attention" "session" "recent"; }
+  .dash { grid-template-columns: 1fr; }
+  /* A phone reads top to bottom: the session first, then the day. */
+  .dash-col { display: contents; }
+  .area-session { order: 0; } .area-today { order: 1; } .area-attention { order: 2; } .area-recent { order: 3; }
 }
 @media (max-width: 640px) {
   .app { --gutter: 16px; }
@@ -328,9 +327,7 @@ button:disabled { opacity: .5; cursor: default; }
   .page-head h1 { font-size: 22px; }
   .pref { flex-direction: column; align-items: flex-start; }
   .pref-ctl { text-align: left; }
-  .app.has-askbar { padding-bottom: 170px; }
   .ask input { flex-basis: 100%; }
-  .has-askbar .toast { bottom: calc(140px + env(safe-area-inset-bottom)); }
 }
 
 /* slice 8 */
@@ -433,8 +430,10 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .session-again { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .session-again .icon-btn { width: 28px; height: 28px; color: var(--session); }
 
-/* Off Home, a live session floats: pinned just above the ask bar while the page scrolls. */
-.session-bar.floating { position: sticky; z-index: 15; bottom: calc(max(var(--askbar-h, 0px), env(safe-area-inset-bottom)) + 12px); box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+/* Off Home, a live session rides on the ask bar, above the question. */
+.askbar .session-bar { margin: 0 0 10px; padding: 8px 12px; }
+.askbar .session-ring { width: 36px; height: 36px; }
+.askbar .session-time { font-size: 17px; }
 /* On Home it is the body of an ordinary card: the card draws the edge. */
 .card .session-bar { margin: 0; border: 0; border-radius: 0 0 12px 12px; }
 .card .session-bar.idle { background: none; }

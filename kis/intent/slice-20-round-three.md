@@ -124,6 +124,15 @@ outcome, which was read as live so the question is not hidden until Home. Proof:
 Chrome -- Home idle at 1280px and running at 390px: inside the Session card, not sticky; Inbox
 idle: no card; Inbox running at 390px and Settings running at 1280px: floating and sticky.
 
+And settled again after a look: the Home grid shared rows between its columns, so a tall Needs
+attention left a gap under Today; it is now two columns that stack on their own (`.dash-col`),
+dissolving on a phone (`display: contents`) into the order Session, Today, Needs attention,
+Recent. Off Home, the live session now rides inside the ask bar, above the question, rather than
+floating separately; the page's bottom padding and the toast follow the bar's measured height.
+Proof: headless Chrome with a session running -- Home at 1280px dark: 18px from Today to Recent;
+Home at 390px: Session, Today, Needs attention, Recent top to bottom; Recent at 390px scrolled to
+the end: the session inside the ask bar, the last card clearing it.
+
 ## Step 6 — the space page split view
 
 **Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an
