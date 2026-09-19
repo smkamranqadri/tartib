@@ -244,7 +244,6 @@ export default function App() {
           onCaptured={onCaptured}
           onQueued={() => showToast({ text: "Saved offline", phase: "final" })}
         />
-        <SessionBar />
         <main>
           <Routes>
             <Route path="/" element={<Home version={version} answer={answer} pending={pending} onCloseAnswer={() => setAnswer(null)} />} />
@@ -265,6 +264,9 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+        {/* At the foot of every page, held just above the ask bar (or the screen edge) while
+            the page scrolls, so a running timer is always in view without leading the page. */}
+        <SessionBar />
         {showChat && <AskBar spaces={spaces} />}
         <Toast toast={toast} />
       </div>

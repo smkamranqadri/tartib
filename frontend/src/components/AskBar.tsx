@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ask } from "../api";
 import type { Answer } from "../types";
 import AnswerView from "./AnswerView";
@@ -26,8 +26,23 @@ export default function AskBar({ spaces }: { spaces: string[] }) {
     }
   }
 
+  // Publish the bar's height, so what sits above it (the session card) clears it exactly -- it
+  // grows with an answer, and wraps to two rows on a phone.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const obs = new ResizeObserver(() => root.style.setProperty("--askbar-h", `${el.offsetHeight}px`));
+    obs.observe(el);
+    return () => {
+      obs.disconnect();
+      root.style.removeProperty("--askbar-h");
+    };
+  }, []);
+
   return (
-    <div className="askbar">
+    <div className="askbar" ref={ref}>
       {result && <AnswerView result={result} onClose={() => setResult(null)} />}
       {error && <p className="error">{error}</p>}
       <form className="ask" onSubmit={submit}>

@@ -97,6 +97,13 @@ token in both themes. Rule 4 is rewritten as approved on 2026-09-19 -- a space m
 sessions; charts, streaks, cycles and long-break logic stay banned. Proof: browser, running and
 done, light and dark; space page list.
 
+Moved after a look on the device, same day: the card left the top of every page for its foot,
+`position: sticky` just above the ask bar -- whose height the bar publishes as `--askbar-h`
+through a ResizeObserver, since it grows with an answer and wraps on a phone -- or above the
+screen edge where there is none. Proof: headless Chrome with a session running, Home at 390px
+and 1280px, a space and Recent at 390px: the card is in view at the top and at the end of each
+page and always clears the ask bar.
+
 ## Step 6 — the space page split view
 
 **Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an
