@@ -65,6 +65,25 @@ def list_spaces(conn: sqlite3.Connection) -> list[str]:
     return [r["name"] for r in conn.execute("SELECT name FROM spaces ORDER BY position, name")]
 
 
+def space_policies(conn: sqlite3.Connection) -> dict[str, str]:
+    return {r["name"]: r["policy"] for r in conn.execute("SELECT name, policy FROM spaces")}
+
+
+def should_file(
+    space: str | None, confidence: float, threshold: float, policies: dict[str, str]
+) -> bool:
+    """Whether a proposal files itself. No space never files; otherwise the space's policy
+    decides, and `auto` falls back to the global confidence threshold."""
+    if space is None:
+        return False
+    policy = policies.get(space, "auto")
+    if policy == "ask":
+        return False
+    if policy == "file":
+        return True
+    return confidence >= threshold
+
+
 def _clean(fields: dict, allowed: Sequence[str]) -> dict:
     values = {k: to_db_value(k, v) for k, v in fields.items() if k in EDITABLE_FIELDS}
     if "text" in values:

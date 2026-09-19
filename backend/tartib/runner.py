@@ -12,7 +12,7 @@ from tartib.ask import AskError, answer_question
 from tartib.classify import ClassifyError, Context, Proposal, classify
 from tartib.clock import utcnow, utcnow_iso
 from tartib.config import Settings
-from tartib.store import SpaceError, insert_item, list_spaces
+from tartib.store import SpaceError, insert_item, list_spaces, should_file, space_policies
 
 log = logging.getLogger("tartib.runner")
 
@@ -248,10 +248,13 @@ class Runner:
     ) -> None:
         conn = self._connect()
         try:
+            policies = space_policies(conn)
             for p in proposals:
                 if p.shape == "question":
                     continue
-                filed = p.space is not None and p.confidence >= self.settings.autofile_confidence
+                filed = should_file(
+                    p.space, p.confidence, self.settings.autofile_confidence, policies
+                )
                 fields = p.model_dump(include={"shape", "space", "title", "due", "remind_at"})
                 try:
                     insert_item(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -11,7 +12,7 @@ from pydantic import BaseModel, Field
 from tartib.auth import require_auth
 from tartib.clock import utcnow_iso
 from tartib.deps import get_db
-from tartib.store import list_spaces
+from tartib.store import list_spaces, space_policies
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -43,9 +44,24 @@ class SpaceBody(BaseModel):
     name: str = Field(min_length=1, max_length=64)
 
 
+class PolicyBody(BaseModel):
+    policy: Literal["auto", "ask", "file"]
+
+
 @router.get("/spaces")
 def get_spaces(conn: sqlite3.Connection = Depends(get_db)) -> dict:
-    return {"spaces": list_spaces(conn)}
+    return {"spaces": list_spaces(conn), "policies": space_policies(conn)}
+
+
+@router.put("/spaces/{name}/policy")
+def set_policy(name: str, body: PolicyBody, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """How this space takes proposals: the global rule, always ask, or always file."""
+    space = name.strip().lower()
+    if space not in list_spaces(conn):
+        raise HTTPException(status_code=404, detail="unknown space")
+    conn.execute("UPDATE spaces SET policy = ? WHERE name = ?", (body.policy, space))
+    conn.commit()
+    return {"name": space, "policy": body.policy}
 
 
 @router.post("/spaces", status_code=201)

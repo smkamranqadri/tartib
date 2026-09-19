@@ -12,20 +12,20 @@ def test_seeded_from_env_once(tmp_path):
     settings = make_settings(tmp_path, TARTIB_SPACES="alpha,beta")
     with TestClient(create_app(settings)) as c:
         c.headers["Authorization"] = f"Bearer {PASSWORD}"
-        assert c.get("/api/spaces").json() == {"spaces": ["alpha", "beta"]}
+        assert c.get("/api/spaces").json()["spaces"] == ["alpha", "beta"]
         c.post("/api/spaces", json={"name": "gamma"})
     # env changes later are ignored: the table is the truth now
     with TestClient(create_app(make_settings(tmp_path, TARTIB_SPACES="zeta"))) as c:
         c.headers["Authorization"] = f"Bearer {PASSWORD}"
-        assert c.get("/api/spaces").json() == {"spaces": ["alpha", "beta", "gamma"]}
+        assert c.get("/api/spaces").json()["spaces"] == ["alpha", "beta", "gamma"]
 
 
 def test_no_env_means_no_spaces_until_created(tmp_path):
     with TestClient(create_app(make_settings(tmp_path, TARTIB_SPACES=""))) as c:
         c.headers["Authorization"] = f"Bearer {PASSWORD}"
-        assert c.get("/api/spaces").json() == {"spaces": []}
+        assert c.get("/api/spaces").json()["spaces"] == []
         assert c.post("/api/spaces", json={"name": " Gym "}).status_code == 201
-        assert c.get("/api/spaces").json() == {"spaces": ["gym"]}
+        assert c.get("/api/spaces").json()["spaces"] == ["gym"]
 
 
 def test_create_validation(auth):

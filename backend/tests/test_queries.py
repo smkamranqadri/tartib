@@ -103,7 +103,7 @@ def test_attention_oldest_first(auth):
 
 
 def test_spaces_come_from_config(auth):
-    assert auth.get("/api/spaces").json() == {"spaces": SPACES.split(",")}
+    assert auth.get("/api/spaces").json()["spaces"] == SPACES.split(",")
 
 
 def test_all_newest_first_with_filters_and_paging(auth):

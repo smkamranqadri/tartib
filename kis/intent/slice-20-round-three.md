@@ -44,6 +44,16 @@ call, capture marked direct); browser.
 
 ## Step 3 — a filing policy per space
 
+**Done 2026-09-19.** Migration 0012 (not 0011, see step 2). `store.should_file` is the one rule;
+the runner calls it per proposal with the spaces' policies read once per capture. `GET
+/api/spaces` gained `policies`; `PUT /api/spaces/{name}/policy`. The space page's "..." lists
+"Files when sure", "Always ask me", "Always file here" with a tick on the current one, and the
+subtitle says so when it is not the default. Three existing tests compared the whole `/api/spaces`
+body and now compare its `spaces` list. Proof: `tests/test_policy.py` -- the rule table, no space
+never files, the runner filing and holding by policy through the fake CLI, and the API (listed,
+set, kept across a rename, 404, 422); pytest 180 passed, ruff clean. Headless Chrome at 390px: the
+menu sets and ticks each policy, the server stores it, and the subtitle line matches.
+
 `spaces.policy`: `auto` (the global threshold), `ask` (always wait), `file` (always file when the
 proposal names this space). Migration 0011. The runner applies it, as does step 7's re-run. Set
 from the space page's "...". A rule the database and runner enforce, not a prompt line. Proof:

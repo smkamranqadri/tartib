@@ -72,7 +72,10 @@ export const subscribePush = (endpoint: string, keys: { p256dh: string; auth: st
   send<{ id: number }>("POST", "/api/subscriptions", { endpoint, keys });
 export const unsubscribePush = (endpoint: string) =>
   send<{ ok: true; removed: number }>("DELETE", "/api/subscriptions", { endpoint });
-export const getSpaces = () => api<{ spaces: string[] }>("/api/spaces");
+export type SpacePolicy = "auto" | "ask" | "file";
+export const getSpaces = () => api<{ spaces: string[]; policies: Record<string, SpacePolicy> }>("/api/spaces");
+export const setSpacePolicy = (space: string, policy: SpacePolicy) =>
+  send<{ name: string; policy: SpacePolicy }>("PUT", `/api/spaces/${encodeURIComponent(space)}/policy`, { policy });
 
 export const getCurrentSession = () => api<SessionState>("/api/sessions/current");
 export const startSession = (item_id: number | null) => send<Session>("POST", "/api/sessions", { item_id });

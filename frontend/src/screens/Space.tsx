@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { deleteSpace, renameSpace } from "../api";
+import { deleteSpace, getSpaces, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
 import Confirm from "../components/Confirm";
@@ -8,7 +8,14 @@ import Menu from "../components/Menu";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import SearchAsk from "../components/SearchAsk";
+import { useLoad } from "../useLoad";
 import SpaceDetail, { type ShapeFilter } from "./SpaceDetail";
+
+const POLICY: Record<SpacePolicy, { menu: string; note: string }> = {
+  auto: { menu: "Files when sure", note: "" },
+  ask: { menu: "Always ask me", note: "Nothing files here without you." },
+  file: { menu: "Always file here", note: "Anything proposed for here files itself." },
+};
 
 /** One space on its own page: back, title row with filter and manage, scoped search, detail. */
 export default function Space({ version, onChanged }: { version: number; onChanged: () => void }) {
@@ -23,6 +30,18 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const [manageError, setManageError] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const spaces = useLoad(getSpaces, [version]);
+  const policy: SpacePolicy = spaces.data?.policies[space] ?? "auto";
+
+  async function choosePolicy(next: SpacePolicy) {
+    setManageError(null);
+    try {
+      await setSpacePolicy(space, next);
+      spaces.reload();
+    } catch (err) {
+      setManageError(err instanceof Error ? err.message : "failed");
+    }
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim()), 200);
@@ -53,7 +72,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
     <div className="screen">
       <BackLink fallback="/spaces" />
       <div className="title-row">
-        <PageHead eyebrow="Spaces" title={space} subtitle="Brief, tasks, and notes in this space." />
+        <PageHead eyebrow="Spaces" title={space} subtitle={`Brief, tasks, and notes in this space.${POLICY[policy].note ? ` ${POLICY[policy].note}` : ""}`} />
         <div className="title-actions">
           <div className="seg" role="group" aria-label="Shape">
             {(["all", "task", "note"] as ShapeFilter[]).map((f) => (
@@ -86,6 +105,11 @@ export default function Space({ version, onChanged }: { version: number; onChang
             <Menu
               label="Manage space"
               items={[
+                ...(["auto", "ask", "file"] as SpacePolicy[]).map((p) => ({
+                  label: `${policy === p ? "✓ " : ""}${POLICY[p].menu}`,
+                  title: p === "auto" ? "Files a proposal when the classifier is confident enough" : undefined,
+                  onSelect: () => void choosePolicy(p),
+                })),
                 { label: "Rename", onSelect: () => setRenaming(true) },
                 {
                   label: itemCount ? `Delete (${itemCount} items)` : "Delete",
