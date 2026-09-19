@@ -5,7 +5,7 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 20, round three** -- approved 2026-09-19. Steps 1 to 6 done; step 7 next. Plan:
+- Task: **slice 20, round three** -- approved 2026-09-19. Steps 1 to 7 done; step 8 next. Plan:
   `kis/intent/slice-20-round-three.md`. Mode: Phase, eight steps.
 - Slice 19, small items round two, closed 2026-09-19, not deployed:
   `kis/intent/slice-19-small-items-2.md`. Migration 0010 (`captures.attempts`) runs on the next
@@ -30,6 +30,10 @@
 
 ## Open
 
+- **Codex usage limit hit on 2026-09-19**, "try again at Sep 20th, 2026 1:51 AM" (seen during
+  the slice 20 eval). If the deployed server uses the same account, captures there park in Needs
+  Attention with `proposal_error` until then; v1.0 has no automatic retry (slice 19, undeployed),
+  so they wait for a person or `reclassify --attention`.
 - **The deployed `v1.0` still carries the Claude fallback**, which hangs for the full 120s
   timeout on that host, so a Codex failure there costs 120s per capture and fails anyway. Removed
   from the code in slice 18 step 1; gone from the server at `v1.1`. Until then, unsetting

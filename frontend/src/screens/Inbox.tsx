@@ -89,7 +89,7 @@ export default function Inbox({
                 hotkey={i === 0}
                 onApproved={(id) => replace(id, null)}
                 onNotNow={(id) => setDeferred((d) => [...d.filter((x) => x !== id), id])}
-                onRejected={(next) => replace(next.id, next)}
+                onRetried={(next) => replace(next.id, next)}
               />
             ))}
           </div>

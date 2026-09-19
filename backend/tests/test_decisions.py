@@ -1,4 +1,4 @@
-"""Approve, reject, and edit against configured spaces."""
+"""Approve and edit against configured spaces. Tell-it-why is in test_redo.py."""
 
 import sqlite3
 
@@ -37,30 +37,11 @@ def test_approve_applies_stored_proposal(auth, settings):
     assert body["proposal"]["confidence"] == 0.5  # kept for inspection
 
 
-def test_reject_discards_proposal_and_keeps_item_waiting(auth, settings):
-    item = one_item(auth, "whatever")
-    conn = sqlite3.connect(settings.db_path)
-    conn.execute(
-        "UPDATE items SET shape='task', title='T', due='2026-01-01',"
-        ' proposal_json=\'{"shape":"task"}\' WHERE id = ?',
-        (item["id"],),
-    )
-    conn.commit()
-    conn.close()
-    body = auth.post(f"/api/items/{item['id']}/reject").json()
-    assert body["stage"] == "attention"
-    assert body["shape"] == "note" and body["space"] is None
-    assert body["title"] is None and body["due"] is None
-    assert body["proposal"] is None and body["proposal_error"] is None
-    assert body["raw_text"] == "whatever"
-    assert [i["id"] for i in auth.get("/api/attention").json()["items"]] == [item["id"]]
-
-
 def test_decisions_require_attention_stage(auth):
     item = one_item(auth, "x")
     auth.post(f"/api/items/{item['id']}/approve", json={"space": "work"})
     assert auth.post(f"/api/items/{item['id']}/approve").status_code == 409
-    assert auth.post(f"/api/items/{item['id']}/reject").status_code == 409
+    assert auth.post(f"/api/items/{item['id']}/redo", json={"reason": "no"}).status_code == 409
 
 
 def test_edit_fields_and_space_validation(auth):

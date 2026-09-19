@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { approveItem, rejectItem } from "../api";
+import { approveItem, redoItem } from "../api";
 import { formatDue, waitingReason } from "../format";
 import type { Item, Shape } from "../types";
 import Menu from "./Menu";
@@ -26,18 +26,22 @@ export default function ApprovalCard({
   hotkey,
   onApproved,
   onNotNow,
-  onRejected,
+  onRetried,
 }: {
   item: Item;
   spaces: string[];
   hotkey?: boolean;
   onApproved: (id: number) => void;
   onNotNow?: (id: number) => void;
-  onRejected: (next: Item) => void;
+  /** The classifier tried again and the item is still waiting, with a new proposal. */
+  onRetried: (next: Item) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() => draftOf(item));
   const [editing, setEditing] = useState<"title" | "due" | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // Tell it why: the reason being written, and whether the classifier is on it.
+  const [why, setWhy] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
 
   useEffect(() => {
     setDraft(draftOf(item));
@@ -63,11 +67,21 @@ export default function ApprovalCard({
     }
   }
 
-  async function reject() {
+  async function tryAgain() {
+    const reason = (why ?? "").trim();
+    if (!reason || asking) return;
+    setAsking(true);
+    setMsg(null);
     try {
-      onRejected(await rejectItem(item.id));
+      const next = await redoItem(item.id, reason);
+      setWhy(null);
+      // A confident second answer files itself, like any capture; then this card is done.
+      if (next.stage === "filed") onApproved(item.id);
+      else onRetried(next);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "failed");
+    } finally {
+      setAsking(false);
     }
   }
 
@@ -75,6 +89,7 @@ export default function ApprovalCard({
     if (!hotkey) return;
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement | null;
+      if (t?.closest(".why")) return; // Enter there sends the reason, not an approval
       const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
       if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
         if (typing && t.tagName === "TEXTAREA") return;
@@ -128,7 +143,34 @@ export default function ApprovalCard({
       </p>
       <p className="reason muted small">{waitingReason(item)}</p>
       {msg && <p className="error">{msg}</p>}
-      <div className="decisions">
+      {why !== null && (
+        <form
+          className="why"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void tryAgain();
+          }}
+        >
+          <input
+            autoFocus
+            value={why}
+            onChange={(e) => setWhy(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setWhy(null)}
+            placeholder="What's wrong with it? e.g. this is a home task"
+            aria-label="Why"
+            maxLength={500}
+            disabled={asking}
+          />
+          <button type="submit" className="primary" disabled={asking || !why.trim()}>
+            {asking ? "Asking…" : "Try again"}
+          </button>
+          <button type="button" className="ghost" onClick={() => setWhy(null)} disabled={asking}>
+            Cancel
+          </button>
+        </form>
+      )}
+      {/* While a reason is being written, that is the decision on the table. */}
+      <div className="decisions" hidden={why !== null}>
         <button type="button" className="primary" onClick={() => void approve()}>
           Approve {hotkey && <kbd>↵</kbd>}
         </button>
@@ -139,7 +181,7 @@ export default function ApprovalCard({
         )}
         <Menu
           items={[
-            { label: "Reject proposal", danger: true, onSelect: () => void reject() },
+            { label: "Tell it why…", onSelect: () => setWhy("") },
             { label: "Open", to: `/items/${item.id}` },
           ]}
         />

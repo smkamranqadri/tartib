@@ -163,3 +163,58 @@ def test_classifier_eval():
             failures.append(f"{tag} -> remind_at {p0.remind_at} expected {flags['remind_at']}")
     if failures:
         pytest.fail("\n".join(failures))
+
+
+# Tell it why: (text, earlier proposal, the person's reason, expected shape, expected space).
+# The third keeps the space: a reason about the shape must not move the item elsewhere.
+REDO_FIXTURES = [
+    (
+        "call Sara about the lease",
+        {"shape": "note", "space": "work", "title": None, "due": None, "confidence": 0.5},
+        "it is something I have to do, and it is about my flat, so home",
+        "task",
+        "home",
+    ),
+    (
+        "Book the car service",
+        {"shape": "task", "space": "finance", "title": "Book the car service", "confidence": 0.6},
+        "not money, this is a house thing",
+        "task",
+        "home",
+    ),
+    (
+        "Standup moved to 10:30",
+        {"shape": "task", "space": "work", "title": "Move standup", "confidence": 0.6},
+        "that is just information, nothing to do",
+        "note",
+        "work",
+    ),
+]
+
+
+@pytest.mark.eval
+def test_a_reason_moves_the_answer():
+    if shutil.which("codex") is None:
+        pytest.skip("codex CLI not installed")
+    import json
+
+    context = Context(now=NOW, zone=ZONE, spaces=SPACES, codex=CodexConfig(command="codex"))
+
+    async def run_all():
+        return await asyncio.gather(
+            *(
+                classify(text, context, correction=(json.dumps(earlier), reason))
+                for text, earlier, reason, *_ in REDO_FIXTURES
+            )
+        )
+
+    failures = []
+    for (text, _, reason, shape, space), proposals in zip(
+        REDO_FIXTURES, asyncio.run(run_all()), strict=True
+    ):
+        p = next((p for p in proposals if p.shape != "question"), None)
+        got = (p.shape, p.space) if p else None
+        if got != (shape, space):
+            failures.append(f"{text!r} + {reason!r}: got {got}, expected {(shape, space)}")
+    if failures:
+        pytest.fail("\n".join(failures))

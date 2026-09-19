@@ -11,8 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from tartib.auth import require_auth
-from tartib.clock import utcnow_iso
-from tartib.deps import get_db
+from tartib.classify import ClassifyError, Context, classify
+from tartib.clock import utcnow, utcnow_iso
+from tartib.config import Settings
+from tartib.deps import get_db, get_settings
 from tartib.store import (
     SpaceError,
     capture_by_client_id,
@@ -21,6 +23,8 @@ from tartib.store import (
     insert_item,
     list_spaces,
     serialize_item,
+    should_file,
+    space_policies,
     update_fields,
 )
 
@@ -220,17 +224,70 @@ def approve(
     return _write(go)
 
 
-@router.post("/items/{item_id}/reject")
-def reject(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
-    """Discard the proposal. The item stays in Needs Attention as a plain note with no space."""
+class RedoBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=500)
+
+
+@router.post("/items/{item_id}/redo")
+async def redo(
+    item_id: int,
+    body: RedoBody,
+    conn: sqlite3.Connection = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    """Disagree with a proposal and say why: the classifier tries again with the reason. This
+    replaced Reject -- a disagreement always gets another attempt, never a discarded proposal.
+    The new proposal follows the normal rules, the space's policy included, so a confident one
+    files itself. The reason is kept on the item whatever happens next."""
     row = fetch_item(conn, item_id)
     _require_attention(row)
+    reason = " ".join(body.reason.split())
+    if not reason:
+        raise HTTPException(status_code=422, detail="say why")
+    if not settings.ai_enabled:
+        raise HTTPException(
+            status_code=409, detail="The classifier is off, so it cannot try again."
+        )
+    line = f"{utcnow_iso()[:10]}: {reason}"
     conn.execute(
-        "UPDATE items SET shape = 'note', space = NULL, title = NULL, due = NULL,"
-        " remind_at = NULL, proposal_json = NULL, proposal_error = NULL WHERE id = ?",
-        (item_id,),
+        "UPDATE items SET feedback = COALESCE(feedback || char(10), '') || ? WHERE id = ?",
+        (line, item_id),
     )
     conn.commit()
+
+    earlier = row["proposal_json"] or json.dumps({"shape": row["shape"], "space": row["space"]})
+    context = Context(
+        now=utcnow().astimezone(settings.zone),
+        zone=settings.zone,
+        spaces=list_spaces(conn),
+        codex=settings.codex(),
+    )
+    try:
+        proposals = await classify(row["raw_text"], context, correction=(earlier, reason))
+    except ClassifyError as e:
+        raise HTTPException(status_code=502, detail=f"Could not try again: {e}") from e
+    proposal = next((p for p in proposals if p.shape != "question"), None)
+    if proposal is None:
+        raise HTTPException(status_code=502, detail="The classifier read it as a question.")
+
+    fields = proposal.model_dump(include={"shape", "space", "title", "due", "remind_at"})
+    proposal_json = proposal.model_dump_json(exclude={"text"})
+    allowed = list_spaces(conn)
+    if should_file(
+        proposal.space, proposal.confidence, settings.autofile_confidence, space_policies(conn)
+    ):
+        file_item(conn, item_id, fields, allowed, proposal_json=proposal_json)
+    else:
+        # Still waiting: every proposal field is replaced, the ones it leaves empty included.
+        update_fields(conn, item_id, fields, allowed)
+        conn.execute(
+            "UPDATE items SET proposal_json = ?, proposal_error = NULL, classified_at = ?"
+            " WHERE id = ?",
+            (proposal_json, utcnow_iso(), item_id),
+        )
+        conn.commit()
     return serialize_item(fetch_item(conn, item_id))
 
 

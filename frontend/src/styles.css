@@ -413,3 +413,7 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .split-item { position: sticky; top: 96px; max-height: calc(100vh - 110px); overflow-y: auto; }
 .split-item .screen { padding: 0; }
 .split-empty { padding: 40px 20px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
+
+/* Tell it why: one line of reason under the proposal, sent back to the classifier. */
+.why { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.why input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }

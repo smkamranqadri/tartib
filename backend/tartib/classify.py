@@ -109,13 +109,28 @@ Text:
 {text}"""
 
 
-def build_prompt(text: str, context: Context) -> str:
-    return PROMPT.format(
+CORRECTION = """
+
+The person disagreed with an earlier proposal for this text and said why. Their reason outranks
+your first reading; every rule above still holds, including that a space must be one of the
+existing spaces.
+Earlier proposal: {earlier}
+Their reason: {reason}"""
+
+
+def build_prompt(text: str, context: Context, correction: tuple[str, str] | None = None) -> str:
+    """`correction` is (earlier proposal as JSON, the person's reason), when asked again."""
+    prompt = PROMPT.format(
         now=context.now.isoformat(),
         zone=context.zone.key,
         spaces=", ".join(context.spaces),
         text=text,
     )
+    if correction is not None:
+        earlier, reason = correction
+        head, _, tail = prompt.rpartition("\n\nText:\n")
+        prompt = head + CORRECTION.format(earlier=earlier, reason=reason) + "\n\nText:\n" + tail
+    return prompt
 
 
 def _normalize(p: Proposal, context: Context) -> Proposal:
@@ -143,9 +158,11 @@ def _normalize(p: Proposal, context: Context) -> Proposal:
     return p.model_copy(update=update)
 
 
-async def classify(text: str, context: Context) -> list[Proposal]:
+async def classify(
+    text: str, context: Context, correction: tuple[str, str] | None = None
+) -> list[Proposal]:
     try:
-        data = await run_json(build_prompt(text, context), OUTPUT_SCHEMA, context.codex)
+        data = await run_json(build_prompt(text, context, correction), OUTPUT_SCHEMA, context.codex)
     except CodexError as e:
         raise ClassifyError(str(e)) from e
     try:

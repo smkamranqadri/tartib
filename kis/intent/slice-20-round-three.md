@@ -112,6 +112,23 @@ working; phones unchanged. Proof: browser at 1280px and 390px.
 
 ## Step 7 — tell it why, instead of rejecting it
 
+**Done 2026-09-19.** `POST /api/items/{id}/redo {reason}` replaces `/reject`, which is gone
+(404/405). The reason is normalised, appended to `items.feedback` as "YYYY-MM-DD: reason" and
+committed before the AI call. `classify` takes `correction=(earlier proposal JSON, reason)`,
+placed just above the text, restating that a space must be an existing one. The first
+non-question proposal replaces the item's fields and proposal; `should_file` (so the space's
+policy too) decides filed or still waiting. The card's "..." says "Tell it why..." -- a one-line
+reason with Try again; the Approve row hides meanwhile, and Enter in the reason is not an
+approval. Rule 8 rewritten. Proof: `tests/test_redo.py`, 6 tests (confident re-run files, with
+the reason and earlier proposal in the recorded prompt and the text still last; unsure stays
+waiting; the `ask` policy holds; reasons accumulate and survive a 502; 422/409 refusals; reject
+is gone), the old reject test removed; pytest 186 passed; ruff clean. Real-Codex eval: 3 new
+cases (note to task and work to home; finance to home; task to note keeping its space) and the
+22 existing ones passed on the first run. A second run could not reach the model: the Codex
+usage limit hit ("try again at Sep 20th, 2026 1:51 AM"), so it is one clean run, not two.
+Headless Chrome with the fake CLI: "Tell it why..." -> reason -> Enter filed the item to home,
+the card left the list, the reason was stored.
+
 Replaces Reject. A sentence from the user re-runs the classifier on that item's text with the
 reason as extra context. The new proposal follows the normal rules and the space's policy. The
 reason is stored as `items.feedback` (migration 0012); the raw text is never rewritten (rule 1).

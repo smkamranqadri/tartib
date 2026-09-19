@@ -111,7 +111,7 @@ export const addItem = (item: { shape: "task" | "note"; space: string; text: str
 export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/items/${id}`, edit);
 export const approveItem = (id: number, edit?: Edit) =>
   send<Item>("POST", `/api/items/${id}/approve`, edit);
-export const rejectItem = (id: number) => send<Item>("POST", `/api/items/${id}/reject`);
+export const redoItem = (id: number, reason: string) => send<Item>("POST", `/api/items/${id}/redo`, { reason });
 export const deleteItem = (id: number) => send<{ ok: true; id: number }>("DELETE", `/api/items/${id}`);
 export const getRecent = (limit = 50, before?: number) =>
   api<{ captures: Capture[]; next_before: number | null }>(`/api/recent?limit=${limit}${before ? `&before=${before}` : ""}`);
