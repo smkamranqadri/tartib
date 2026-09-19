@@ -5,7 +5,9 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 18, small fixes** closed 2026-09-19, not deployed:
+- Task: **slice 19, small items round two** -- approved 2026-09-19, no step started. Plan:
+  `kis/intent/slice-19-small-items-2.md`. Mode: Standard.
+- Slice 18, small fixes, closed 2026-09-19, not deployed:
   `kis/intent/slice-18-small-fixes.md`. When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`,
   `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come out of the CapRover app config.
 - Next, in no fixed order:

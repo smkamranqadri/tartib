@@ -41,8 +41,24 @@ Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
   and over-application -- a correction applied where it did not belong -- went 1/2 to 0/6 only
   after a prompt fix, so test for that specifically. Decided 2026-09-19.
 
+Slice 19 (`slice-19-small-items-2.md`, planned 2026-09-19) takes: failed-capture retry (from the
+candidates), proposed due dates, "Say why an item needs you", Inbox tabs, the session-end ring,
+and "Refuse a stale save". Those leave this file when it closes. Dropped the same day: "a
+notification key that cannot fire twice" -- all three pushers already hold a once-only guard
+(`reminded_at`, `digest_date`, `notified_at`).
+
 Approved on 2026-09-19, not yet planned and none of it sized. "Link, don't duplicate" is scope for 14
 rather than work beside it:
+
+  Also, moved in 2026-09-19 from the approved list -- **one set of shared rules across both prompts.** Tartib has two prompts, classify and ask, and
+  each carries its own copy of the item header format and the datetime handling. Two copies of
+  one rule drift: on an earlier build the two prompts ended up disagreeing about the single rule
+  they shared, one saying never invent a domain and the other saying null beats a wrong one,
+  without anyone deciding it. Shared rules live once; each prompt adds only what genuinely
+  differs. Do this before or with 14 -- an editable override is far more dangerous laid over two
+  copies that have already diverged.
+
+Deferred from a slice rather than never planned:
 
 - **Link, don't duplicate.** The classifier prompt should attach a capture to an item that
   already exists instead of filing a near-duplicate beside it. Needs retrieval at classify time,
@@ -117,11 +133,6 @@ rather than work beside it:
   whatever the confidence. Today one global 0.85 threshold decides everything. A rule the database
   enforces, not an instruction in a prompt -- a prompt can be ignored, and elsewhere this exact
   gate exists because the prose version was ignored once.
-- **A notification key that cannot fire twice.** Every push carries a key unique to the thing that
-  caused it, and inserting an existing key does nothing. Reminders are already guarded by
-  `reminded_at`, but the daily digest and the session-end push have no equivalent, so a restart or
-  a clock change can repeat them. One UNIQUE column and an ignore-on-conflict insert generalise
-  what `reminded_at` does for one path to all three.
 - **Offline read, and offline edit.** The app goes blank of data the moment the network does.
   Proved in Chrome at 390px on 2026-09-19 against the local container: with the context offline,
   the shell and the nav render, Today says "You're offline.", Needs Attention and Recent are
@@ -197,16 +208,6 @@ rather than work beside it:
   change only; the field already exists. The failure to watch for is the opposite one -- Today
   filling with dates you never chose -- so the eval fixtures need dateless tasks that should stay
   undated as well as ones that should not.
-- **One set of shared rules across both prompts.** Tartib has two prompts, classify and ask, and
-  each carries its own copy of the item header format and the datetime handling. Two copies of
-  one rule drift: on an earlier build the two prompts ended up disagreeing about the single rule
-  they shared, one saying never invent a domain and the other saying null beats a wrong one,
-  without anyone deciding it. Shared rules live once; each prompt adds only what genuinely
-  differs. Do this before or with 14 -- an editable override is far more dangerous laid over two
-  copies that have already diverged.
-
-Deferred from a slice rather than never planned:
-
 - **Backups for the deployed database.** Slice 17 step 4 called for a cron copying
   `/data/tartib.db` off the persistent directory and one restore actually performed; deferred
   2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so it is
