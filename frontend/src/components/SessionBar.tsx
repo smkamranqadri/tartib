@@ -15,7 +15,7 @@ export default function SessionBar() {
 
   if (current.state === "running") {
     return (
-      <div className="session-bar" role="status">
+      <div className="session-bar running" role="status">
         <span className="session-icon muted">
           <ClockIcon />
         </span>

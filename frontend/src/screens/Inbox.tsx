@@ -59,14 +59,18 @@ export default function Inbox({
 
   return (
     <div className="screen">
-      <PageHead title="Inbox" subtitle={SUBTITLE[tab]} />
-      <nav className="tabs" aria-label="Inbox">
-        <NavLink to="/inbox" end>
-          Needs attention {count(items.length)}
-        </NavLink>
-        <NavLink to="/inbox/stale">Stale {count(stale.length)}</NavLink>
-        <NavLink to="/inbox/recent">Recent</NavLink>
-      </nav>
+      <div className="title-row">
+        <PageHead title="Inbox" subtitle={SUBTITLE[tab]} />
+        <div className="title-actions">
+          <nav className="pills tabs" aria-label="Inbox">
+            <NavLink to="/inbox" end>
+              Needs attention {count(items.length)}
+            </NavLink>
+            <NavLink to="/inbox/stale">Stale {count(stale.length)}</NavLink>
+            <NavLink to="/inbox/recent">Recent</NavLink>
+          </nav>
+        </div>
+      </div>
       {tab === "recent" ? (
         <RecentTab version={version} pending={pending} />
       ) : error ? (

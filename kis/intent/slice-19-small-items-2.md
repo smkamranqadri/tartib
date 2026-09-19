@@ -92,6 +92,10 @@ One tab strip with a count on each: Needs attention at `/inbox` (every item, not
 
 Proof: browser at 390px and 1280px: tabs, counts, URLs, the redirect, Back.
 
+After a look on the device, same day: the tabs moved into the title row, right of "Inbox", in
+the nav's pill style (`.pills`); under 640px they wrap to a full-width row below the subtitle.
+Screenshots at 390px light and 1280px dark, no horizontal overflow.
+
 ## Step 5 — a ring when a session ends
 
 **Done in the browser 2026-09-19; hearing it on the phone is still owed.** `chime.ts`: two sine
@@ -128,6 +132,10 @@ ending with each choice decodes and plays its own file (`bell-*.mp3` 44,870 byte
 44,556, `wood-*` 20,106) and fetches nothing else, Off plays and fetches nothing; the picker
 previews and stores its choice; with the service worker blocked and the MP3 aborted, the
 fallback tones play. Typecheck and build pass. Whether they sound right is the user's call.
+
+Also asked for on the device: the session bar stands out while it runs -- an accent tint and
+border, the countdown and icon in the accent (`.session-bar.running`). The "done" bar is
+unchanged. Seen in the same screenshots, light and dark.
 
 ## Step 6 — refuse a stale save
 
