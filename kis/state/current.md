@@ -5,13 +5,10 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 18, small fixes** -- all six steps done and proved locally on 2026-09-19,
-  commits `365bdfc` to `da7094f`; plan and per-step proof in
-  `kis/intent/slice-18-small-fixes.md`. Not deployed, by decision. Owed on the phone: no zoom on
-  tapping the capture box (step 5), and the header clearing the notch without scroll jank
-  (step 6). When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and
-  `CLAUDE_CODE_OAUTH_TOKEN` come out of the CapRover app config.
-- After it, in no fixed order:
+- Task: none in flight. **Slice 18, small fixes** closed 2026-09-19, not deployed:
+  `kis/intent/slice-18-small-fixes.md`. When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`,
+  `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come out of the CapRover app config.
+- Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
      everything on that server exists exactly once. This is the one open item whose cost is
@@ -61,6 +58,8 @@ Maintenance).
 
 ## Known gaps
 
+- Slice 18's sticky glass nav and safe-area insets were checked on the phone only in the browser
+  over the LAN. The installed app's header against the real notch is unchecked until `v1.1`.
 - **The app shows no data offline.** The shell opens and a capture still queues, but Today,
   Needs Attention and Recent are all empty, because the service worker never caches an `/api/`
   response. Deliberate -- slice 15 scoped offline *read* out -- and proved in Chrome on

@@ -1,13 +1,10 @@
 # Slice 18: small fixes (approved 2026-09-19)
 
-**Status 2026-09-19: all six steps done and proved locally; not deployed.** Owed before the slice
-counts as closed: on the phone, that tapping the capture box no longer zooms (step 5) and that
-the installed app's header clears the notch and scrolls smoothly (step 6). Both need `v1.1` on
-the server, or the local container reached from the phone.
-
-Picked for being small: the cause is known, one or two files each, no migration, no prompt
-change. Six independent steps, each proved on its own. No deploy in this slice -- it ends green
-locally, and `v1.1` ships when asked for.
+**Closed 2026-09-19; not deployed.** All six steps proved locally, and checked by the user on
+the phone against the local container over the LAN (`http://`, in the browser): no complaint on
+zoom or the sticky nav ("rest is good"), then two rounds of glass changes asked for and accepted
+("ok good"). Not checked: the installed app's header against the real notch, which needs HTTPS
+-- carried in State as a known gap until `v1.1` is on the phone.
 
 ## Step 1 — Codex is the only classifier
 
