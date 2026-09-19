@@ -41,6 +41,10 @@ Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
   and over-application -- a correction applied where it did not belong -- went 1/2 to 0/6 only
   after a prompt fix, so test for that specifically. Decided 2026-09-19.
 
+Slice 20 (`slice-20-round-three.md`, planned 2026-09-19) takes: add directly, filing policy
+per space, skeleton rows (from "UI polish"), search that lands on the line, the session card,
+the space page split view, tell it why, and the thought section. They leave when it closes.
+
 Slices 18 and 19 (`slice-1{8,9}-*.md`) closed on 2026-09-19 and their entries have left this
 file. Dropped the same day as already true: "a notification key that cannot fire twice" --
 all three pushers hold a once-only guard (`reminded_at`, `digest_date`, `notified_at`).
