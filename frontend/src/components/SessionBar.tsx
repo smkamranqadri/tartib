@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useRef } from "react";
 import { getRecentSessions } from "../api";
 import { formatRemaining, useSession } from "../session";
 import { useLoad } from "../useLoad";
@@ -23,6 +23,22 @@ export default function SessionBar({ placement }: { placement: "card" | "float" 
     () => (current && state !== "running" ? getRecentSessions(4) : Promise.resolve(null)),
     [!!current, state, current?.session?.id],
   );
+  // A floating card is fixed above the ask bar; it publishes its height (plus the gap) so the
+  // page leaves room for it and the toast clears it. Gone, it takes the room back.
+  const floatRef = useRef<HTMLDivElement>(null);
+  const floating = placement === "float" && !!current && state !== null;
+  useEffect(() => {
+    const el = floatRef.current;
+    const root = document.documentElement;
+    if (!floating || !el) return;
+    const obs = new ResizeObserver(() => root.style.setProperty("--session-h", `${el.offsetHeight + 10}px`));
+    obs.observe(el);
+    return () => {
+      obs.disconnect();
+      root.style.removeProperty("--session-h");
+    };
+  }, [floating, state]);
+
   if (!current) return null; // not loaded yet
   if (placement === "float" && state === null) return null; // quiet pages show only a live one
   const wrap = (body: ReactElement) =>
@@ -37,7 +53,7 @@ export default function SessionBar({ placement }: { placement: "card" | "float" 
   if (state === null) {
     const recent = (past.data?.sessions ?? []).slice(0, 3);
     return wrap(
-      <div className={`session-bar idle${placement === "float" ? " floating" : ""}`}>
+      <div ref={floatRef} className={`session-bar idle${placement === "float" ? " floating" : ""}`}>
         <Ring fraction={0} />
         <div className="session-main">
           <span className="session-time">No session running</span>
@@ -81,7 +97,7 @@ export default function SessionBar({ placement }: { placement: "card" | "float" 
     const s = current.session;
     const total = s ? Math.max(1, (new Date(s.ends_at).getTime() - new Date(s.started_at).getTime()) / 1000) : 1;
     return wrap(
-      <div className={`session-bar running${placement === "float" ? " floating" : ""}`} role="status">
+      <div ref={floatRef} className={`session-bar running${placement === "float" ? " floating" : ""}`} role="status">
         <Ring fraction={remaining / total} />
         <div className="session-main">
           <span className="session-time">{formatRemaining(remaining)}</span>
@@ -97,7 +113,7 @@ export default function SessionBar({ placement }: { placement: "card" | "float" 
   // The one being asked about is itself the newest finished session; the list is the ones before.
   const earlier = (past.data?.sessions ?? []).filter((p) => p.id !== current.session?.id).slice(0, 3);
   return wrap(
-    <div className={`session-bar done${placement === "float" ? " floating" : ""}`}>
+    <div ref={floatRef} className={`session-bar done${placement === "float" ? " floating" : ""}`}>
       <Ring fraction={0} />
       <div className="session-main">
         <span className="session-time">Session done</span>

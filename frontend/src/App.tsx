@@ -265,8 +265,10 @@ export default function App() {
         </main>
         {/* At the foot of every page, held just above the ask bar (or the screen edge) while
             the page scrolls, so a running timer is always in view without leading the page. */}
-        {/* Home has the session as a card of its own; elsewhere a live one rides on the ask bar. */}
-        <AskBar spaces={spaces}>{location.pathname !== "/" && <SessionBar placement="float" />}</AskBar>
+        {/* Home has the session as a card of its own; elsewhere a live one sits pinned just
+            above the ask bar while the page scrolls. */}
+        {location.pathname !== "/" && <SessionBar placement="float" />}
+        <AskBar spaces={spaces} />
         <Toast toast={toast} />
       </div>
       </SessionProvider>

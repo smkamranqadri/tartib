@@ -133,6 +133,13 @@ Proof: headless Chrome with a session running -- Home at 1280px dark: 18px from 
 Home at 390px: Session, Today, Needs attention, Recent top to bottom; Recent at 390px scrolled to
 the end: the session inside the ask bar, the last card clearing it.
 
+Last, same day: not inside the ask bar but above it, the same on every page. Sticky could only
+push the card up, so on a short page it sat far above the bar; it is now fixed like the bar,
+10px above it in the bar's own 720px column, and publishes its height (`--session-h`) so the
+page's padding and the toast leave room. Proof: headless Chrome with a session running, six
+pages at 390px and 1280px, at the top and the end of each: 10px above the ask bar every time,
+the same left edge and width as the bar's form, and the last card clear of it at the end.
+
 ## Step 6 — the space page split view
 
 **Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an

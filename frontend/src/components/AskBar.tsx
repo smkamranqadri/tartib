@@ -1,10 +1,10 @@
-import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ask } from "../api";
 import type { Answer } from "../types";
 import AnswerView from "./AnswerView";
 
 /** Chat-style bar pinned to the bottom of every screen, as wide as the app column. */
-export default function AskBar({ spaces, children }: { spaces: string[]; children?: ReactNode }) {
+export default function AskBar({ spaces }: { spaces: string[] }) {
   const [question, setQuestion] = useState("");
   const [space, setSpace] = useState("");
   const [busy, setBusy] = useState(false);
@@ -43,7 +43,6 @@ export default function AskBar({ spaces, children }: { spaces: string[]; childre
 
   return (
     <div className="askbar" ref={ref}>
-      {children}
       {result && <AnswerView result={result} onClose={() => setResult(null)} />}
       {error && <p className="error">{error}</p>}
       <form className="ask" onSubmit={submit}>
