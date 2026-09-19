@@ -90,6 +90,13 @@ Proof: a space created on Spaces appears in the Inbox picker and the ask bar wit
 
 ## Step 5 — no zoom on focus
 
+**Done in the browser 2026-09-19; the phone check is still owed.** One rule beside the existing
+`font: inherit` puts `input, textarea, select` at 16px; the capture box's 15px and the two hand-set
+16px overrides are gone. Headless Chrome at 390px (mobile, touch) read the computed size of every
+field on nine screens -- Home, Inbox, Waiting, Recent, Spaces with the new-space form open, a
+space, two item pages, Settings: 23 fields, all 16px. Screenshot of Home shows no layout change
+beyond the larger field text. Whether Mobile Safari stops zooming can only be seen on the phone.
+
 One global rule puts every `input`, `textarea` and `select` at 16px; the two hand-set 16px
 overrides and the capture box's explicit 15px go.
 

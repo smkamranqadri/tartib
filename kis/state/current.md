@@ -5,7 +5,7 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 18, small fixes** -- approved 2026-09-19. Steps 1 to 4 done; step 5 next. Plan:
+- Task: **slice 18, small fixes** -- approved 2026-09-19. Steps 1 to 5 done (5 still needs the phone check); step 6 next. Plan:
   `kis/intent/slice-18-small-fixes.md`. Six independent steps: remove the Claude fallback (rule 3
   becomes Codex-only), Settings shows why it is stuck, Recent stops repeating Needs Attention, a
   new space reaches the pickers, 16px fields, a sticky glass nav with safe areas. Mode: Standard.
