@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { getAttention, getSpaces } from "../api";
+import { getAttention } from "../api";
 import ApprovalCard from "../components/ApprovalCard";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
@@ -8,11 +8,12 @@ import PageHead from "../components/PageHead";
 import { Empty, ErrorLine, Loading } from "../components/Status";
 import type { Item } from "../types";
 import { useLoad } from "../useLoad";
+import { useSpaces } from "../useSpaces";
 
 /** Every waiting item as a decision card. Enter takes the first. */
 export default function Waiting({ version, onDecided }: { version: number; onDecided: () => void }) {
   const { data, setData, error, loading } = useLoad(getAttention, [version]);
-  const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
+  const spaces = useSpaces(version);
   const [deferred, setDeferred] = useState<number[]>([]);
   const items = useMemo(() => {
     const all = [...(data?.items ?? [])].sort((a, b) => b.id - a.id);

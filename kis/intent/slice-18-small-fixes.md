@@ -72,6 +72,16 @@ lists only its filed item; the Inbox card checked in a browser.
 
 ## Step 4 — a new space reaches the pickers
 
+**Done 2026-09-19.** Reproduced in headless Chrome at 1280px before fixing, two ways. Created on
+Spaces and reached through the nav, the Inbox picker had it but the ask bar did not (`App.tsx`
+loaded it once per login). Created by another client with the Inbox open, neither had it, even
+after the tab regained focus -- the likely shape of the report, a phone left open. Fix: one
+`useSpaces(version)` hook for every picker (App's ask bar, Inbox, Waiting, ItemPage) that reloads
+on `version` and when the page becomes visible again; only the names reload on return, never the
+screen's data, so an open edit is not disturbed. After: both cases show the new space. Typecheck
+and build pass. Not covered, on purpose: a screen that stays in the foreground the whole time
+does not poll.
+
 Reported, not reproduced. Inbox and Waiting both refetch spaces on mount, so the backlog's guess
 may not be the path. Reproduce first and fix what reproduces. Fixed regardless: the ask bar's
 list, which `App.tsx:139` loads once per login -- it reloads on `version` like everything else.

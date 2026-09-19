@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { approveItem, deleteItem, editItem, getCapture, getItem, getSpaces } from "../api";
+import { approveItem, deleteItem, editItem, getCapture, getItem } from "../api";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import Confirm from "../components/Confirm";
@@ -11,6 +11,7 @@ import { formatDue, formatRelative, formatRemind } from "../format";
 import { useSession } from "../session";
 import type { Capture as CaptureRecord, Edit } from "../types";
 import { useLoad } from "../useLoad";
+import { useSpaces } from "../useSpaces";
 
 export default function ItemPage({ version }: { version: number }) {
   const session = useSession();
@@ -18,7 +19,7 @@ export default function ItemPage({ version }: { version: number }) {
   const itemId = Number(id);
   const navigate = useNavigate();
   const { data: item, setData, error, loading } = useLoad(() => getItem(itemId), [itemId, version]);
-  const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
+  const spaces = useSpaces(version);
   const [capture, setCapture] = useState<CaptureRecord | null>(null);
   const [text, setText] = useState("");
   const [editingText, setEditingText] = useState(false);

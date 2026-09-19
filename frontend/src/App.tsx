@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { getCapture, getSpaces, setUnauthorizedHandler } from "./api";
+import { getCapture, setUnauthorizedHandler } from "./api";
 import { type Pending, onPending, watchForReconnect } from "./offline";
 import { takePendingNav } from "./push";
 import Capture from "./Capture";
@@ -21,7 +21,7 @@ import Settings from "./screens/Settings";
 import { SessionProvider } from "./session";
 import { ThemeContext, type Theme } from "./theme";
 import type { Answer, Capture as CaptureRecord } from "./types";
-import { useLoad } from "./useLoad";
+import { useSpaces } from "./useSpaces";
 
 function readTheme(): Theme {
   try {
@@ -136,7 +136,7 @@ export default function App() {
       }),
     [],
   );
-  const spaces = useLoad(getSpaces, [authed]).data?.spaces ?? [];
+  const spaces = useSpaces(`${authed}:${version}`);
   const onSearchPage = location.pathname.startsWith("/spaces") || location.pathname.startsWith("/search");
   const showChat = location.pathname === "/" || location.pathname === "/inbox";
 

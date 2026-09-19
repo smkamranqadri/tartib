@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getAttention, getSpaces, getToday } from "../api";
+import { getAttention, getToday } from "../api";
 import ApprovalCard from "../components/ApprovalCard";
 import Card from "../components/Card";
 import { AlertIcon, CheckSquareIcon, ClockIcon } from "../components/Icons";
@@ -10,13 +10,14 @@ import RecentList from "../components/RecentList";
 import { Empty, ErrorLine, Loading } from "../components/Status";
 import type { Item } from "../types";
 import { useLoad } from "../useLoad";
+import { useSpaces } from "../useSpaces";
 
 const SHOW = 3;
 
 /** Inbox: the newest waiting items as decision cards (Enter takes the first), stale tasks, recent. */
 export default function Inbox({ version, onDecided }: { version: number; onDecided: () => void }) {
   const { data, setData, error, loading } = useLoad(getAttention, [version]);
-  const spaces = useLoad(getSpaces, [version]).data?.spaces ?? [];
+  const spaces = useSpaces(version);
   const today = useLoad(getToday, [version]).data;
   // Needs Attention is right above, so Recent leaves out what is already waiting there. Today's
   // list is shared with Home, which has no Needs Attention, so the filter lives here.
