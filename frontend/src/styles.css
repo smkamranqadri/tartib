@@ -12,6 +12,7 @@
   --star: #e0a800;
   --field: #ffffff;
   --pill: #e8eeeb;
+  --session: #d6453d;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   /* Glass, the way iOS draws its own menus: mostly see-through, heavily blurred, colour kept. */
   --glass-blur: blur(20px) saturate(180%);
@@ -31,6 +32,7 @@
   --star: #f2c14e;
   --field: #121816;
   --pill: #1f2a26;
+  --session: #ff7b6b;
   --shadow: none;
   color-scheme: dark;
 }
@@ -367,14 +369,19 @@ button:disabled { opacity: .5; cursor: default; }
 /* Same shape as the session bar: this sits in the same place and should not look like a
    different kind of thing. Muted, because it is an offer and not news. */
 .update-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -12px 0 16px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; color: var(--muted); }
-.session-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -12px 0 22px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
-.session-icon { display: inline-flex; }
-.session-time { font-variant-numeric: tabular-nums; font-weight: 600; }
-.session-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 14px; }
-.session-bar.done { border-color: var(--accent); }
-/* A running session is the one live thing on the screen, so it carries the accent. */
-.session-bar.running { background: color-mix(in srgb, var(--accent) 12%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
-.session-bar.running .session-icon, .session-bar.running .session-time { color: var(--accent); }
+/* The session card: red, a tomato's colour, so a pomodoro never reads as the app's own teal. */
+.session-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -12px 0 22px; padding: 12px 14px; background: color-mix(in srgb, var(--session) 9%, var(--panel)); border: 1px solid color-mix(in srgb, var(--session) 45%, var(--line)); border-radius: 14px; }
+.session-ring { flex: none; width: 48px; height: 48px; color: var(--session); }
+.session-ring .track { stroke: color-mix(in srgb, var(--session) 18%, transparent); }
+.session-ring .left { stroke: var(--session); transition: stroke-dashoffset 1s linear; }
+.session-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.session-time { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 20px; color: var(--session); line-height: 1.2; }
+.session-bar.done .session-time { font-size: 16px; }
+.session-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.session-bar .primary { background: var(--session); color: #fff; }
+.session-past { width: 100%; margin: 2px 0 0; padding: 8px 0 0; border-top: 1px solid color-mix(in srgb, var(--session) 25%, var(--line)); list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.session-past li { display: flex; justify-content: space-between; gap: 10px; }
+.session-past .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-outcomes { display: flex; gap: 8px; flex-wrap: wrap; }
 .session-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 0; font-size: 14px; }
 @media (max-width: 560px) {
@@ -398,3 +405,5 @@ button:disabled { opacity: .5; cursor: default; }
 
 /* What a search matched, on the item it opened. */
 mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+.session-row { display: flex; flex-direction: column; gap: 2px; padding: 10px 16px; }

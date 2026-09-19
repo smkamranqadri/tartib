@@ -75,6 +75,19 @@ every match. Proof: browser with a long note.
 
 ## Step 5 — a session card
 
+**Done 2026-09-19.** `GET /api/sessions/recent?space=&limit=` -- finished sessions, newest first,
+with the item's title, text and space. The card (still `SessionBar.tsx`) is red from a
+`--session` token (#d6453d light, #ff7b6b dark): a 48px ring emptying clockwise while running,
+and once stopped the outcome buttons with the three sessions before this one, one line each
+("Fix gate · 25 min · done · 2h ago"). A space page gets a Sessions card of its last 20, only
+when it has any, and not while searching. Rule 4 rewritten. While building, a script truncated
+`SessionBar.tsx` (opened for write before reading it); restored from git and redone, nothing
+committed in between. Proof: new test for `/sessions/recent` (a running session is excluded,
+newest first, titles joined, scoped by space); pytest 181 passed. Headless Chrome at 390px:
+running card in light and dark with the ring's offset growing; after a stop the card shows the
+three earlier sessions and not the one being asked about; home lists its sessions, work (none)
+shows no card. Typecheck and build pass.
+
 The slim bar becomes a card: a countdown ring and the controls while running, and the last two or
 three sessions once stopped. A space's page lists that space's sessions. Colour: a red `session`
 token in both themes. Rule 4 is rewritten as approved on 2026-09-19 -- a space may list its own

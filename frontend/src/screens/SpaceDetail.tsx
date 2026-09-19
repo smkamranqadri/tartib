@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { getBrief, listItems } from "../api";
+import { getBrief, getRecentSessions, listItems } from "../api";
 import Card from "../components/Card";
-import { CheckSquareIcon, LayersIcon, NoteIcon, RefreshIcon } from "../components/Icons";
+import { CheckSquareIcon, ClockIcon, LayersIcon, NoteIcon, RefreshIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
+import { describe } from "../components/SessionPast";
 import { Empty, ErrorLine, Loading } from "../components/Status";
 import { formatRelative } from "../format";
 import type { Brief, Item } from "../types";
@@ -78,6 +79,9 @@ export default function SpaceDetail({
 
   const tasks = useLoad(() => listItems({ space, shape: "task", q: debounced, limit: 200 }), [space, debounced, version]);
   const notes = useLoad(() => listItems({ space, shape: "note", q: debounced, limit: 200 }), [space, debounced, version]);
+  // This space's own sessions: a plain list, newest first. No totals or charts (rule 4).
+  const sessions = useLoad(() => getRecentSessions(20, space), [space, version]);
+  const past = sessions.data?.sessions ?? [];
   const taskRows = [...(tasks.data?.items ?? [])]
     .filter((t) => t.stage === "filed" && (showDone || t.status === "open"))
     .sort((a, b) => Number(b.starred) - Number(a.starred) || (a.due ?? "9").localeCompare(b.due ?? "9") || b.id - a.id);
@@ -152,6 +156,22 @@ export default function SpaceDetail({
               ))}
             </ul>
           )}
+        </Card>
+      )}
+
+      {past.length > 0 && !debounced && (
+        <Card icon={<ClockIcon />} label="Sessions" aside={<span className="muted">last {past.length}</span>}>
+          <ul className="rows flat">
+            {past.map((p) => {
+              const d = describe(p);
+              return (
+                <li key={p.id} className="row session-row">
+                  <span className="row-text">{d.what}</span>
+                  <span className="muted small">{d.meta}</span>
+                </li>
+              );
+            })}
+          </ul>
         </Card>
       )}
     </div>

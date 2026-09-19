@@ -13,7 +13,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from tartib import db, push
@@ -295,6 +295,32 @@ def begin(
     if clock is not None:
         clock.arm(row["id"], row["ends_at"])
     return serialize(row)
+
+
+@router.get("/sessions/recent")
+def recent(
+    space: str | None = None,
+    limit: int = Query(default=3, ge=1, le=50),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> dict:
+    """Finished sessions, newest first, each with what it was about. Scoped to a space when one
+    is given -- a space's own sessions, which rule 4 allows since 2026-09-19; still no charts,
+    streaks, cycles or totals over time."""
+    where = "WHERE s.ended_at IS NOT NULL"
+    params: list = []
+    if space:
+        where += " AND i.space = ?"
+        params.append(space.strip().lower())
+    rows = conn.execute(
+        f"""
+        SELECT s.*, i.title AS item_title, i.raw_text AS item_text, i.space AS item_space
+        FROM sessions s LEFT JOIN items i ON i.id = s.item_id
+        {where}
+        ORDER BY s.started_at DESC, s.id DESC LIMIT ?
+        """,
+        (*params, limit),
+    ).fetchall()
+    return {"sessions": [dict(r) for r in rows]}
 
 
 @router.get("/sessions/current")

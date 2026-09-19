@@ -1,4 +1,4 @@
-import type { Answer, Brief, Capture, Edit, Item, Outcome, Session, SessionState, SpaceSummary } from "./types";
+import type { Answer, Brief, Capture, Edit, Item, Outcome, PastSession, Session, SessionState, SpaceSummary } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -78,6 +78,8 @@ export const setSpacePolicy = (space: string, policy: SpacePolicy) =>
   send<{ name: string; policy: SpacePolicy }>("PUT", `/api/spaces/${encodeURIComponent(space)}/policy`, { policy });
 
 export const getCurrentSession = () => api<SessionState>("/api/sessions/current");
+export const getRecentSessions = (limit: number, space?: string) =>
+  api<{ sessions: PastSession[] }>(`/api/sessions/recent?limit=${limit}${space ? `&space=${encodeURIComponent(space)}` : ""}`);
 export const startSession = (item_id: number | null) => send<Session>("POST", "/api/sessions", { item_id });
 export const stopSession = (id: number) => send<Session>("POST", `/api/sessions/${id}/stop`);
 export const answerSession = (id: number, outcome: Outcome) =>

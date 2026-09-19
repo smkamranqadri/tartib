@@ -94,6 +94,13 @@ export interface Session {
   created_at: string;
 }
 
+/** A finished session with what it was about, for the card and a space's list. */
+export interface PastSession extends Session {
+  item_title: string | null;
+  item_text: string | null;
+  item_space: string | null;
+}
+
 /** What the app shows on load: a countdown, an outcome sheet, or neither. */
 export interface SessionState {
   state: "running" | "awaiting" | null;

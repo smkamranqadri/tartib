@@ -328,3 +328,24 @@ def test_a_page_watching_the_countdown_does_not_steal_the_push(auth, tmp_path):
 
     assert sessions.fire(session["id"], ends) is True, "the read consumed the push"
     assert sender.titles == ["Session done"]
+
+
+def test_recent_lists_finished_sessions_and_scopes_to_a_space(auth, tmp_path):
+    """The card's last few, and a space page's own list. Running ones are not history yet."""
+    work = a_task(auth, "ship it", "Ship it", space="work")
+    home = a_task(auth, "fix gate", "Fix gate", space="home")
+    ids = []
+    for item_id in (work["id"], home["id"], None):
+        s = auth.post("/api/sessions", json={"item_id": item_id}).json()
+        auth.post(f"/api/sessions/{s['id']}/stop")
+        auth.post(f"/api/sessions/{s['id']}/outcome", json={"outcome": "done"})
+        ids.append(s["id"])
+    running = auth.post("/api/sessions", json={}).json()
+
+    every = auth.get("/api/sessions/recent", params={"limit": 10}).json()["sessions"]
+    assert running["id"] not in [s["id"] for s in every]
+    assert [s["id"] for s in every[:3]] == list(reversed(ids))
+    assert every[2]["item_title"] == "Ship it" and every[0]["item_title"] is None
+
+    work_only = auth.get("/api/sessions/recent", params={"space": "work"}).json()["sessions"]
+    assert [s["id"] for s in work_only] == [ids[0]] and work_only[0]["item_space"] == "work"
