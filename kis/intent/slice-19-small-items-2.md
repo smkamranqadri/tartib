@@ -57,6 +57,16 @@ fail, stop and bring it back -- Today filling with dates nobody chose is the fai
 
 ## Step 3 — each waiting item says why
 
+**Done 2026-09-19.** `waitingReason(item)` in `format.ts`, in order: `proposal_error` -> "AI
+failed: <error>"; no proposal left -> "Proposal rejected" (a fourth cause the plan missed: reject
+clears both proposal and error); no space -> "No space matched" (also covers the runner's
+SpaceError path, which files with space null); otherwise "Unsure (62%)" -- an item that kept a
+space and a proposal waits only because confidence was under the threshold, so the threshold is
+not needed client side. The card shows it on its own line under the sentence; rows show a short
+lowercase form in the meta line, without the error detail. Proof: headless Chrome at 390px, one
+item of each cause (AI off, a reject, and two proposals written into a throwaway DB): the
+Waiting page shows the four reasons, Home's rows show the short forms. Typecheck and build pass.
+
 Four causes look identical on the card today. Stale tasks have their own list, so the card names
 the other three, derived from fields that already exist: `proposal_error` -> "AI failed:
 <error>", a proposal with no space -> "No space matched", confidence under the threshold ->

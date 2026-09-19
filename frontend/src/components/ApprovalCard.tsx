@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { approveItem, rejectItem } from "../api";
-import { formatDue } from "../format";
+import { formatDue, waitingReason } from "../format";
 import type { Item, Shape } from "../types";
 import Menu from "./Menu";
 import SpaceSelect from "./SpaceSelect";
@@ -125,9 +125,8 @@ export default function ApprovalCard({
             )}
           </>
         )}
-        {item.proposal && <span className="muted small"> · {Math.round(item.proposal.confidence * 100)}%</span>}
-        {!item.proposal && item.proposal_error && <span className="muted small"> · {item.proposal_error}</span>}
       </p>
+      <p className="reason muted small">{waitingReason(item)}</p>
       {msg && <p className="error">{msg}</p>}
       <div className="decisions">
         <button type="button" className="primary" onClick={() => void approve()}>

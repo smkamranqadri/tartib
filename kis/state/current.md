@@ -5,7 +5,7 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 19, small items round two** -- approved 2026-09-19. Steps 1 and 2 done; step 3 next. Plan:
+- Task: **slice 19, small items round two** -- approved 2026-09-19. Steps 1 to 3 done; step 4 next. Plan:
   `kis/intent/slice-19-small-items-2.md`. Mode: Standard.
 - Slice 18, small fixes, closed 2026-09-19, not deployed:
   `kis/intent/slice-18-small-fixes.md`. When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`,

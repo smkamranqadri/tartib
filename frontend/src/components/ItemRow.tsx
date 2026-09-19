@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { editItem } from "../api";
-import { formatDueLong, formatRelative, formatRemind, todayLocal } from "../format";
+import { formatDueLong, formatRelative, formatRemind, todayLocal, waitingReason } from "../format";
 import type { Edit, Item } from "../types";
 import { AlertIcon, NoteIcon } from "./Icons";
 import Row from "./Row";
@@ -37,8 +37,7 @@ export default function ItemRow({
   const firstLine = item.raw_text.split("\n")[0];
   const headline = isTask ? item.title || firstLine : firstLine;
 
-  const meta: string[] = [waiting ? "needs attention" : (item.space ?? "no space"), formatRelative(item.updated_at ?? item.created_at)];
-  if (waiting && item.proposal) meta.push(`${Math.round(item.proposal.confidence * 100)}%`);
+  const meta: string[] = [waiting ? waitingReason(item, true) : (item.space ?? "no space"), formatRelative(item.updated_at ?? item.created_at)];
   if (sessions) meta.push(sessions === 1 ? "1 session" : `${sessions} sessions`);
 
   return (

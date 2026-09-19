@@ -1,3 +1,5 @@
+import type { Item } from "./types";
+
 const DAY = 86_400_000;
 
 export function todayLocal(): string {
@@ -83,4 +85,15 @@ export function formatDueLong(due: string): string {
 
 export function formatLongDate(d: Date = new Date()): string {
   return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}
+
+/** Why an item is waiting for you, from what it already carries. No threshold needed: an item
+ *  that kept a space and a proposal is only waiting because the classifier was unsure. `short`
+ *  is the row's meta-line form: lowercase, and without the error's detail. */
+export function waitingReason(item: Item, short = false): string {
+  const pct = item.proposal ? Math.round(item.proposal.confidence * 100) : 0;
+  if (item.proposal_error) return short ? "AI failed" : `AI failed: ${item.proposal_error}`;
+  if (!item.proposal) return short ? "proposal rejected" : "Proposal rejected";
+  if (!item.space) return short ? "no space matched" : "No space matched";
+  return short ? `unsure, ${pct}%` : `Unsure (${pct}%)`;
 }

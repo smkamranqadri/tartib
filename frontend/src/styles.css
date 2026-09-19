@@ -187,6 +187,7 @@ button:disabled { opacity: .5; cursor: default; }
 .one { padding: 12px 16px 14px; }
 .raw { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .raw.big { font-size: 18px; line-height: 1.55; margin: 0 0 14px; }
+.reason { margin: -8px 0 14px; }
 .sentence { margin: 0 0 14px; font-size: 16px; line-height: 2; }
 .word { background: none; border: 0; padding: 0 2px; font: inherit; font-weight: 700; color: var(--fg); cursor: pointer; border-bottom: 2px dotted var(--accent); }
 .word.quoted::before { content: "“"; } .word.quoted::after { content: "”"; }
