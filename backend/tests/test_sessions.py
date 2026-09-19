@@ -87,10 +87,14 @@ def test_a_session_that_ended_while_you_were_away_is_waiting(auth, tmp_path):
     # wind it back so its time is up
     conn = db.connect(str(tmp_path / "t.db"))
     try:
+        ended = datetime.now(UTC) - timedelta(minutes=5)
         conn.execute(
-            "UPDATE sessions SET started_at = '2026-09-18T03:00:00Z', ends_at ="
-            " '2026-09-18T03:25:00Z' WHERE id = ?",
-            (started["id"],),
+            "UPDATE sessions SET started_at = ?, ends_at = ? WHERE id = ?",
+            (
+                (ended - timedelta(minutes=25)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                ended.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                started["id"],
+            ),
         )
         conn.commit()
     finally:

@@ -48,10 +48,7 @@
 
 - Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (16 real-Codex fixtures,
   needs a Codex login); `cd frontend && npm run typecheck && npm run build`. As of 2026-09-19
-  pytest is **162 passed, 1 failed**, with no code changed: `test_a_session_that_ended_while_you_were_away_is_waiting`
-  pins its session to `2026-09-18T03:25Z`, and `OUTCOME_WINDOW` (`sessions.py:34`) is 12h, so it
-  started failing at 15:25Z that day and always will. The test is wrong, not the product. That
-  one red is expected until the test uses times relative to now; any other red is real.
+  pytest is **163 passed**; any red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
