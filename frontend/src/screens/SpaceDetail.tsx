@@ -30,12 +30,15 @@ export default function SpaceDetail({
   version,
   filter = "all",
   onCount,
+  rowTo,
 }: {
   space: string;
   query: string;
   version: number;
   filter?: ShapeFilter;
   onCount?: (n: number) => void;
+  /** Where a row opens, when the page keeps the item beside the list. */
+  rowTo?: (item: Item) => string;
 }) {
   const debounced = query;
   const [showDone, setShowDone] = useState(false);
@@ -134,7 +137,7 @@ export default function SpaceDetail({
           {taskRows.length > 0 && (
             <ul className="rows flat">
               {taskRows.map((item) => (
-                <ItemRow key={item.id} item={item} onChange={updateTask} query={debounced || undefined} />
+                <ItemRow key={item.id} item={item} onChange={updateTask} query={debounced || undefined} to={rowTo?.(item)} />
               ))}
             </ul>
           )}
@@ -152,7 +155,7 @@ export default function SpaceDetail({
           {noteRows.length > 0 && (
             <ul className="rows flat">
               {noteRows.map((item) => (
-                <ItemRow key={item.id} item={item} onChange={() => {}} query={debounced || undefined} />
+                <ItemRow key={item.id} item={item} onChange={() => {}} query={debounced || undefined} to={rowTo?.(item)} />
               ))}
             </ul>
           )}

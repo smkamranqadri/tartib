@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { deleteSpace, getSpaces, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
@@ -9,6 +9,8 @@ import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import SearchAsk from "../components/SearchAsk";
 import { useLoad } from "../useLoad";
+import { useWide } from "../useWide";
+import ItemPage from "./ItemPage";
 import SpaceDetail, { type ShapeFilter } from "./SpaceDetail";
 
 const POLICY: Record<SpacePolicy, { menu: string; note: string }> = {
@@ -30,6 +32,13 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const [manageError, setManageError] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  // Wide screens keep the open item beside the list, in the URL so Back and links still work.
+  const wide = useWide();
+  const [params, setParams] = useSearchParams();
+  const openId = Number(params.get("item")) || null;
+  const rowTo = wide
+    ? (item: { id: number }) => `/spaces/${encodeURIComponent(space)}?item=${item.id}${debounced ? `&q=${encodeURIComponent(debounced)}` : ""}`
+    : undefined;
   const spaces = useLoad(getSpaces, [version]);
   const policy: SpacePolicy = spaces.data?.policies[space] ?? "auto";
 
@@ -124,18 +133,40 @@ export default function Space({ version, onChanged }: { version: number; onChang
           {manageError && <span className="error">{manageError}</span>}
         </div>
       </div>
-      {adding && (
-        <AddItemForm
-          space={space}
-          onAdded={() => {
-            setAdding(false);
-            onChanged();
-          }}
-          onCancel={() => setAdding(false)}
-        />
-      )}
-      <SearchAsk value={q} onChange={setQ} space={space} placeholder={`Search ${space}, or ask`} />
-      <SpaceDetail space={space} query={debounced} version={version} filter={filter} onCount={setItemCount} />
+      <div className={wide ? "split" : undefined}>
+        <div className="split-list">
+          {adding && (
+            <AddItemForm
+              space={space}
+              onAdded={() => {
+                setAdding(false);
+                onChanged();
+              }}
+              onCancel={() => setAdding(false)}
+            />
+          )}
+          <SearchAsk value={q} onChange={setQ} space={space} placeholder={`Search ${space}, or ask`} />
+          <SpaceDetail space={space} query={debounced} version={version} filter={filter} onCount={setItemCount} rowTo={rowTo} />
+        </div>
+        {wide && (
+          <aside className="split-item">
+            {openId ? (
+              <ItemPage
+                key={openId}
+                version={version}
+                itemId={openId}
+                onChanged={onChanged}
+                onClosed={() => setParams((p) => {
+                  p.delete("item");
+                  return p;
+                })}
+              />
+            ) : (
+              <p className="split-empty muted">Pick an item to read it here.</p>
+            )}
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

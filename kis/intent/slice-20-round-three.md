@@ -96,6 +96,16 @@ done, light and dark; space page list.
 
 ## Step 6 — the space page split view
 
+**Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an
+`<aside>` holding `ItemPage` embedded (`itemId` given: no Back link, `onChanged` bumps the list's
+version, delete clears `?item`). The open item is `?item={id}` in the URL, carrying `q` when
+opened from a search. `ItemRow` gained a `to` override; `SpaceDetail` a `rowTo`. The pane is
+sticky and scrolls on its own. Proof: headless Chrome at 1280px: an empty pane says "Pick an
+item", a row click sets `?item=7` and shows it with the list still there, a second swaps to
+`?item=6`, Back returns to 7; Notes collapsed stays collapsed after opening an item; starring
+in the pane stars the row in the list; no horizontal overflow. At 390px no split, rows link to
+`/items/{id}`. Typecheck and build pass.
+
 From 1100px, the list on the left and the open item on the right; a row click swaps the item
 without leaving the page. The Tasks/Notes collapse state survives; `/items/{id}` links keep
 working; phones unchanged. Proof: browser at 1280px and 390px.

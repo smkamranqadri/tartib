@@ -14,17 +14,20 @@ export default function ItemRow({
   onChange,
   sessions = 0,
   query,
+  to,
 }: {
   item: Item;
   onChange: (item: Item) => void;
   /** The search that listed this row: the item page opens on the match. */
   query?: string;
+  /** Where the row opens, when not the item's own page: the space page's side pane. */
+  to?: string;
   /** Today's pomodoro count for this item, shown in the meta line when there is one. */
   sessions?: number;
 }) {
   const [error, setError] = useState<string | null>(null);
   const isTask = item.shape === "task";
-  const href = query ? `/items/${item.id}?q=${encodeURIComponent(query)}` : `/items/${item.id}`;
+  const href = to ?? (query ? `/items/${item.id}?q=${encodeURIComponent(query)}` : `/items/${item.id}`);
   const editable = item.stage === "filed";
   const waiting = item.stage === "attention";
   const overdue = isTask && item.status === "open" && !!item.due && item.due < todayLocal();

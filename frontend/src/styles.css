@@ -407,3 +407,9 @@ button:disabled { opacity: .5; cursor: default; }
 mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
 
 .session-row { display: flex; flex-direction: column; gap: 2px; padding: 10px 16px; }
+
+/* A space on a wide screen: the list, and the open item beside it. */
+.split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+.split-item { position: sticky; top: 96px; max-height: calc(100vh - 110px); overflow-y: auto; }
+.split-item .screen { padding: 0; }
+.split-empty { padding: 40px 20px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }

@@ -10,16 +10,29 @@ import Menu from "../components/Menu";
 import { ErrorLine, Loading } from "../components/Status";
 import { formatDue, formatRelative, formatRemind } from "../format";
 import { useSession } from "../session";
-import type { Capture as CaptureRecord, Edit } from "../types";
+import type { Capture as CaptureRecord, Edit, Item } from "../types";
 import { useLoad } from "../useLoad";
 import { useSpaces } from "../useSpaces";
 
-export default function ItemPage({ version }: { version: number }) {
+/** One item. Its own route on a phone; on a wide space page it is embedded beside the list
+ *  (`itemId` given), where it has no Back, and tells the list when it changed. */
+export default function ItemPage({
+  version,
+  itemId: embeddedId,
+  onChanged,
+  onClosed,
+}: {
+  version: number;
+  itemId?: number;
+  onChanged?: () => void;
+  onClosed?: () => void;
+}) {
   const session = useSession();
   const { id } = useParams();
   const [params] = useSearchParams();
   const query = params.get("q");
-  const itemId = Number(id);
+  const embedded = embeddedId !== undefined;
+  const itemId = embedded ? embeddedId : Number(id);
   const navigate = useNavigate();
   const { data: item, setData, error, loading } = useLoad(() => getItem(itemId), [itemId, version]);
   const spaces = useSpaces(version);
@@ -59,15 +72,20 @@ export default function ItemPage({ version }: { version: number }) {
   const waiting = item.stage === "attention";
   const originalDiffers = capture && capture.raw_text.trim() !== item.raw_text.trim();
 
+  /** A write the server took: show it, and let an embedding list know. */
+  function land(next: Item) {
+    setData(next);
+    onChanged?.();
+  }
   /** Toggles: sent as they are, never refused. */
   async function save(edit: Edit) {
-    setData(await editItem(itemId, edit));
+    land(await editItem(itemId, edit));
   }
   /** Real edits carry the version this page loaded. False when refused as stale: the edit is
    *  held in `conflict` for the person to reload over or send anyway. */
   async function saveChecked(edit: Edit): Promise<boolean> {
     try {
-      setData(await editItem(itemId, { ...edit, expected_updated_at: item?.updated_at ?? undefined }));
+      land(await editItem(itemId, { ...edit, expected_updated_at: item?.updated_at ?? undefined }));
       setConflict(null);
       return true;
     } catch (err) {
@@ -87,12 +105,12 @@ export default function ItemPage({ version }: { version: number }) {
   }
   async function overwrite() {
     if (!conflict) return;
-    setData(await editItem(itemId, conflict));
+    land(await editItem(itemId, conflict));
     setEditingText(false);
     setConflict(null);
   }
   async function approve(edit: Edit) {
-    setData(await approveItem(itemId, edit));
+    land(await approveItem(itemId, edit));
     setOpen({ file: false, proposal: false });
   }
   async function saveText() {
@@ -111,7 +129,10 @@ export default function ItemPage({ version }: { version: number }) {
   async function remove() {
     try {
       await deleteItem(itemId);
-      navigate(-1);
+      if (embedded) {
+        onChanged?.();
+        onClosed?.();
+      } else navigate(-1);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "failed");
     }
@@ -119,7 +140,7 @@ export default function ItemPage({ version }: { version: number }) {
 
   return (
     <div className="screen item-page">
-      <BackLink fallback={item.space ? `/spaces/${item.space}` : "/inbox"} />
+      {!embedded && <BackLink fallback={item.space ? `/spaces/${item.space}` : "/inbox"} />}
       <Card
         label={isTask ? "Task" : "Note"}
         aside={
