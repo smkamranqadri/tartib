@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { approveItem, deleteItem, editItem, getCapture, getItem } from "../api";
+import { ApiError, approveItem, deleteItem, editItem, getCapture, getItem } from "../api";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import Confirm from "../components/Confirm";
@@ -26,6 +26,8 @@ export default function ItemPage({ version }: { version: number }) {
   const [open, setOpen] = useState<{ file: boolean; proposal: boolean } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // An edit the server refused because the item moved on elsewhere, kept so it can be sent anyway.
+  const [conflict, setConflict] = useState<Edit | null>(null);
 
   useEffect(() => {
     if (!item) return;
@@ -41,8 +43,37 @@ export default function ItemPage({ version }: { version: number }) {
   const waiting = item.stage === "attention";
   const originalDiffers = capture && capture.raw_text.trim() !== item.raw_text.trim();
 
+  /** Toggles: sent as they are, never refused. */
   async function save(edit: Edit) {
     setData(await editItem(itemId, edit));
+  }
+  /** Real edits carry the version this page loaded. False when refused as stale: the edit is
+   *  held in `conflict` for the person to reload over or send anyway. */
+  async function saveChecked(edit: Edit): Promise<boolean> {
+    try {
+      setData(await editItem(itemId, { ...edit, expected_updated_at: item?.updated_at ?? undefined }));
+      setConflict(null);
+      return true;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setConflict(edit);
+        return false;
+      }
+      throw err;
+    }
+  }
+  async function reloadItem() {
+    const fresh = await getItem(itemId);
+    setData(fresh);
+    setText(fresh.raw_text);
+    setEditingText(false);
+    setConflict(null);
+  }
+  async function overwrite() {
+    if (!conflict) return;
+    setData(await editItem(itemId, conflict));
+    setEditingText(false);
+    setConflict(null);
   }
   async function approve(edit: Edit) {
     setData(await approveItem(itemId, edit));
@@ -55,8 +86,7 @@ export default function ItemPage({ version }: { version: number }) {
       return;
     }
     try {
-      await save({ text: value });
-      setEditingText(false);
+      if (await saveChecked({ text: value })) setEditingText(false);
       setMsg(null);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "failed");
@@ -122,6 +152,19 @@ export default function ItemPage({ version }: { version: number }) {
           <Confirm question={<>Delete this {item.shape}? The original capture stays.</>} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />
         )}
         {msg && <ErrorLine>{msg}</ErrorLine>}
+        {conflict && (
+          <div className="load-failed">
+            <ErrorLine>This changed on another device or tab since you opened it.</ErrorLine>
+            <span className="toggles">
+              <button type="button" className="ghost" onClick={() => void reloadItem()}>
+                Reload
+              </button>
+              <button type="button" className="ghost" onClick={() => void overwrite()}>
+                Overwrite
+              </button>
+            </span>
+          </div>
+        )}
         {isTask && (
           <div className="item-meta">
             <span className="chip">{item.status}</span>
@@ -153,13 +196,13 @@ export default function ItemPage({ version }: { version: number }) {
         }
       >
         <ItemEditor
-          key={`${item.id}-${item.stage}-${item.classified_at}`}
+          key={`${item.id}-${item.stage}-${item.classified_at}-${item.updated_at}`}
           item={item}
           fromProposal={waiting}
           spaces={spaces}
           submitLabel={waiting ? "Approve" : "Save"}
           requireSpace
-          onSubmit={waiting ? approve : save}
+          onSubmit={waiting ? approve : async (edit) => void (await saveChecked(edit))}
           onCancel={() => {}}
           hideCancel
           inline

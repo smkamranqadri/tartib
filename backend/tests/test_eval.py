@@ -1,4 +1,5 @@
-"""Classifier eval against the real Codex CLI. Run with `uv run pytest -m eval` (about 30s, the captures run concurrently).
+"""Classifier eval against the real Codex CLI. Run with `uv run pytest -m eval` (about 30s;
+the captures run concurrently).
 
 22 captures: 4 multi-item, 2 questions, 2 with no clear space, 2 verb-less tasks, 1 timed
 reminder, 5 plain, and 6 dateless: 4 concrete tasks that should be given a near-term date and 2

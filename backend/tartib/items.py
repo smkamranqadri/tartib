@@ -96,9 +96,13 @@ class EditBody(BaseModel):
     starred: bool | None = None
     status: Literal["open", "done"] | None = None
     text: str | None = Field(default=None, min_length=1, max_length=20_000)
+    # The `updated_at` the editor loaded. Sent by the item editor, not by row toggles: when it
+    # no longer matches, someone changed the item since -- another device, another tab -- and
+    # taking this write would lose theirs without a word.
+    expected_updated_at: str | None = Field(default=None, max_length=40)
 
     def provided(self) -> dict:
-        data = self.model_dump(include=self.model_fields_set)
+        data = self.model_dump(include=self.model_fields_set - {"expected_updated_at"})
         if "title" in data and data["title"] is not None:
             data["title"] = data["title"].strip() or None
         return data
@@ -123,7 +127,9 @@ def edit_item(
     body: EditBody,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> dict:
-    fetch_item(conn, item_id)
+    row = fetch_item(conn, item_id)
+    if body.expected_updated_at is not None and row["updated_at"] != body.expected_updated_at:
+        raise HTTPException(status_code=409, detail="This item changed since you opened it.")
 
     def go() -> dict:
         update_fields(conn, item_id, body.provided(), list_spaces(conn))

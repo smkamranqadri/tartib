@@ -90,3 +90,36 @@ def test_edit_cannot_touch_raw_text_or_stage(auth):
     assert auth.patch(f"/api/items/{item['id']}", json={"stage": "filed"}).status_code == 422
     assert auth.patch(f"/api/items/{item['id']}", json={"capture_id": 5}).status_code == 422
     assert auth.patch(f"/api/items/{item['id']}", json={"raw_text": "nope"}).status_code == 422
+
+
+def test_a_stale_save_is_refused_and_a_fresh_one_taken(auth):
+    """Two devices open one item; the second to save must not silently erase the first."""
+    item = one_item(auth, "stale save")
+    loaded = item["updated_at"]
+
+    first = auth.patch(
+        f"/api/items/{item['id']}", json={"title": "Phone", "expected_updated_at": loaded}
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["updated_at"] != loaded
+
+    stale = auth.patch(
+        f"/api/items/{item['id']}", json={"title": "Desk", "expected_updated_at": loaded}
+    )
+    assert stale.status_code == 409
+    assert "changed since you opened it" in stale.json()["detail"]
+    assert auth.get(f"/api/items/{item['id']}").json()["title"] == "Phone"  # nothing written
+
+    fresh = first.json()["updated_at"]
+    again = auth.patch(
+        f"/api/items/{item['id']}", json={"title": "Desk", "expected_updated_at": fresh}
+    )
+    assert again.status_code == 200 and again.json()["title"] == "Desk"
+
+
+def test_a_toggle_without_a_timestamp_is_never_refused(auth):
+    """Star and done come from rows that may be minutes old; a quick tick must just work."""
+    item = one_item(auth, "toggle")
+    auth.patch(f"/api/items/{item['id']}", json={"title": "changed elsewhere"})
+    r = auth.patch(f"/api/items/{item['id']}", json={"starred": True})
+    assert r.status_code == 200 and r.json()["starred"] is True

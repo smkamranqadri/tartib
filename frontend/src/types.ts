@@ -59,6 +59,8 @@ export interface Edit {
   starred?: boolean;
   status?: Status;
   text?: string;
+  /** The `updated_at` the editor loaded; the server refuses the write with 409 if it moved. */
+  expected_updated_at?: string;
 }
 
 export interface SpaceSummary {

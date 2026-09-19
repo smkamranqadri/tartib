@@ -115,6 +115,17 @@ hearing it on the phone is the user's check.
 
 ## Step 6 — refuse a stale save
 
+**Done 2026-09-19.** `expected_updated_at` on the PATCH body, excluded from the applied fields;
+a mismatch is 409 "This item changed since you opened it." The item page keeps a refused edit
+and offers Reload (take theirs, drop the draft) or Overwrite (send it without the check); the
+editor's key now includes `updated_at`, so a reload shows the fresh values. Proof: two new tests
+in `test_decisions.py` -- a stale save refused with nothing written, a fresh one taken, a toggle
+without a timestamp never refused -- pytest 169 passed, ruff clean. Headless Chrome, two tabs on
+one item: tab A saves; tab B's save is refused with the conflict line, its text still open and
+the stored text A's; Overwrite stores B's; A's next save is refused, Reload shows B's text, and
+A's save after that goes through. Also fixed here: step 2 had committed a docstring line over
+ruff's 100-column limit in `test_eval.py`, edited after its lint run.
+
 The item editor sends the `updated_at` it loaded; the PATCH returns 409 when the stored value is
 newer, and the editor offers Reload or Overwrite. Row toggles (star, done) send nothing and keep
 working as today, so a quick tick is never refused.
