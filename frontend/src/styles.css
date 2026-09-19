@@ -209,6 +209,11 @@ button:disabled { opacity: .5; cursor: default; }
 .search-row.large input[type="search"] { padding: 13px 16px; }
 .search-row input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .search-row .primary { padding: 9px 16px; }
+/* Inbox tabs: the nav's pill look, one tab per route, the count beside each label. */
+.tabs { display: flex; gap: 2px; padding: 3px; margin: 0 0 16px; background: var(--pill); border-radius: 12px; overflow-x: auto; }
+.tabs a { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 9px; color: var(--muted); text-decoration: none; font-size: 14px; white-space: nowrap; }
+.tabs a.active { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.tabs .count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 8%, transparent); font-size: 12px; line-height: 20px; text-align: center; }
 .chip-rows { display: flex; gap: 10px; flex-wrap: wrap; }
 .chips { display: inline-flex; gap: 2px; padding: 3px; background: var(--pill); border-radius: 10px; flex-wrap: wrap; }
 .chip-btn { background: none; border: 0; padding: 6px 12px; border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 14px; }

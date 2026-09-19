@@ -13,10 +13,8 @@ import Home from "./screens/Home";
 import Inbox from "./screens/Inbox";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
-import Recent from "./screens/Recent";
 import Space from "./screens/Space";
 import Spaces from "./screens/Spaces";
-import Waiting from "./screens/Waiting";
 import Settings from "./screens/Settings";
 import { SessionProvider } from "./session";
 import { ThemeContext, type Theme } from "./theme";
@@ -138,7 +136,7 @@ export default function App() {
   );
   const spaces = useSpaces(`${authed}:${version}`);
   const onSearchPage = location.pathname.startsWith("/spaces") || location.pathname.startsWith("/search");
-  const showChat = location.pathname === "/" || location.pathname === "/inbox";
+  const showChat = location.pathname === "/" || location.pathname === "/inbox" || location.pathname.startsWith("/inbox/");
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthed(false));
@@ -251,11 +249,12 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home version={version} answer={answer} pending={pending} onCloseAnswer={() => setAnswer(null)} />} />
             <Route path="/today" element={<Navigate to="/" replace />} />
-            <Route path="/inbox" element={<Inbox version={version} onDecided={bump} />} />
-            <Route path="/inbox/attention" element={<Waiting version={version} onDecided={bump} />} />
-            <Route path="/inbox/recent" element={<Recent version={version} pending={pending} />} />
+            <Route path="/inbox" element={<Inbox tab="attention" version={version} onDecided={bump} pending={pending} />} />
+            <Route path="/inbox/stale" element={<Inbox tab="stale" version={version} onDecided={bump} pending={pending} />} />
+            <Route path="/inbox/recent" element={<Inbox tab="recent" version={version} onDecided={bump} pending={pending} />} />
+            <Route path="/inbox/attention" element={<Navigate to="/inbox" replace />} />
             <Route path="/attention" element={<Navigate to="/inbox" replace />} />
-            <Route path="/attention/all" element={<Navigate to="/inbox/attention" replace />} />
+            <Route path="/attention/all" element={<Navigate to="/inbox" replace />} />
             <Route path="/recent" element={<Navigate to="/inbox/recent" replace />} />
             <Route path="/spaces" element={<Spaces version={version} onChanged={bump} />} />
             <Route path="/spaces/:name" element={<Space version={version} onChanged={bump} />} />

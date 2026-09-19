@@ -53,21 +53,20 @@ Header convention: the **eyebrow** names the page only when the title does not; 
 Route              Back    Eyebrow    Title                    Subtitle
 /                  —       DASHBOARD  <today's date>           Today, what needs you, and what you captured.
 /inbox             —       —          Inbox                    Approve what the classifier proposed, or file it yourself.
+/inbox/stale       —       —          Inbox                    Open tasks nobody has touched in a while.
+/inbox/recent      —       —          Inbox                    Everything you captured, newest first.
 /spaces            —       —          Spaces                   Where things live. Search across all, or end with ? to ask.
 /settings          —       —          Settings                 How this copy of Tartib is set up.
-/inbox/attention   Back    INBOX      Everything waiting       Every item that needs a decision.
-/inbox/recent      Back    INBOX      Everything you captured  Newest first, filed or not.
 /spaces/{name}     Back    SPACES     <space name>             Brief, tasks, and notes in this space.
 /items/{id}        Back    —          —                        — (the card holds the item)
 ```
 
 1. Home `/`: Today (open tasks due today or overdue, starred, passed reminders, or worked on in a session today; starred first; today's session count per task and in total, with a Start a session button), Needs attention (top 3 of queue then stale, "View all", and a line naming the most recently touched space), Recent (last 3 captures, "View all"). Two columns from 900px with Needs attention on the right; on phone the order is Today, Needs attention, Recent.
-2. Inbox `/inbox`: card "Needs attention · N things to decide" holding the 3 newest waiting items as decision cards (text, proposal sentence with tappable words, Approve, Not now, "…" with Reject and Open); Enter approves the first; "View all N" opens `/inbox/attention`. Then Stale tasks (open filed tasks untouched 14+ days) and Recent (last 3, "View all" opens `/inbox/recent`).
+2. Inbox: three tabs, each its own route so Back moves between them, with a count on the first two -- Needs attention `/inbox`, Stale `/inbox/stale`, Recent `/inbox/recent` (since 2026-09-19; `/inbox/attention` redirects to `/inbox`). Needs attention: every waiting item as a decision card, newest first, "Not now" sending one to the end (text, proposal sentence with tappable words, the reason it waits -- AI failed, proposal rejected, no space matched, or unsure with its confidence -- Approve, Not now, "…" with Reject and Open); Enter approves the first. Stale: open filed tasks untouched 14+ days. Recent: captures newest first, 50 at a time with "Load more", leaving out what waits in Needs attention.
 3. Spaces `/spaces`: title row with "+ New space" at the right (lowercase, digits, dashes, 24 max). Search-or-ask across everything, results grouped by space. Cards: name, "4 open · 12 notes", last activity, overdue dot; Unfiled muted, links to Inbox. A card opens `/spaces/{name}`: Back, title row with an All / Tasks / Notes filter and "…" (Rename carries items; Delete only when empty), scoped search-or-ask, Brief (cached until an item is added or removed, refresh icon, cleared when switching spaces), Tasks (Show done), Notes, collapsible and remembered per space.
 4. Settings `/settings`: Appearance (theme), Classifier (Codex on/off, threshold), Device (voice capture, timezone, reminders worker version, installed), Reminders (enable or turn off push; permission is only ever asked from that button, and a blocked browser is told it has to be undone in browser settings), Spaces (configured list), Account (sign out). Read-only except theme, reminders, and sign out.
 5. Item page `/items/{id}`: the item's text (editable via "…" > Edit text or double-click), status chips, the space name linking to its space, "File it" (while waiting) or "Edit" (filed) and "Proposal" as accordions, open while waiting and closed once filed; the Proposal shows the original capture text when it differs. "…" also holds Delete with an inline confirm.
-6. Recent `/inbox/recent`: captures newest first, 50 at a time with "Load more".
-7. Login: one password field.
+6. Login: one password field.
 
 Routes from earlier versions still resolve; the redirect map is in `../knowledge/technical.md`.
 

@@ -76,6 +76,16 @@ Proof: browser, one item of each cause, each with its own line.
 
 ## Step 4 — Inbox as tabs
 
+**Done 2026-09-19.** One `Inbox` component renders all three routes with a `tab` prop, so a tab
+switch keeps what is loaded; the Waiting screen is deleted (its newest-first and Not-now order
+moved in) and Recent became the tab's body. `/inbox/attention` and the old `/attention/all` go to
+`/inbox`. The ask bar shows on every Inbox tab. Recent carries no count: "everything captured" is
+not a number to act on, so only Needs attention and Stale show one -- a small departure from
+"a count on each". Proof: headless Chrome at 390px and 1280px, with 4 waiting, 1 stale and 2
+filed items: `/inbox/attention` lands on `/inbox`; the tab strip reads "Needs attention 4 · Stale
+1 · Recent"; each tab shows its list at its URL; Back goes Recent -> Stale -> Needs attention;
+no horizontal overflow. Typecheck and build pass. SPEC's route table and Inbox entry rewritten.
+
 One tab strip with a count on each: Needs attention at `/inbox` (every item, not 3), Stale at
 `/inbox/stale`, Recent at `/inbox/recent`. `/inbox/attention` ("Everything waiting") redirects to
 `/inbox`. Back and forward move between tabs. Recent keeps slice 18's exclusion of waiting items.
