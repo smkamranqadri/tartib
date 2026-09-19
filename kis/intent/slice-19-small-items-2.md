@@ -92,6 +92,16 @@ One tab strip with a count on each: Needs attention at `/inbox` (every item, not
 
 Proof: browser at 390px and 1280px: tabs, counts, URLs, the redirect, Back.
 
+Sounds, second round: the Kenney arrangements did not sound like the Pomofocus alarms the user
+had in mind. Kitchen and bell are now real recordings from BigSoundBank (CC0, attribution
+optional): "Mechanical alarm clock, ring #3" (2659) and "Bell #2" (2114, low-passed at 3.5 kHz).
+Chosen by measuring against the user's two reference links -- spectral centroid, strike rate,
+time sounding -- with the references downloaded to the scratchpad for comparison only, never
+committed, and deleted after. Kitchen: 6.3 kHz / 9.9 strikes/s / 3.6 s against the reference's
+6.1 / 10.4 / 3.1. Bell: 4.5 kHz / 6.4 / 2.9 s against 3.4 / 6.8 / 4.0 -- warmer than the raw
+recording, still brighter than the reference. Wood is unchanged. Provenance in
+`frontend/src/sounds/SOURCES.md`. Whether they are right is the user's ear.
+
 After a look on the device, same day: the tabs moved into the title row, right of "Inbox", in
 the nav's pill style (`.pills`); under 640px they wrap to a full-width row below the subtitle.
 Screenshots at 390px light and 1280px dark, no horizontal overflow.
