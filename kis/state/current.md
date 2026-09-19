@@ -6,7 +6,7 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
 - Task: **slice 18, small fixes** -- all six steps done and proved locally on 2026-09-19,
-  commits `365bdfc` to the step 6 commit; plan and per-step proof in
+  commits `365bdfc` to `da7094f`; plan and per-step proof in
   `kis/intent/slice-18-small-fixes.md`. Not deployed, by decision. Owed on the phone: no zoom on
   tapping the capture box (step 5), and the header clearing the notch without scroll jank
   (step 6). When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and
