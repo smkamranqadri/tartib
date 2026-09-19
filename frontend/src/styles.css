@@ -425,3 +425,10 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .thoughts p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .thought-add { display: flex; gap: 8px; align-items: flex-end; padding: 10px 16px 14px; }
 .thought-add textarea { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; }
+
+/* No session running: quieter than a live one, the recent ones ready to run again. */
+.session-bar.idle { background: var(--panel); border-color: var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+.session-bar.idle .session-time { font-size: 15px; color: var(--fg); }
+.session-bar.idle .session-ring { width: 36px; height: 36px; }
+.session-again { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.session-again .icon-btn { width: 28px; height: 28px; color: var(--session); }

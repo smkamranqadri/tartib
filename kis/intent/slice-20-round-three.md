@@ -110,6 +110,12 @@ the bar. Proof: headless Chrome with a session running, seven pages (Home, Inbox
 a space with an item open, an item, Settings) at 390px and 1280px, at the top and the end of
 each: the ask bar in view, the card above it and in view, no horizontal overflow.
 
+And: with no session running the card no longer disappears. It stays, quiet (panel colours, a
+small empty ring): "No session running", Start for a fresh one, and the last three sessions each
+with ▶ to run the same task again. Proof: headless Chrome at 390px after closing the running
+session: the idle card lists three with ▶; ▶ on a task's row started a running session on that
+task and the card turned red with its countdown.
+
 ## Step 6 — the space page split view
 
 **Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an

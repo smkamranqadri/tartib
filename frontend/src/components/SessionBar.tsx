@@ -10,11 +10,55 @@ import { describe } from "./SessionPast";
  *  sheet that blocks the app to ask about 25 minutes that already happened would be the
  *  nagging rule 4 exists to prevent. */
 export default function SessionBar() {
-  const { current, remaining, busy, stop, answer } = useSession();
+  const { current, remaining, busy, stop, answer, start } = useSession();
   const state = current?.state ?? null;
-  // The last few, shown once a session has stopped. Fetched when the card turns to its question.
-  const past = useLoad(() => (state === "awaiting" ? getRecentSessions(4) : Promise.resolve(null)), [state, current?.session?.id]);
-  if (!current || state === null) return null;
+  // The last few: under the question once a session stops, and on their own when none runs.
+  const past = useLoad(
+    () => (current && state !== "running" ? getRecentSessions(4) : Promise.resolve(null)),
+    [!!current, state, current?.session?.id],
+  );
+  if (!current) return null; // not loaded yet
+
+  if (state === null) {
+    const recent = (past.data?.sessions ?? []).slice(0, 3);
+    return (
+      <div className="session-bar idle">
+        <Ring fraction={0} />
+        <div className="session-main">
+          <span className="session-time">No session running</span>
+          <span className="session-what muted">{recent.length ? "Run one again, or start fresh." : "Start one when you are ready."}</span>
+        </div>
+        <button type="button" className="ghost" disabled={busy} onClick={() => void start(null)}>
+          Start
+        </button>
+        {recent.length > 0 && (
+          <ul className="session-past" aria-label="Recent sessions">
+            {recent.map((p) => {
+              const d = describe(p);
+              return (
+                <li key={p.id}>
+                  <span className="what">{d.what}</span>
+                  <span className="session-again">
+                    <span className="muted">{d.meta}</span>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      disabled={busy}
+                      onClick={() => void start(p.item_id)}
+                      aria-label={`Start again: ${d.what}`}
+                      title="Start again"
+                    >
+                      ▶
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    );
+  }
 
   const what = current.item?.title || current.item?.raw_text.split("\n")[0] || "No task";
 
