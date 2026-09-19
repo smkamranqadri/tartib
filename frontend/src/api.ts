@@ -101,6 +101,8 @@ export const getItem = (id: number) => api<Item>(`/api/items/${id}`);
 export const ask = (question: string, space?: string) =>
   send<Answer>("POST", "/api/ask", { question, space: space || undefined });
 
+export const addItem = (item: { shape: "task" | "note"; space: string; text: string; due?: string }) =>
+  send<Item>("POST", "/api/items", item);
 export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/items/${id}`, edit);
 export const approveItem = (id: number, edit?: Edit) =>
   send<Item>("POST", `/api/items/${id}/approve`, edit);

@@ -35,12 +35,13 @@ class Report:
 
 
 def select_ids(conn, scope: str) -> list[int]:
+    # A capture filed by hand never goes to the classifier: it would overwrite what was chosen.
     if scope == "all":
-        rows = conn.execute("SELECT id FROM captures ORDER BY id").fetchall()
+        rows = conn.execute("SELECT id FROM captures WHERE direct = 0 ORDER BY id").fetchall()
     else:
         rows = conn.execute(
             "SELECT DISTINCT c.id FROM captures c LEFT JOIN items i ON i.capture_id = c.id"
-            " WHERE c.status = 'error' OR i.stage = 'attention' ORDER BY c.id"
+            " WHERE c.direct = 0 AND (c.status = 'error' OR i.stage = 'attention') ORDER BY c.id"
         ).fetchall()
     return [r["id"] for r in rows]
 

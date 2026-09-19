@@ -389,3 +389,9 @@ button:disabled { opacity: .5; cursor: default; }
 .skeleton .bar.short { height: 10px; background: color-mix(in srgb, var(--fg) 6%, transparent); }
 @keyframes skeleton-pulse { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .skeleton .bar { animation: none; } }
+
+/* Filing by hand on a space page. */
+.add-item { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; margin: 0 0 16px; }
+.add-item-top, .add-item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.add-item textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; }
+.add-item input[type="date"] { margin-left: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); color: var(--fg); }

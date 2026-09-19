@@ -11,12 +11,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from tartib.auth import require_auth
+from tartib.clock import utcnow_iso
 from tartib.deps import get_db
 from tartib.store import (
     SpaceError,
     capture_by_client_id,
     create_capture,
     file_item,
+    insert_item,
     list_spaces,
     serialize_item,
     update_fields,
@@ -118,6 +120,54 @@ def _write(fn) -> dict:
             raise HTTPException(
                 status_code=422, detail="a filed item needs a configured space"
             ) from e
+        raise
+
+
+class DirectBody(BaseModel):
+    """An item filed by hand: shape and space already known, so no classifier."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    shape: Literal["task", "note"]
+    space: str = Field(max_length=80)
+    text: str = Field(min_length=1, max_length=20_000)
+    due: date | None = None
+
+
+@router.post("/items", status_code=201)
+def add_item(body: DirectBody, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """File an item directly. It gets a capture like any other -- what was typed is kept the same
+    way -- marked `direct` and already done, so neither the runner nor reclassify touches it."""
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="text is empty")
+    fields: dict = {"shape": body.shape, "space": body.space}
+    if body.shape == "task" and body.due is not None:
+        fields["due"] = body.due
+
+    def go() -> dict:
+        now = utcnow_iso()
+        cur = conn.execute(
+            "INSERT INTO captures (raw_text, source, created_at, status, classified_at, direct)"
+            " VALUES (?, 'web', ?, 'done', ?, 1)",
+            (text, now, now),
+        )
+        item_id = insert_item(
+            conn,
+            capture_id=int(cur.lastrowid or 0),
+            raw_text=text,
+            created_at=now,
+            fields=fields,
+            stage="filed",
+            allowed=list_spaces(conn),
+        )
+        conn.commit()
+        return serialize_item(fetch_item(conn, item_id))
+
+    try:
+        return _write(go)
+    except HTTPException:
+        conn.rollback()
         raise
 
 

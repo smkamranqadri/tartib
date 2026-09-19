@@ -25,6 +25,18 @@ jump when data lands. Proof: browser with the API slowed, rows hold the layout.
 
 ## Step 2 — add a task or note directly
 
+**Done 2026-09-19.** One correction to the plan: `captures.source` is a CHECK constraint (`web`,
+`api`, `migrated`), so `'direct'` is not a value it can take without rebuilding a table `items`
+references. A column instead: `captures.direct` (migration 0011), with `source='web'`,
+`status='done'`. This moves the later migrations up one: policy 0012, feedback 0013, thoughts
+0014. `POST /api/items {shape, space, text, due?}`; an unknown space is 422 and leaves no capture
+behind; a note drops any due date. `reclassify` skips `direct=1` in both scopes -- without that,
+`--all` would hand a hand-filed task to the model. Proof: `tests/test_direct.py`, 4 tests (filed
+with no classifier call, recorded by the fake CLI; note drops due; unknown space rolled back;
+reclassify skips it); pytest 173 passed, ruff clean. Headless Chrome at 390px and 1280px: "+
+Add" -> task with a due date lands in Tasks with "Sep 25", Note hides the date and lands in Notes,
+the form closes, no horizontal overflow.
+
 "+ Add" at the right of a space's title: task or note, the text, a due date for tasks. Files into
 that space with no AI call. Stored as a capture with `source = 'direct'`, status done, so every
 item keeps a capture and nothing in the schema changes. Proof: tests (filed item, no classifier

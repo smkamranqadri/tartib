@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { deleteSpace, renameSpace } from "../api";
+import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
 import Confirm from "../components/Confirm";
 import Menu from "../components/Menu";
@@ -21,6 +22,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [manageError, setManageError] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim()), 200);
@@ -32,6 +34,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
     setRenaming(false);
     setConfirmDelete(false);
     setManageError(null);
+    setAdding(false);
   }, [space]);
 
   async function doDelete() {
@@ -59,6 +62,11 @@ export default function Space({ version, onChanged }: { version: number; onChang
               </button>
             ))}
           </div>
+          {!adding && (
+            <button type="button" className="ghost" onClick={() => setAdding(true)}>
+              + Add
+            </button>
+          )}
           {renaming ? (
             <NameForm
               initial={space}
@@ -92,6 +100,16 @@ export default function Space({ version, onChanged }: { version: number; onChang
           {manageError && <span className="error">{manageError}</span>}
         </div>
       </div>
+      {adding && (
+        <AddItemForm
+          space={space}
+          onAdded={() => {
+            setAdding(false);
+            onChanged();
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
       <SearchAsk value={q} onChange={setQ} space={space} placeholder={`Search ${space}, or ask`} />
       <SpaceDetail space={space} query={debounced} version={version} filter={filter} onCount={setItemCount} />
     </div>
