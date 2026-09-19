@@ -7,6 +7,12 @@ Slices 15, 16 and 17 -- PWA, public repo, deploy -- were put ahead of everything
 2026-09-18 and all closed that day; their plans stay in `slice-1{5,6,7}-*.md`. Nothing below is
 ordered yet.
 
+Slice 18 (`slice-18-small-fixes.md`, planned 2026-09-19) takes: both reported defects with a
+known cause, the unreproduced space-picker defect, "Keep Needs Attention out of the Inbox Recent
+list", the safe areas from "UI polish", and "opaque menus" -- reversed into a sticky translucent
+nav. It also removes the Claude fallback, which voids the "fails slowly" candidate. Those entries
+leave this file when the slice closes.
+
 Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 
 - **13 presentation** — markdown on the item page, note bodies and briefs, rendered and edited

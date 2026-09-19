@@ -4,25 +4,20 @@
   reached the phone before the move -- lives in `kis/state/private.md`, gitignored and never
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  `v1.0` is tagged and released. Uncommitted: the 2026-09-19 backlog session -- `backlog.md`,
-  `SPEC.md`, `history.md`, the new `themes.md` (all `intent/`), `rules.md`, `technical.md`,
-  `project.md` (`knowledge/`), and this file. KIS only; no code changed.
-- Task: none in flight. Slices 12, 15, 16 and 17 are all closed. Tartib runs on its own host,
-  behind HTTPS, reachable from the phone, and is in real use -- which is what slices 15 to 17
-  existed for. Plans: `kis/intent/slice-1{5,6,7}-*.md`.
-- Next, in no fixed order and none of it started:
+  `v1.0` is tagged and released; `main` is ahead of it, unpushed.
+- Task: **slice 18, small fixes** -- planned and approved 2026-09-19, no step started. Plan:
+  `kis/intent/slice-18-small-fixes.md`. Six independent steps: remove the Claude fallback (rule 3
+  becomes Codex-only), Settings shows why it is stuck, Recent stops repeating Needs Attention, a
+  new space reaches the pickers, 16px fields, a sticky glass nav with safe areas. Mode: Standard.
+  No deploy in this slice; when `v1.1` does ship, `TARTIB_AI_FALLBACK_COMMAND`,
+  `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come out of the CapRover app config.
+- After it, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
      everything on that server exists exactly once. This is the one open item whose cost is
      unbounded.
-  2. **The Claude fallback hang**, below.
-  3. Slice 13 (presentation) and slice 14 (AI contract), approved in the backlog, unplanned --
-     joined on 2026-09-19 by twenty-two more approved items and three reported defects, all in
-     `kis/intent/backlog.md`, with the theme palettes as data in `kis/intent/themes.md`.
-     Three of them change a hard rule when they ship -- rules 4, 7 and 8 -- and each of those
-     rules now points at the backlog entry that supersedes it. Rule 9, on tone, was added the
-     same day and is in force now. Slice 13's scope also changed that day: the row's pencil stays
-     and the title stops being a link, reversing the 2026-09-17 decision.
+  2. Slice 13 (presentation), slice 14 (AI contract) and the rest of `kis/intent/backlog.md`,
+     with the theme palettes as data in `kis/intent/themes.md`.
 
 ## The deployment
 
