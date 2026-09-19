@@ -145,7 +145,7 @@ same wake points `push.ts` watches, not Background Sync, which Safari does not h
 lists render pending rows even when their server load failed, which is exactly when there are any.
 `useLoad` owns every screen's load error and says "You're offline." rather than the browser's
 "Failed to fetch".
-`push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible.
+`push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible. Bump it on every release that changes the app, not only when `sw.js` changes: a browser re-installs a worker only when its bytes differ, so a bundle-only release leaves the old worker active and never offers the reload.
 `App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
 
 One component per pattern, each the only owner of its markup:
@@ -170,6 +170,12 @@ under QEMU; `TARTIB_IMAGE` and `TARTIB_PLATFORM` override the defaults. The scri
 overwrite a tag that already exists, because the tags are immutable versions and there is no
 `latest` -- CapRover redeploying the same string could otherwise serve either image.
 
+On CapRover the container's HTTP port must be set to 8000, not the default 80, and there is no
+host port mapping: mapping one would bypass nginx, and with it TLS and the `X-Forwarded-Proto`
+header the `Secure` session cookie depends on. Force HTTPS is on, so `http://` answers 302. The
+persistent directories are `/data` (the database) and `/root/.codex` (the Codex login). The
+deployed database is separate from the local one and always has been.
+
 The Codex CLI authenticates with a device code, so `codex login` works over SSH on a headless
 server with no browser callback and no credential files to carry. On CapRover it is run inside
 the container, because the persistent directory is a labelled volume and the host's own
@@ -179,6 +185,11 @@ CLI's token refresh persists.
 ## Maintenance
 
 `python -m tartib.reclassify --all | --attention [--dry-run]` (in Docker: `docker compose exec tartib python -m tartib.reclassify --all`). Deletes the selected captures' items, marks the captures pending, runs the Runner in-process until drained, then carries `starred`/`status` over where a capture still yields one task. Safe with the server up; do not restart the server mid-run. Back up `/data/tartib.db` first (`docker cp tartib-tartib-1:/data/tartib.db …`).
+
+History is not rewritten. It was rewritten three times on 2026-09-18, all before the first push
+(one identity, then the domain and private-network setup scrubbed, then a second email address
+removed); the repository has been public since, so any further rewrite would be a force-push
+over published history. Scrub by commit going forward, never by rewrite.
 
 ## Verification commands
 

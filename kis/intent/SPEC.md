@@ -2,7 +2,7 @@
 
 What the product does. How it is built lives in `kis/knowledge/technical.md`. Hard rules live in `kis/knowledge/rules.md`.
 
-Status: v0.1 built and verified 2026-09-17. Every section below is implemented.
+Status: v1.0, released and deployed 2026-09-18. Every section below is implemented. Approved changes that are not built yet live in `backlog.md`, not here.
 
 ## Capture and Item
 
