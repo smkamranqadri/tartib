@@ -21,12 +21,22 @@ import { useLoad } from "../useLoad";
 
 export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
   const { theme, setTheme } = useTheme();
-  const config = useLoad(getConfig, []).data;
+  const { data: config, error: configError, loading: configLoading, reload: reloadConfig } = useLoad(getConfig, []);
+  // A config that failed to load must not read as one still loading: say why, and offer another go.
+  const configFailed = !!configError && !config;
   const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
 
   return (
     <div className="screen">
       <PageHead title="Settings" subtitle="How this copy of Tartib is set up." />
+      {configFailed && (
+        <div className="load-failed">
+          <ErrorLine>{configError}</ErrorLine>
+          <button type="button" className="ghost" disabled={configLoading} onClick={reloadConfig}>
+            {configLoading ? "Retrying…" : "Retry"}
+          </button>
+        </div>
+      )}
       <Card icon={<SettingsIcon />} label="Appearance" aside={<span className="muted">{theme}</span>}>
         <Row title="Theme" desc="Light or dark. Follows your system until you choose.">
           <div className="seg">
@@ -63,7 +73,7 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
           <span className="muted">{standalone ? "app" : "browser"}</span>
         </Row>
       </Card>
-      <Reminders vapidPublic={config ? config.vapid_public : undefined} />
+      <Reminders vapidPublic={config ? config.vapid_public : undefined} failed={configFailed} />
       <Card icon={<LayersIcon />} label="Spaces" aside={<span className="muted">{config?.spaces.length ?? "…"}</span>}>
         <Row title="Your spaces" desc="Create, rename, or delete them on the Spaces page. The classifier files only into these.">
           <span className="muted">{config?.spaces.join(" · ") ?? "…"}</span>
@@ -112,7 +122,7 @@ const WORDING: Record<PushState, string> = {
   denied: "Notifications are blocked for this site. Browsers do not allow asking again, so this has to be undone in your browser's site settings.",
 };
 
-function Reminders({ vapidPublic }: { vapidPublic: string | null | undefined }) {
+function Reminders({ vapidPublic, failed }: { vapidPublic: string | null | undefined; failed: boolean }) {
   const [state, setState] = useState<PushState>(() => pushState(vapidPublic));
   const [subscribed, setSubscribed] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -168,7 +178,7 @@ function Reminders({ vapidPublic }: { vapidPublic: string | null | undefined }) 
     <Card icon={<BellIcon />} label="Reminders" aside={<span className="muted">{aside}</span>}>
       {/* No control at all when there is nothing to press: the label and the description
           already say why, and repeating "blocked" in both columns is just noise. */}
-      <Row title="Push notifications" desc={WORDING[state]}>
+      <Row title="Push notifications" desc={failed && state === "loading" ? "Can't tell until this install's settings load." : WORDING[state]}>
         {canAsk ? (
           <button type="button" className="primary" disabled={busy} onClick={() => toggle(true)}>
             {busy ? "Enabling…" : "Enable reminders"}

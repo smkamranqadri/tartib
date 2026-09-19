@@ -5,7 +5,7 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 18, small fixes** -- approved 2026-09-19. Step 1 done; step 2 next. Plan:
+- Task: **slice 18, small fixes** -- approved 2026-09-19. Steps 1 and 2 done; step 3 next. Plan:
   `kis/intent/slice-18-small-fixes.md`. Six independent steps: remove the Claude fallback (rule 3
   becomes Codex-only), Settings shows why it is stuck, Recent stops repeating Needs Attention, a
   new space reaches the pickers, 16px fields, a sticky glass nav with safe areas. Mode: Standard.
@@ -72,9 +72,6 @@ Maintenance).
   retire an endpoint, and Safari never fires the event.
 - Tapping a reminder on iOS opens Tartib but does not navigate to `/today`. Whether iOS runs the
   worker's `notificationclick` at all was never established; `technical.md` records what was tried.
-- On a desktop, Settings can sit on "Checking this browser and this install..." with no error and
-  no retry whenever `/api/config` fails -- reproduced 2026-09-19. It hides the push state entirely,
-  so the gap below cannot be judged from that screen until it is fixed. Backlog has both.
 - One device is subscribed to push. A desktop Chrome fails to subscribe with "Registration failed
   - push service error", which is the browser failing to register with FCM and not a Tartib
   problem: `pushManager.subscribe()` never contacts the server, and iOS accepted the same key.

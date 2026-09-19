@@ -35,6 +35,12 @@ backlog candidate and matters more now.
 
 ## Step 2 — Settings says why it is stuck
 
+**Done 2026-09-19.** Headless Chrome at 390px against a throwaway server, `/api/config` aborted:
+the page shows "Can't reach Tartib." with Retry, and the Reminders row reads "Can't tell until
+this install's settings load." instead of "Checking...". Unblocked, Retry removes the error and
+the page resolves (timezone `UTC`, push "no push key set up", correct for that server).
+Typecheck passes.
+
 `Settings.tsx:24` keeps only `.data` from `useLoad`. Show its `error` with `ErrorLine` and a
 Retry that reloads the config.
 

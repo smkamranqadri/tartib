@@ -306,6 +306,8 @@ button:disabled { opacity: .5; cursor: default; }
 .new-space { align-self: center; }
 .name-form { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .name-form input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--fg); width: 180px; }
+.load-failed { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+.load-failed .error { margin: 0; }
 .confirm { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 14px; }
 .card-body > .confirm { margin: 8px 16px; }
 .item-aside { display: inline-flex; align-items: center; gap: 6px; }
