@@ -5,21 +5,11 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 25 (offline) is committed on `main` and not deployed.** Plan,
-  decisions and proof: `kis/intent/slice-25-offline.md`. The app reads offline and says how old
-  what it shows is; ticking, starring, editing text and adding a thought all work with no
-  network and replay on reconnect. It also carries a fix to slice 24's conflict strip, which
-  broke a phone's width whenever it appeared.
-- **Slice 24 (presentation) is committed on `main` and not deployed.**
-  Plan, every decision and the proof: `kis/intent/slice-24-presentation.md`. Work mode **Phase**.
-  A rendered markdown on the item body, thought entries, Ask answers and the space brief,
-  flattened the row headline in all five places that compute one, and kept slice 20's search hit
-  marked inside the rendered output. B made the item text an editor you tap into rather than a
-  mode you enter -- CodeMirror lazily, debounced autosave, a non-modal 409 strip, and a local
-  draft so a teardown cannot take your words.
-- **Slice 23 (the UI language) is committed on `main` and not deployed.** Plan and proof:
-  `kis/intent/slice-23-ui.md`; the palette and the floors: `kis/knowledge/themes.md`.
-- Neither 23 nor 24 has been seen on a device. What that leaves unsettled is under Known gaps.
+- Task: none in flight.
+- **Slices 23 (the UI language), 24 (presentation) and 25 (offline) are committed on `main`,
+  not deployed, and have never been seen on a device.** What each changed, in a line:
+  `kis/intent/history.md`; the decisions and the proof: `kis/intent/slice-2{3,4,5}-*.md`.
+  What being unseen leaves unsettled is under Known gaps.
 - **Slices 18 to 22 are closed and accepted on a device.** Plans: `kis/intent/slice-1{8,9}-*.md`,
   `kis/intent/slice-2{0,1,2}-*.md`; what each one changed, in a line: `kis/intent/history.md`.
 - **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 25 are local commits on `main`
@@ -76,14 +66,9 @@ with a desktop tab open on the same countdown (the migration 0008 case), and `ht
 
 ## Known gaps
 
-- Offline, **counts lag**. Slice 25 shows a queued change on the item wherever it appears, but
-  tiles, counts and a space's brief are computed by the server and do not move until the queue
-  drains. Deliberate: the alternative was reimplementing the backend's aggregation in the client
-  and keeping a second source of truth for it. The stale line explains the gap.
-- Offline, **editing text needs one unhurried moment online first**. The editor is a lazy chunk
-  and the worker only caches what it has fetched, so a device that has never opened an item page
-  cannot edit text offline. Reading, ticking, starring and thoughts all work from the first
-  offline moment.
+Offline behaviour that is designed rather than missing -- counts lagging, and text editing
+needing one moment online first -- is product truth: `../intent/SPEC.md`, Offline.
+
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
   Inbox also shows.
 - **Slices 23, 24 and 25 were proved in headless Chrome only.** Four things wait on glass:
