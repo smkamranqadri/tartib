@@ -13,6 +13,13 @@ taking a sixth tab -- five is what fits at 390px, and Spaces cannot be dropped.
 
 ## Step 1 — a bottom bar under the thumb
 
+**Done 2026-09-20.** `TabBar` on phones only; the top header is hidden there entirely, since the
+page's own title says where you are. It publishes `--tabbar-h`, so the ask bar, the floating
+session card, the toast and the page's bottom padding all stack above it. Proof: 390x844 --
+header 0 (was 104), tab bar 65, the ask bar sitting exactly on top of it, chrome down from 439
+to 400 with a session live (the rest is step 2's); tapping Spaces navigates and marks the tab;
+⊕ focuses the capture box for now. At 1280px the header is still there and the bar is not.
+
 On phones only: Home, Inbox, ⊕, Spaces, Settings, fixed at the bottom, glass like the rest, with
 the bottom safe-area inset, 44px targets and the active tab marked. The top keeps a slim bar:
 the page title and its actions, nothing else. The desktop nav does not change.

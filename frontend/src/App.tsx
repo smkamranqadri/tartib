@@ -7,6 +7,7 @@ import Capture from "./Capture";
 import AskBar from "./components/AskBar";
 import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
 import SessionBar from "./components/SessionBar";
+import TabBar from "./components/TabBar";
 import Toast, { type ToastState } from "./components/Toast";
 import UpdateBar from "./components/UpdateBar";
 import Home from "./screens/Home";
@@ -272,6 +273,7 @@ export default function App() {
             above the ask bar while the page scrolls. */}
         {location.pathname !== "/" && <SessionBar placement="float" />}
         <AskBar spaces={spaces} />
+        <TabBar onAdd={() => window.dispatchEvent(new Event("tartib:focus-capture"))} />
         <Toast toast={toast} />
       </div>
       </SessionProvider>

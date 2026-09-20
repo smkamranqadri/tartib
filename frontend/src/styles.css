@@ -484,3 +484,31 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
 }
 .pills button.active { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .line.static .line-title { flex: 1; }
+
+/* The phone's nav, under the thumb. The header's pills do this job on a wide screen. */
+.tabbar { display: none; }
+@media (max-width: 640px) {
+  header.top { display: none; }
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+    display: flex; align-items: stretch; justify-content: space-around;
+    padding: 6px max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
+    background: color-mix(in srgb, var(--bg) 62%, transparent);
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+    border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
+  .tabbar a, .tabbar button {
+    flex: 1; min-width: 44px; min-height: 44px; display: inline-flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; border: 0;
+    background: none; color: var(--muted); text-decoration: none; font-size: 11px; cursor: pointer;
+  }
+  .tabbar a svg { width: 22px; height: 22px; }
+  .tabbar a.active { color: var(--accent); }
+  .tabbar .tab-add { flex: 0 0 56px; }
+  .tabbar .tab-add span { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 26px; line-height: 1; }
+  /* Everything fixed at the bottom stacks above it. */
+  .askbar { bottom: var(--tabbar-h, 0px); }
+  .app.has-askbar { padding-bottom: calc(var(--askbar-h, 120px) + var(--session-h, 0px) + var(--tabbar-h, 0px) + 16px); }
+  .session-bar.floating { bottom: calc(var(--askbar-h, 0px) + var(--tabbar-h, 0px) + 10px); }
+  .has-askbar .toast { bottom: calc(var(--askbar-h, 96px) + var(--session-h, 0px) + var(--tabbar-h, 0px) + 12px); }
+}
