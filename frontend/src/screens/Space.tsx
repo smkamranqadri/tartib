@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { deleteSpace, getSpaces, listItems, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
@@ -11,7 +11,7 @@ import SearchAsk from "../components/SearchAsk";
 import { useLoad } from "../useLoad";
 import { useWide } from "../useWide";
 import ItemPage from "./ItemPage";
-import { LAYOUTS } from "./layouts/shared";
+import { LayoutSwitch, spaceView } from "./layouts/shared";
 import SpaceDetail, { type ShapeFilter } from "./SpaceDetail";
 
 const POLICY: Record<SpacePolicy, { menu: string; note: string }> = {
@@ -33,6 +33,8 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const [manageError, setManageError] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  // The view this device prefers. Classic is "", so landing here confirms it.
+  const preferred = spaceView();
   // Wide screens keep the open item beside the list, in the URL so Back and links still work.
   const wide = useWide();
   const [params, setParams] = useSearchParams();
@@ -86,6 +88,8 @@ export default function Space({ version, onChanged }: { version: number; onChang
     }
   }
 
+  if (preferred) return <Navigate to={`/spaces/${encodeURIComponent(space)}/${preferred}`} replace />;
+
   return (
     <div className="screen">
       <BackLink fallback="/spaces" />
@@ -99,6 +103,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
               </button>
             ))}
           </div>
+          <LayoutSwitch space={space} current="" />
           {!adding && (
             <button type="button" className="ghost" onClick={() => setAdding(true)}>
               + Add
@@ -127,10 +132,6 @@ export default function Space({ version, onChanged }: { version: number; onChang
                   label: `${policy === p ? "✓ " : ""}${POLICY[p].menu}`,
                   title: p === "auto" ? "Files a proposal when the classifier is confident enough" : undefined,
                   onSelect: () => void choosePolicy(p),
-                })),
-                ...LAYOUTS.filter((l) => l.slug).map((l) => ({
-                  label: `Try: ${l.label}`,
-                  to: `/spaces/${encodeURIComponent(space)}/${l.slug}`,
                 })),
                 { label: "Rename", onSelect: () => setRenaming(true) },
                 {

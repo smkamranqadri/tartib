@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { listItems } from "../../api";
 import { formatDue, formatRelative, todayLocal } from "../../format";
 import type { Item } from "../../types";
@@ -12,16 +12,50 @@ export const LAYOUTS = [
   { slug: "tree", label: "Tree" },
 ];
 
-export function LayoutSwitch({ space }: { space: string }) {
+const KEY = "tartib-space-view";
+
+/** The view a space opens in, per device. A space page sets it whenever one is picked, so the
+ *  next space opens the same way. */
+export function spaceView(): string {
+  try {
+    const v = localStorage.getItem(KEY);
+    if (v && LAYOUTS.some((l) => l.slug === v)) return v;
+  } catch {
+    /* private mode */
+  }
+  return "";
+}
+
+export function setSpaceView(slug: string): void {
+  try {
+    localStorage.setItem(KEY, slug);
+  } catch {
+    /* private mode: the choice lasts as long as the page */
+  }
+}
+
+/** Pick how to read this space. Remembered, so it is a preference and not a per-visit detour. */
+export function LayoutSwitch({ space, current }: { space: string; current: string }) {
+  const navigate = useNavigate();
   const base = `/spaces/${encodeURIComponent(space)}`;
   return (
-    <nav className="pills tabs" aria-label="Layout">
-      {LAYOUTS.map((l) => (
-        <NavLink key={l.slug} to={l.slug ? `${base}/${l.slug}` : base} end>
-          {l.label}
-        </NavLink>
-      ))}
-    </nav>
+    <label className="view-pick muted small">
+      View
+      <select
+        value={current}
+        aria-label="View"
+        onChange={(e) => {
+          setSpaceView(e.target.value);
+          navigate(e.target.value ? `${base}/${e.target.value}` : base, { replace: true });
+        }}
+      >
+        {LAYOUTS.map((l) => (
+          <option key={l.slug} value={l.slug}>
+            {l.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

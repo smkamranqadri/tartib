@@ -461,3 +461,6 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .node .lines { padding-left: 14px; }
 @media (max-width: 640px) { .line-meta { font-size: 12px; } }
 
+
+.view-pick { display: inline-flex; align-items: center; gap: 6px; }
+.view-pick select { padding: 7px 30px 7px 10px; border: 1px solid var(--line); border-radius: 999px; background-color: var(--panel); color: var(--fg); font-size: 14px; }

@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import BackLink from "../components/BackLink";
 import PageHead from "../components/PageHead";
 import Panes from "./layouts/Panes";
-import { LayoutSwitch } from "./layouts/shared";
+import { LayoutSwitch, setSpaceView } from "./layouts/shared";
 import Tree from "./layouts/Tree";
 
 const SUBTITLE = {
@@ -16,13 +17,15 @@ export default function SpaceLayout({ kind, version, onChanged }: { kind: keyof 
   const { name = "" } = useParams();
   const space = name.toLowerCase();
   const Layout = { panes: Panes, tree: Tree }[kind];
+  // Landing here by link or bookmark is a choice too: remember it for the next space.
+  useEffect(() => setSpaceView(kind), [kind]);
   return (
     <div className="screen">
       <BackLink fallback="/spaces" />
       <div className="title-row">
         <PageHead eyebrow="Spaces" title={space} subtitle={SUBTITLE[kind]} />
         <div className="title-actions">
-          <LayoutSwitch space={space} />
+          <LayoutSwitch space={space} current={kind} />
         </div>
       </div>
       <Layout space={space} version={version} onChanged={onChanged} />
