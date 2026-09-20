@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { Item } from "../../types";
 import { useWide } from "../../useWide";
 import ItemPage from "../ItemPage";
-import { ItemLine, isOverdue, useSpaceItems } from "./shared";
+import { ItemLine, isOverdue, matches, SpaceSessions, useSpaceItems } from "./shared";
 
 type Branch = { key: string; label: string; keep: (i: Item) => boolean; children?: Branch[] };
 
@@ -23,8 +23,9 @@ const TREE: Branch[] = [
 
 /** Tree: the space as branches you open and close -- Tasks (Overdue, Open, Done) and Notes, each
  *  counted. The item opens beside the tree, so the branch you are in stays where it was. */
-export default function Tree({ space, version, onChanged }: { space: string; version: number; onChanged: () => void }) {
-  const { items, loading, error } = useSpaceItems(space, version);
+export default function Tree({ space, version, query, onChanged }: { space: string; version: number; query: string; onChanged: () => void }) {
+  const { items: all, loading, error } = useSpaceItems(space, version);
+  const items = all.filter((i) => matches(i, query));
   const [shut, setShut] = useState<string[]>([]);
   const wide = useWide();
   const [params, setParams] = useSearchParams();
@@ -77,6 +78,7 @@ export default function Tree({ space, version, onChanged }: { space: string; ver
             <Node key={branch.key} branch={branch} depth={0} />
           ))}
         </ul>
+        <SpaceSessions space={space} version={version} />
       </div>
       {wide && (
         <aside className="split-item">

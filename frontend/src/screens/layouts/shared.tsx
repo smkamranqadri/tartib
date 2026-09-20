@@ -1,5 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { listItems } from "../../api";
+import { getRecentSessions, listItems } from "../../api";
+import Card from "../../components/Card";
+import { ClockIcon } from "../../components/Icons";
+import { describe } from "../../components/SessionPast";
 import { formatDue, formatRelative, todayLocal } from "../../format";
 import type { Item } from "../../types";
 import { useLoad } from "../../useLoad";
@@ -23,7 +26,7 @@ export function spaceView(): string {
   } catch {
     /* private mode */
   }
-  return "";
+  return "panes"; // the default until a device says otherwise
 }
 
 export function setSpaceView(slug: string): void {
@@ -84,5 +87,36 @@ export function ItemLine({ item, meta = true }: { item: Item; meta?: boolean }) 
         </span>
       )}
     </>
+  );
+}
+
+
+/** Does this item answer the search box? Text, title and space, the way a reader would expect. */
+export function matches(item: Item, q: string): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const hay = `${item.title ?? ""} ${item.raw_text} ${item.space ?? ""}`.toLowerCase();
+  return needle.split(/\s+/).every((word) => hay.includes(word));
+}
+
+/** This space's own sessions, the same list the classic page shows, in these layouts' shape. */
+export function SpaceSessions({ space, version }: { space: string; version: number }) {
+  const { data } = useLoad(() => getRecentSessions(20, space), [space, version]);
+  const past = data?.sessions ?? [];
+  if (past.length === 0) return null;
+  return (
+    <Card icon={<ClockIcon />} label="Sessions" aside={<span className="muted">last {past.length}</span>}>
+      <ul className="lines">
+        {past.map((p) => {
+          const d = describe(p);
+          return (
+            <li key={p.id} className="line static">
+              <span className="line-title">{d.what}</span>
+              <span className="line-meta muted">{d.meta}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }

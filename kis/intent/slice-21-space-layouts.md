@@ -6,7 +6,9 @@ Chrome, no page errors -- Classic opens with `?item=11` in its pane, 16px betwee
 brief; the switcher reads Classic | Panes | Tree; `j` in Panes moves the selection and the brief
 strip opens; a tree leaf sets `?item=7` and fills the pane, with nothing expanding in the tree
 itself, and collapsing Notes removes its rows; `/board` and `/timeline` no longer resolve (they
-fall through to Home); at 390px the tree has no pane and a leaf links to `/items/{id}`. Picker: Classic ->
+fall through to Home); at 390px the tree has no pane and a leaf links to `/items/{id}`. Search, Add and sessions: on both, "gate" cut Panes 7 rows to 3 and Tree 9 to 4, each has one
+Sessions card and one "+ Add", and an item added from each appeared in its list. With nothing
+stored, `/spaces/home` lands on `/spaces/home/panes`. Picker: Classic ->
 Tree stores `tree` and moves there, another space then opens in Tree, picking Panes stores
 `panes`, picking Classic stores `""` and Classic stays Classic.
 
@@ -15,7 +17,9 @@ be. Four alternatives were built at their own URLs beside the current page, whic
 change. **2026-09-20, after trying them: Board and Timeline are out** -- deleted, not kept as
 dead routes -- Tree opens its item in the pane instead of expanding in place, and all three that
 remain are kept, chosen from a "View" select in the title row and remembered per device
-(`tartib-space-view`), so the next space opens the same way. What remains:
+(`tartib-space-view`), **Panes by default**, so the next space opens the same way. Panes and
+Tree carry the same furniture as Classic: the scoped search box, "+ Add", and the space's
+sessions. What remains:
 
 - `/spaces/{name}` — **Classic**, today's page. Untouched.
 - `/spaces/{name}/panes` — **Panes**: no card frames. A collapsible brief strip, filter chips,

@@ -4,7 +4,7 @@ import { getBrief } from "../../api";
 import { useLoad } from "../../useLoad";
 import { useWide } from "../../useWide";
 import ItemPage from "../ItemPage";
-import { ItemLine, useSpaceItems } from "./shared";
+import { ItemLine, matches, SpaceSessions, useSpaceItems } from "./shared";
 
 type Filter = "all" | "task" | "note" | "done";
 
@@ -17,14 +17,14 @@ const KEEP: Record<Filter, (i: ReturnType<typeof useSpaceItems>["items"][number]
 
 /** Panes: no card frames. The brief folded into a strip, filter chips, one dense list, the item
  *  beside it. `j` and `k` walk the list, so a space can be read without the mouse. */
-export default function Panes({ space, version, onChanged }: { space: string; version: number; onChanged: () => void }) {
+export default function Panes({ space, version, query, onChanged }: { space: string; version: number; query: string; onChanged: () => void }) {
   const { items, loading, error } = useSpaceItems(space, version);
   const [filter, setFilter] = useState<Filter>("all");
   const [openBrief, setOpenBrief] = useState(false);
   const brief = useLoad(() => (openBrief ? getBrief(space) : Promise.resolve(null)), [openBrief, space, version]);
   const wide = useWide();
   const [params, setParams] = useSearchParams();
-  const shown = items.filter(KEEP[filter]);
+  const shown = items.filter((i) => KEEP[filter](i) && matches(i, query));
   const openId = Number(params.get("item")) || shown[0]?.id || null;
 
   const open = (id: number) => setParams({ item: String(id) }, { replace: true });
@@ -70,6 +70,7 @@ export default function Panes({ space, version, onChanged }: { space: string; ve
           ))}
         </ul>
         <p className="muted small hint">j and k move through the list.</p>
+        <SpaceSessions space={space} version={version} />
       </div>
       {wide && (
         <aside className="split-item">
