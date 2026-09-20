@@ -336,3 +336,12 @@ session ring). Text is measured against the surface it actually sits on -- the p
 card header, a field -- not against `--bg`.
 
 UI checks run headless Chrome through playwright-core from the scratchpad (the Claude in Chrome extension was not connected on 2026-09-17). Contrast is read out of the running app rather than from the stylesheet, and tap targets are measured on the element that receives the tap -- a checkbox's target is the `.tap-box` label wrapping it, not the 18px box.
+**Clicking a row near the foot of a list needs `dispatchEvent("click")`, not `click()` and not
+`click({ force: true })`.** The ask bar and the phone tab bar are fixed over the last rows, and
+`force` only skips the actionability check -- it still dispatches at the element's coordinates,
+so the bar eats it. This cost two rounds on slice 25 chasing a queued edit that would not stick;
+the queue was right and the click was landing on the ask bar.
+Each slice has so far built its harness in the scratchpad and thrown it away, so nothing can
+re-run an earlier slice's checks. That is how slice 24's conflict strip reached a phone 430px
+wide: its own checks never had a conflict on screen, and slice 25's harness was the first thing
+to look. Committing them as a suite is an open question, not a settled practice.
