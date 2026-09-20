@@ -23,7 +23,6 @@ import { SessionProvider } from "./session";
 import { useWide } from "./useWide";
 import type { Answer, Capture as CaptureRecord } from "./types";
 import { useLoad } from "./useLoad";
-import { DEFAULT_THEME, ThemeContext, migrateTheme, type Theme } from "./theme";
 import { useSpaces } from "./useSpaces";
 
 /** "Filed as task in namazee", "Needs your look", "Filed 2 tasks · 1 needs your look", "Answered". */
@@ -42,18 +41,8 @@ function outcome(cap: CaptureRecord): string {
   return parts.join(" · ") || "Saved";
 }
 
-function readTheme(): Theme {
-  try {
-    return migrateTheme(localStorage.getItem("tartib-theme"));
-  } catch {
-    /* storage unavailable */
-  }
-  return DEFAULT_THEME;
-}
-
 export default function App() {
   const [authed, setAuthed] = useState(true);
-  const [theme, setTheme] = useState<Theme>(readTheme);
   const [version, setVersion] = useState(0);
   // On a phone capture and ask live in the ⊕ sheet; null means it is closed.
   const [sheet, setSheet] = useState<SheetMode | null>(null);
@@ -174,18 +163,6 @@ export default function App() {
     setUnauthorizedHandler(() => setAuthed(false));
   }, []);
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    /* The status bar follows the theme, read from the theme's own --bg so there is no second
-       copy of the palette to drift. index.html sets it before the first frame. */
-    const bar = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
-    if (bar) for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.setAttribute("content", bar);
-    try {
-      localStorage.setItem("tartib-theme", theme);
-    } catch {
-      /* ignore */
-    }
-  }, [theme]);
 
 
   // keyboard: c -> capture bar, / -> search field on Search
@@ -244,7 +221,6 @@ export default function App() {
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
       <SessionProvider onFinish={bump}>
       <div className="app has-askbar">
         <header className="top">
@@ -343,6 +319,5 @@ export default function App() {
         <Toast toast={toast} />
       </div>
       </SessionProvider>
-    </ThemeContext.Provider>
   );
 }

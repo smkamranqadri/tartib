@@ -261,3 +261,25 @@ numbers, the breadcrumb, and the session button after a real start and stop. Pic
 click applies and stores. First paint with the JavaScript bundle blocked: five cases including
 two retired names falling back to bronze. Phone: 44px targets and no horizontal scroll on all
 four screens. `typecheck`, `build`, and **193 tests** clean.
+
+
+## Step 11 — themes out, background in (2026-09-20)
+
+The owner called it: *"let's skip theme at all, we have already spent too much time on it."* The
+seven were removed -- no picker, no `data-theme`, no Appearance card -- and bronze kept its
+**generated** values, which is the part that mattered: generating them had fixed a `--danger` at
+3.93:1 and an `--accent-2` used as text while only checked as a star. A plain `git revert` would
+have taken the session-button fix and both corrections with it, so the removal was done by hand.
+
+In its place, the background effect from the reference build: two accent glows and a 24px dot
+grid, fixed. The glow colour is the accent mixed 75% into black -- made of the raw accent it
+lightens the corner and washes the page out. The floor is enforced where the two glows overlap,
+which is the brightest the page ever gets: at the obvious values muted lands at **4.04:1** there
+while reading 6.32:1 against the flat colour, so the generator now refuses those values outright.
+Shipped at 4.97:1.
+
+The app bar paints no fill now, only its border, so the glow runs through it. It can afford to
+because it no longer sticks.
+
+Proof: typecheck and build clean, phone checks green on all four screens, no page errors, and the
+generator fails loudly rather than emitting a glow that breaks the floor.

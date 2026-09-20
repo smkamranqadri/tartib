@@ -3,31 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- One theme, so one bar colour and nothing to decide at runtime. -->
     <meta name="theme-color" content="#0d0f12" />
-    <!-- The theme, before the first frame: without it an installed app paints the default and
-         corrects itself on every launch, which is every cold start. Defensive on purpose --
-         localStorage throws in private mode, and a theme bootstrap that throws takes the app
-         down with it. This map is the one place a ground colour is written twice; styles.css
-         owns the real values and this only has to be right for one frame. -->
-    <script>
-      (function () {
-        var bg = {
-          "bronze": "#0d0f12", "fintech": "#0a2540", "monochrome": "#111827",
-          "teal-navy": "#1e293b", "earthy": "#292524", "security": "#374151",
-          "citrus": "#1c1917",
-        };
-        var theme = "bronze";
-        try {
-          var stored = localStorage.getItem("tartib-theme");
-          if (stored && bg[stored]) theme = stored;
-        } catch (e) {
-          /* storage unavailable */
-        }
-        document.documentElement.dataset.theme = theme;
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", bg[theme]);
-      })();
-    </script>
     <!-- The app is set entirely in this face; preloading it keeps the first paint from being a
          fallback that reflows once the stylesheet resolves. -->
     <link rel="preload" href="/fonts/jetbrains-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />

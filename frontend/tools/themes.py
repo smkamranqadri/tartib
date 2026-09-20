@@ -100,18 +100,9 @@ SESSION = "#e2574b"
 T = {
     # The default, unchanged: the app's type, spacing and tones were all tuned against it.
     "bronze": ("Bronze", "Charcoal with a bronze accent", "#0d0f12", "#b98a44", "#d3a45a", "#eceff4"),
-    # The six below come from the owner's palette list (2026-09-20). They were written as light
-    # palettes -- neutral as the page, primary as the brand colour -- and are built here the
-    # other way round: the primary is the ground and the accent stays the accent, which keeps
-    # every pairing far apart in hue. Marketing Citrus is the exception: its primary #ea580c is
-    # an orange, and an orange page is not a page, so it takes stone-900 as the ground and keeps
-    # both of its colours as accents.
-    "fintech": ("Fintech Classic", "Deep navy with a teal accent", "#0a2540", "#00d4b2", "#7dd3fc", "#ffffff"),
-    "monochrome": ("Monochrome", "Near-black, one amber pop", "#111827", "#f59e0b", "#e5e7eb", "#ffffff"),
-    "teal-navy": ("Teal & Navy", "Slate navy with orange and teal", "#1e293b", "#f97316", "#0d9488", "#f8fafc"),
-    "earthy": ("Earthy Green", "Warm stone with amber and emerald", "#292524", "#d97706", "#059669", "#fefce8"),
-    "security": ("Security Slate", "Lifted slate with emerald", "#374151", "#10b981", "#9ca3af", "#f9fafb"),
-    "citrus": ("Marketing Citrus", "Near-black with citrus yellow", "#1c1917", "#facc15", "#ea580c", "#fff7ed"),
+    # Six more were built from a palette list on 2026-09-20 and removed the same day. They are
+    # in git (commit ab9433f) if they are ever wanted; what they left behind is this file, and
+    # the two floors bronze itself was failing before it existed.
 }
 
 blocks, report = [], []
@@ -160,12 +151,30 @@ for tid, (label, desc, bg, accent, accent2, neutral) in T.items():
     session = session if cr(bg, session) >= 4.5 else brighten(session, "session")
     session_ink = bg
 
+    # The background is not one flat fill: two soft glows in the theme's own accents and a fine
+    # dot grid, all fixed so they stay put while the page scrolls. The glow colour is the accent
+    # mixed most of the way into black -- a glow made of the raw accent lightens the corner and
+    # washes the page out. It still lifts the ground where the two overlap, and text sitting
+    # directly on the page has to clear its floor THERE, not against the flat colour: at the
+    # obvious values (55% into black at 0.5) muted lands at 4.04:1.
+    glow1, glow1_a = mix(accent, "#000000", 0.75), 0.50
+    glow2, glow2_a = mix(accent2, "#000000", 0.75), 0.35
+    brightest = mix(mix(bg, glow1, glow1_a), glow2, glow2_a * 0.5)
+    for token, colour in (("--fg", fg), ("--muted", muted)):
+        if cr(colour, brightest) < 4.5:
+            raise SystemExit(f"{tid}: {token} is {cr(colour, brightest):.2f} on the page where the "
+                             f"glows overlap ({brightest}); turn the glow down.")
+    STEPS.append(f"{tid} background: glows {glow1} at {glow1_a} and {glow2} at {glow2_a}; "
+                 f"page reaches {brightest} where they overlap, muted {cr(muted, brightest):.2f}:1 there")
+    rgba = lambda h, a: "rgba(%d, %d, %d, %s)" % (*h2r(h), a)
+
     blocks.append(f"""[data-theme="{tid}"] {{
   --bg: {bg}; --panel: {panel}; --head: {head}; --fg: {fg}; --muted: {muted};
   --line: {line}; --accent: {accent_text}; --accent-ink: {accent_ink}; --accent-2: {accent2};
   --field: {field}; --pill: {head};
   --ok: {tones['ok']}; --info: {tones['info']}; --warn: {tones['warn']}; --danger: {tones['danger']};
   --star: {star}; --session: {session}; --session-ink: {session_ink};
+  --glow-1: {rgba(glow1, glow1_a)}; --glow-2: {rgba(glow2, glow2_a)}; --grid: {rgba(fg, 0.03)};
   --shadow: none; color-scheme: dark;
 }}""")
     report.append((label, tid, desc, [bg, accent_text, accent2],
