@@ -140,6 +140,13 @@ page's padding and the toast leave room. Proof: headless Chrome with a session r
 pages at 390px and 1280px, at the top and the end of each: 10px above the ask bar every time,
 the same left edge and width as the bar's form, and the last card clear of it at the end.
 
+And: the recent-session list belongs to Home's card alone -- above the ask bar it was a list in
+the way of the page -- and the floating card takes the same glass as the nav, the ask bar and the
+menus, tinted with the session red. Proof: headless Chrome with a session running -- Recent at
+390px light and 1280px dark: the floating card has no list, `backdrop-filter: blur(20px)
+saturate(1.8)` and a 64% background, with the row behind showing through; Home's card still
+lists three.
+
 ## Step 6 — the space page split view
 
 **Done 2026-09-19.** `useWide(1100)`; on a wide screen `Space.tsx` renders the list and an

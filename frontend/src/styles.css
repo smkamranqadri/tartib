@@ -431,7 +431,14 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .session-again .icon-btn { width: 28px; height: 28px; color: var(--session); }
 
 /* Off Home, a live session sits pinned just above the ask bar while the page scrolls. */
-.session-bar.floating { position: fixed; z-index: 19; left: 50%; transform: translateX(-50%); bottom: calc(var(--askbar-h, 0px) + 10px); width: min(100% - 32px, 720px); margin: 0; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+.session-bar.floating {
+  position: fixed; z-index: 19; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--askbar-h, 0px) + 10px); width: min(100% - 32px, 720px); margin: 0;
+  /* Glass, like the nav, the ask bar and the menus -- tinted with the session's red. */
+  background: color-mix(in srgb, var(--session) 14%, color-mix(in srgb, var(--panel) 58%, transparent));
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+}
 /* On Home it is the body of an ordinary card: the card draws the edge. */
 .card .session-bar { margin: 0; border: 0; border-radius: 0 0 12px 12px; }
 .card .session-bar.idle { background: none; }

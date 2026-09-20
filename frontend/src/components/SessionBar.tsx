@@ -18,10 +18,14 @@ import { describe } from "./SessionPast";
 export default function SessionBar({ placement }: { placement: "card" | "float" }) {
   const { current, remaining, busy, stop, answer, start } = useSession();
   const state = current?.state ?? null;
-  // The last few: under the question once a session stops, and on their own when none runs.
+  // The last few, on Home's card only: floating above the ask bar it would be a list in the
+  // way of the page. Under the question once a session stops, on their own when none runs.
   const past = useLoad(
-    () => (current && state !== "running" ? getRecentSessions(4) : Promise.resolve(null)),
-    [!!current, state, current?.session?.id],
+    () =>
+      placement === "card" && current && state !== "running"
+        ? getRecentSessions(4)
+        : Promise.resolve(null),
+    [placement, !!current, state, current?.session?.id],
   );
   // A floating card is fixed above the ask bar; it publishes its height (plus the gap) so the
   // page leaves room for it and the toast clears it. Gone, it takes the room back.
