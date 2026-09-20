@@ -288,11 +288,6 @@ button:disabled { opacity: .5; cursor: default; }
 .word-input { font: inherit; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--fg); }
 .decisions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .more { position: relative; margin-left: auto; }
-.menu { position: absolute; right: 0; top: 34px; display: flex; flex-direction: column; min-width: 170px; background: color-mix(in srgb, var(--panel) 62%, transparent); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.14); z-index: 5; }
-.menu button, .menu a { background: none; border: 0; text-align: left; padding: 8px 10px; border-radius: 6px; color: var(--fg); text-decoration: none; cursor: pointer; font: inherit; }
-.menu button:hover, .menu a:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
-.menu button.danger { color: var(--danger); }
-.menu button:disabled { color: var(--muted); cursor: default; }
 
 /* search */
 .search-row { display: flex; gap: 8px; }
@@ -747,7 +742,6 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   .line-row { gap: 12px; }
   .line-lead { width: 22px; height: 22px; }
   .line-lead svg { width: 20px; height: 20px; }
-  .menu button, .menu a { min-height: 44px; display: flex; align-items: center; }
   button.ghost, button.primary { min-height: 44px; }
   /* The floating session card is one line while it runs; the outcome question may take two. */
   .session-bar.floating { padding: 8px 12px; }

@@ -151,7 +151,7 @@ lists render pending rows even when their server load failed, which is exactly w
 
 One component per pattern, each the only owner of its markup:
 - `Row` is the list row primitive (leading, title, meta, right, trailing, actions; long-press reveal). `ItemRow` and `RecentList` compose it; no screen writes row markup.
-- `Menu` (the "…" dropdown) is **dead code since slice 23**: nothing imports it. Both users -- the item page and the space page -- now show their actions as visible pills, and a space's filing policy is an AUTO / ASK / FILE segment on the page. The file is still in the tree; delete it when something else touches that directory.
+- `Menu` (the "…" dropdown) is **gone** (deleted 2026-09-21, dead since slice 23 and unimported since). Both users -- the item page and the space page -- show their actions as visible pills, and a space's filing policy is an AUTO / ASK / FILE segment on the page. Its `.menu` rules left `styles.css` with it.
 - `Tiles` is the stat row on Home: four bordered tiles, each a link to the screen that explains its number, each showing "…" until its data lands rather than a 0 that is about to change.
 - `Confirm` is the inline "Delete X? Yes / No" line. `NameForm` is the create-and-rename field, owning its own error state.
 - `Card` renders section cards and, with `collapsible`/`open`/`onToggle`, the accordions on the space and item pages.
@@ -257,6 +257,8 @@ cd backend && uv run pytest -m eval        # 22 fixtures through real Codex, ~30
 cd frontend && npm run typecheck && npm run build
 docker compose build && docker compose up -d && curl localhost:8000/api/health && docker stats --no-stream
 ```
+
+## UI language
 
 The phone layout (slice 22) is one breakpoint at 641px in `styles.css` plus `useWide(641)` in `App.tsx`: below it the header, capture bar and ask bar are not rendered and `TabBar` + `CaptureSheet` are; `AskForm` is shared by the bar and the sheet so only one is ever mounted. `--tabbar-h` stacks the ask bar, session card, toast and page padding above the bar.
 
