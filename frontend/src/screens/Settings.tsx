@@ -17,9 +17,12 @@ import {
   resyncSubscription,
   workerVersion,
 } from "../push";
+import { THEMES, useTheme } from "../theme";
 import { useLoad } from "../useLoad";
 
 export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
+  const { theme, setTheme } = useTheme();
+  const themeLabel = THEMES.find((t) => t.value === theme)?.label ?? theme;
   const { data: config, error: configError, loading: configLoading, reload: reloadConfig } = useLoad(getConfig, []);
   // A config that failed to load must not read as one still loading: say why, and offer another go.
   const configFailed = !!configError && !config;
@@ -36,6 +39,33 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
           </button>
         </div>
       )}
+      <Card icon={<SettingsIcon />} label="Appearance" aside={<span className="muted">{themeLabel}</span>}>
+        <Row title="Theme" desc="Seven, all dark. Your choice stays; nothing follows your system." stack>
+          <div className="theme-list">
+            {THEMES.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                className="theme-row"
+                aria-pressed={theme === t.value}
+                onClick={() => setTheme(t.value)}
+              >
+                {/* The chip wears the theme it offers: its ground and its two accents. */}
+                <span className="chip-swatch" aria-hidden="true">
+                  <i style={{ background: t.swatch[0] }} />
+                  <i style={{ background: t.swatch[1] }} />
+                  <i style={{ background: t.swatch[2] }} />
+                </span>
+                <span className="names">
+                  <span className="name">{t.label}</span>
+                  <span className="desc">{t.desc}</span>
+                </span>
+                <span className="tick" aria-hidden="true">✓</span>
+              </button>
+            ))}
+          </div>
+        </Row>
+      </Card>
       <Card icon={<AlertIcon />} label="Classifier" aside={<span className="muted">{config ? (config.ai ? "on" : "off") : "…"}</span>}>
         <Row title="Codex CLI" desc="Files every capture in the background.">
           <span className="muted">{config ? (config.ai ? "enabled" : "off") : "…"}</span>
@@ -202,9 +232,11 @@ function Reminders({ vapidPublic, failed }: { vapidPublic: string | null | undef
   );
 }
 
-function Row({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
+/** `stack` puts the control under the text at full width, for anything wider than a value or a
+ *  switch -- the theme list is the only one so far. */
+function Row({ title, desc, stack, children }: { title: string; desc: string; stack?: boolean; children: React.ReactNode }) {
   return (
-    <div className="pref">
+    <div className={`pref ${stack ? "stacked" : ""}`}>
       <div className="pref-text">
         <span className="pref-title">{title}</span>
         <span className="pref-desc muted">{desc}</span>

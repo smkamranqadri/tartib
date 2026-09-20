@@ -1,0 +1,65 @@
+{
+ "bronze": {
+  "label": "Bronze",
+  "desc": "Charcoal with a bronze accent",
+  "swatch": [
+   "#0d0f12",
+   "#b98a44",
+   "#d3a45a"
+  ]
+ },
+ "fintech": {
+  "label": "Fintech Classic",
+  "desc": "Deep navy with a teal accent",
+  "swatch": [
+   "#0a2540",
+   "#00d4b2",
+   "#7dd3fc"
+  ]
+ },
+ "monochrome": {
+  "label": "Monochrome",
+  "desc": "Near-black, one amber pop",
+  "swatch": [
+   "#111827",
+   "#f59e0b",
+   "#e5e7eb"
+  ]
+ },
+ "teal-navy": {
+  "label": "Teal & Navy",
+  "desc": "Slate navy with orange and teal",
+  "swatch": [
+   "#1e293b",
+   "#f68a3f",
+   "#6bbab4"
+  ]
+ },
+ "earthy": {
+  "label": "Earthy Green",
+  "desc": "Warm stone with amber and emerald",
+  "swatch": [
+   "#292524",
+   "#df9337",
+   "#5eb895"
+  ]
+ },
+ "security": {
+  "label": "Security Slate",
+  "desc": "Lifted slate with emerald",
+  "swatch": [
+   "#374151",
+   "#7ed4b9",
+   "#ccd0d6"
+  ]
+ },
+ "citrus": {
+  "label": "Marketing Citrus",
+  "desc": "Near-black with citrus yellow",
+  "swatch": [
+   "#1c1917",
+   "#facc15",
+   "#eb7839"
+  ]
+ }
+}

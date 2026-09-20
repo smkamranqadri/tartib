@@ -228,3 +228,36 @@ linking to the Inbox, and the clock. Readouts, not controls -- the nav is for go
 Proof: every control measures 32px on a pointer; all four phone screens still clear 44px with no
 horizontal scroll; typecheck and build clean; no page errors. Looked at: Home, Spaces and the
 decision card at 1280, the card and Home at 390.
+
+
+## Step 10 — themes, on top of the language (2026-09-20)
+
+With the UI settled the owner asked for themes back, from a list of six light palettes. They are
+built as dark themes -- the palette's primary is the ground, its accent stays the accent -- so no
+theme's accent sits in its own background's hue family, which is the rule the scrapped attempt
+finally produced. Bronze stays and stays the default. Seven in all, chosen from a list of rows in
+Settings: swatch, name in mono caps, and a line saying what it looks like.
+
+`frontend/tools/themes.py` generates every value and enforces the floors; `kis/intent/themes.md`
+is the record. Nothing about the theme system is hand-written twice: the type, the picker rows
+and the bootstrap map all come from that generator's output.
+
+**A correction.** The commit before this one (`04b9be6`) claimed the session card's button was
+fixed at 5.21:1. It was not. `--session-ink` was correct and unused: `.session-bar .primary`
+still read `color: #fff`, which is **3.69:1**, and the probe compared the two *tokens* instead of
+the button, so it reported a pass. The rule uses the ink token now, and the harness reads
+computed styles off real elements -- starting and stopping a session in each of the seven themes
+to reach that exact button, which is how it is now proved at 4.53 to 5.21:1.
+
+Two further defects the generator found in what had already shipped: bronze's `--danger` was
+**3.93:1** against a surface it is drawn on, and `--accent-2` -- which paints tile numbers and
+space chips, both text -- was only ever checked as a decorative star at 3:1, leaving four themes
+between 3.40 and 4.37:1. Both are fixed by the floors being applied to the job each token
+actually does.
+
+Proof: all seven themes pass every check, measured from what the browser paints -- tokens, row
+titles, row meta, section labels, space chips on their own 12% fill, the ADD button, tile
+numbers, the breadcrumb, and the session button after a real start and stop. Picker: seven rows,
+click applies and stores. First paint with the JavaScript bundle blocked: five cases including
+two retired names falling back to bronze. Phone: 44px targets and no horizontal scroll on all
+four screens. `typecheck`, `build`, and **193 tests** clean.
