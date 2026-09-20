@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatRelative } from "../format";
+import { flattenFirstLine } from "../markdown";
 import type { Pending } from "../offline";
 import type { Capture, Item } from "../types";
 import ItemRow from "./ItemRow";
@@ -46,7 +47,7 @@ export default function RecentList({
             key={`c${cap.id}`}
             className="waiting"
             leading={<span className="row-icon muted"><span className="dot" /></span>}
-            title={<span className="row-text">{cap.raw_text.split("\n")[0]}</span>}
+            title={<span className="row-text">{flattenFirstLine(cap.raw_text)}</span>}
             meta={
               <>
                 {cap.status === "pending" ? "filing…" : cap.answer ? "answered" : "no items"}

@@ -36,8 +36,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-const send = <T,>(method: string, path: string, body?: unknown) =>
-  api<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+const send = <T,>(method: string, path: string, body?: unknown, init?: RequestInit) =>
+  api<T>(path, { ...init, method, body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const login = (password: string) => send<{ ok: true }>("POST", "/api/login", { password });
 export const logout = () => send<{ ok: true }>("POST", "/api/logout");
@@ -108,7 +108,10 @@ export const ask = (question: string, space?: string) =>
 
 export const addItem = (item: { shape: "task" | "note"; space: string; text: string; due?: string }) =>
   send<Item>("POST", "/api/items", item);
-export const editItem = (id: number, edit: Edit) => send<Item>("PATCH", `/api/items/${id}`, edit);
+/** `keepalive` lets an edit outlive the page that sent it: the autosave flushed when a tab
+ *  closes or a phone backgrounds would otherwise be cancelled mid-flight (slice 24). */
+export const editItem = (id: number, edit: Edit, keepalive = false) =>
+  send<Item>("PATCH", `/api/items/${id}`, edit, keepalive ? { keepalive: true } : undefined);
 export const approveItem = (id: number, edit?: Edit) =>
   send<Item>("POST", `/api/items/${id}/approve`, edit);
 export const getThoughts = (id: number) => api<{ thoughts: Thought[] }>(`/api/items/${id}/thoughts`);

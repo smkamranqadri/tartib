@@ -1,5 +1,6 @@
 import { type ReactElement, useEffect, useRef } from "react";
 import { getRecentSessions } from "../api";
+import { flattenFirstLine } from "../markdown";
 import { formatRemaining, useSession } from "../session";
 import { useLoad } from "../useLoad";
 import Card from "./Card";
@@ -95,7 +96,7 @@ export default function SessionBar({ placement }: { placement: "card" | "float" 
     );
   }
 
-  const what = current.item?.title || current.item?.raw_text.split("\n")[0] || "No task";
+  const what = current.item?.title || flattenFirstLine(current.item?.raw_text ?? "") || "No task";
 
   if (state === "running") {
     const s = current.session;

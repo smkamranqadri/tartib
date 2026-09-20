@@ -4,6 +4,7 @@ import { getBrief } from "../../api";
 import { useLoad } from "../../useLoad";
 import { useWide } from "../../useWide";
 import ItemPage from "../ItemPage";
+import Markdown from "../../components/Markdown";
 import SearchAsk from "../../components/SearchAsk";
 import { ItemLead, ItemLine, matches, SessionLines, useSessions, useSpaceItems } from "./shared";
 
@@ -54,7 +55,12 @@ export default function Panes({ space, version, query, onQuery, onChanged }: { s
           <span>{openBrief ? "▾" : "▸"} Brief</span>
           <span className="muted small">{openBrief ? "" : "what is going on here"}</span>
         </button>
-        {openBrief && <p className="brief-text">{brief.data?.text ?? (brief.error ?? "Reading the space…")}</p>}
+        {openBrief &&
+          (brief.data?.text ? (
+            <Markdown text={brief.data.text} className="brief-text" />
+          ) : (
+            <p className="brief-text">{brief.error ?? "Reading the space…"}</p>
+          ))}
         <SearchAsk value={query} onChange={onQuery} space={space} placeholder={`Search ${space}, or ask`} />
         <div className="filter-row">
           <div className="pills tabs" role="group" aria-label="Show">

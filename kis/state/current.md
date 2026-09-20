@@ -5,7 +5,16 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 23 (the UI language) is committed on `main` and not deployed.**
+- Task: **slice 24 (presentation). Both phases done and proved. Not committed and not deployed.**
+  Plan, every decision and the proof: `kis/intent/slice-24-presentation.md`. Work mode **Phase**.
+  A rendered markdown on the item body, thought entries, Ask answers and the space brief,
+  flattened the row headline in all five places that compute one, and kept slice 20's search hit
+  marked inside the rendered output. B made the item text an editor you tap into rather than a
+  mode you enter -- CodeMirror lazily, debounced autosave, a non-modal 409 strip, and a local
+  draft so a teardown cannot take your words. **The whole slice is in the working tree,
+  uncommitted.**
+  **Unproved on a device:** whether mono at 14px with markdown suits a long note on a phone.
+- **Slice 23 (the UI language) is committed on `main` and not deployed.**
   What it is and why, step by step with its proof: `kis/intent/slice-23-ui.md`; what it changed
   in one line each: `kis/intent/history.md`; the palette and the floors: `kis/knowledge/themes.md`.
   **Not yet seen on a device.** Unproved there: whether mono at 14px suits a long note on a
@@ -17,7 +26,7 @@
   Tree, Board and Timeline deleted), **slice 20** (eight items, round three), **slice 19** and
   **slice 18**. Plans: `kis/intent/slice-1{8,9}-*.md`, `kis/intent/slice-2{0,1,2}-*.md`.
 - **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 23 are local commits on `main`
-  (66 ahead of `origin/main`). On the next deploy: migrations 0010-0014 run, and
+  (69 ahead of `origin/main`, and Phase A is not yet committed). On the next deploy: migrations 0010-0014 run, and
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config.
 - Next, in no fixed order:
@@ -25,11 +34,11 @@
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
      everything on that server exists exactly once. This is the one open item whose cost is
      unbounded.
-  2. **Look at slice 23 on a device**, which is the only thing that can settle whether mono at
-     14px suits a long note and whether `background-attachment: fixed` survives iOS.
-  3. What is left of backlog 13 -- markdown on the item page and in briefs, the CodeMirror
-     editor, the pencil restored -- whose decisions are already settled there. Then slice 14
-     (AI contract) and the rest of `kis/intent/backlog.md`. The themes half of 13 is closed.
+  2. **Look at slices 23 and 24 on a device**, which is the only thing that can settle whether
+     mono at 14px suits a long note -- markdown is the best headless answer to it and is now in
+     -- and whether `background-attachment: fixed` survives iOS.
+  3. Then slice 14 (AI contract) and the rest of `kis/intent/backlog.md`. Both halves of
+     backlog 13 are now accounted for: themes closed, presentation is slice 24.
 
 ## The deployment
 
@@ -60,7 +69,13 @@
 ## Proof
 
 Each slice keeps its proof in its plan file and its commits; `../intent/history.md` says what
-each one changed. Proved on the deployed app rather than only in tests: a capture classifies and
+each one changed. Slice 24 Phase A: 32 browser checks green on channel chrome against the local
+container, including stored `<script>` and `<img onerror>` producing no element and no execution,
+and a `javascript:` link losing its href -- the app renders markdown from a token stream and
+never builds an HTML string, so that holds by construction rather than by a filter. Phase B:
+32 checks green on three consecutive runs, covering the caret landing where it was tapped, the
+cold page fetching no editor chunk, autosave and its readout, a hard teardown losing nothing,
+a two-context conflict resolving both ways without a retry loop, and offline saying so. Proved on the deployed app rather than only in tests: a capture classifies and
 files itself, the session cookie carries `Secure` behind the proxy, a session ending pushes and
 the phone buzzes with a desktop tab open on the same countdown (the migration 0008 case), and
 `http://` redirects.

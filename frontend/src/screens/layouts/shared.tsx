@@ -3,6 +3,7 @@ import { editItem, getRecentSessions, listItems } from "../../api";
 import { ClockIcon, NoteIcon } from "../../components/Icons";
 import { describe } from "../../components/SessionPast";
 import { formatDue, formatRelative, todayLocal } from "../../format";
+import { flattenFirstLine } from "../../markdown";
 import type { Item } from "../../types";
 import { useLoad } from "../../useLoad";
 
@@ -48,7 +49,7 @@ export function ItemLead({ item, onChanged }: { item: Item; onChanged: () => voi
 
 /** One line: the title, then what matters about it. No card frame anywhere in these layouts. */
 export function ItemLine({ item, meta = true }: { item: Item; meta?: boolean }) {
-  const title = item.shape === "task" ? item.title || item.raw_text.split("\n")[0] : item.raw_text.split("\n")[0];
+  const title = item.shape === "task" ? item.title || flattenFirstLine(item.raw_text) : flattenFirstLine(item.raw_text);
   return (
     <>
       <span className={`line-title ${item.status === "done" ? "done" : ""}`}>{title}</span>

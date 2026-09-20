@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { editItem } from "../api";
 import { formatDueLong, formatRelative, formatRemind, todayLocal, waitingReason } from "../format";
 import type { Edit, Item } from "../types";
+import { flattenFirstLine } from "../markdown";
 import { useWide } from "../useWide";
 import { AlertIcon, NoteIcon } from "./Icons";
 import Row from "./Row";
@@ -45,7 +46,7 @@ export default function ItemRow({
     }
   }
 
-  const firstLine = item.raw_text.split("\n")[0];
+  const firstLine = flattenFirstLine(item.raw_text);
   const headline = isTask ? item.title || firstLine : firstLine;
 
   /* The space is a chip, not another word in a grey run-on line: it is the one piece of metadata

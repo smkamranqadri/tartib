@@ -133,10 +133,9 @@ also fires the first time a worker claims a page that had none. `sw.js` also han
 shell cache and re-registering against `/api/subscriptions` with `credentials: "include"`; Safari
 does not fire that event, so on the phone it is insurance rather than a fix.
 `manifest.webmanifest` has an `id` and a `start_url` of `/` (it was `/today`, a redirect, so every
-launch paid one). `index.html` carries a `theme-color` per colour scheme so the first paint is
-right before any script runs, and `App` overwrites both with the active theme's background when
-the chosen theme is not the system's. `background_color` is a single dark value and the app has
-two themes, so one of them gets a mismatched splash; a manifest cannot know which.
+launch paid one). Since slice 23 there is one theme, so `index.html` carries a single
+`theme-color` of `#0d0f12`, the manifest's `background_color` matches it, and no script rewrites
+either: the first paint is right before any JavaScript runs, and the splash cannot mismatch.
 `offline.ts` is the capture queue and the only path a capture takes: `enqueue` writes it to an
 IndexedDB store keyed by `client_id`, then `flush` sends what is queued oldest first and stops at
 the first one that does not go, so a later capture cannot overtake an earlier one. Ordering lives
@@ -160,6 +159,42 @@ One component per pattern, each the only owner of its markup:
 - `Status` exports `Loading`, `ErrorLine`, and `Empty`.
 - `ApprovalCard` is one waiting item as a decision; `hotkey` binds Enter. `SearchAsk` is the search field; a question in it goes to `AskForm`, which the ask bar (wide) and the ⊕ sheet (phone) share.
 - `TabBar`, `CaptureSheet` and `ItemSheet` are the phone shell (slice 22); `layouts/shared.tsx` holds the space list's pieces (`ItemLead`, `ItemLine`, `SessionLines`, `useSpaceItems`).
+Markdown (slice 24) is rendered by `Markdown.tsx` from `marked.lexer()`'s **token stream, emitted
+as React elements**. No HTML string is ever built and `dangerouslySetInnerHTML` appears nowhere in
+the app -- keep it that way. It is what makes raw HTML in a note, a brief or an Ask answer render
+as characters instead of markup, which matters because briefs and answers are written by the
+model and marked has had no `sanitize` option since v5; and because every text node is emitted
+there, slice 20's search `<mark>` is a branch in that renderer rather than a pass over output.
+`safeHref` refuses any scheme but http, https, mailto and in-app paths, so a `javascript:` link
+keeps its words and loses its href. The lexer runs with **`breaks: true`**: notes here are typed
+rather than authored, and with marked's default a single newline is a space, which would reflow
+every note written before that slice. Rendered on the item body, thought entries, Ask answers and
+the space brief. Deliberately not rendered where the point is the captured bytes: the original
+capture on the item page and `ApprovalCard`. `markdown.ts` holds the parser-free helpers --
+`flattenFirstLine` strips syntax from a row's first line, and all five places that compute a row
+headline call it.
+The item's text is an editor you tap into, not a mode you enter (slice 24): `TextEditor.tsx`
+shows rendered markdown until a tap, then lazy-loads `MarkdownEditor.tsx` -- the only module that
+imports CodeMirror, so it is its own **213.86 kB gzip** chunk that a note you merely read never
+fetches. Keep it the only importer; a static import from anywhere puts the editor back on the
+cold page. `index.html` does not name that chunk, so `sw.js` does not precache it and the import
+rejects offline -- caught, so the text stays readable and says why it cannot be edited.
+The tap is carried across by **word**, not by coordinates: rendered markdown and its source do
+not share a layout, so `posAtCoords` answers about a point that belonged to the other one. The
+tap records the Nth occurrence of the word it hit and the editor finds that word again in the
+source (`spotFromPoint`, `findSpot`).
+Saving is debounced ~2s and flushed on blur, on unmount and on `visibilitychange`/`pagehide`,
+with one save in flight at a time. Two things make that survive the way out: the request is
+issued **before** any React state update, because a state update first can defer the call past
+the renderer's death; and the draft is mirrored to `localStorage` as it is typed, restored on
+the way in and cleared once the server has it. That mirror is not belt and braces --
+`fetch(..., {keepalive: true})` was measured failing to arrive at all (the server's log line
+count was identical either side of the teardown), so the guarantee rests on the draft, not on
+keepalive. It is crash safety only: no queue, no replay, none of the offline-edit item's logic.
+A stale save (slice 19's 409) shows a **non-modal strip** above the text rather than a dialog,
+keeps the local words, keeps saying Unsaved, and pauses the debounce until it is answered --
+otherwise it retries into the same refusal every two seconds. Resolving it remounts the editor,
+and the outgoing instance must not flush, or it sends the held draft again and the strip returns.
 One primary button class (`.primary`), one ghost, one icon button. The space page is one list with filter pills, so it keeps no collapse state (the old `tartib-space-<name>` key is dead since slice 21).
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 

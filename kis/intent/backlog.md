@@ -9,7 +9,12 @@ its plan file. What is below is what is left, and nothing in it is ordered yet.
 
 Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 
-- **13 presentation** — markdown on the item page, note bodies and briefs, rendered and edited
+- **13 presentation** — **done as slice 24** (`slice-24-presentation.md`), both phases proved,
+  not yet deployed. This entry closes when the slice is committed; what it established that
+  outlives it is in `../knowledge/technical.md`. Two sub-items ended differently than written:
+  the row title **keeps** its link (slices 21 and 22 made the row the tap target, which the
+  2026-09-17 decision predates), and the pencil was already in `ItemRow`.
+  Markdown on the item page, note bodies and briefs, rendered and edited
   in the same place: no edit mode to enter and no button to enter it, the text styles as you type,
   and the stored bytes are never rewritten.
   **The themes half is closed, not waiting.** It was attempted twice on 2026-09-20 -- six own

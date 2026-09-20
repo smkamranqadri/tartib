@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Answer } from "../types";
+import { flattenFirstLine } from "../markdown";
+import Markdown from "./Markdown";
 
 /** An answer with its cited items as links. Used after a question capture and by the Ask bar. */
 export default function AnswerView({ result, onClose }: { result: Answer; onClose?: () => void }) {
@@ -13,13 +15,13 @@ export default function AnswerView({ result, onClose }: { result: Answer; onClos
           </button>
         )}
       </div>
-      <p>{result.answer}</p>
+      <Markdown text={result.answer} />
       {result.items.length > 0 ? (
         <ul className="cited">
           {result.items.map((item) => (
             <li key={item.id}>
               <Link to={`/items/${item.id}`}>
-                <span className="muted">#{item.id}</span> {item.shape === "task" && item.title ? item.title : item.raw_text}
+                <span className="muted">#{item.id}</span> {item.shape === "task" && item.title ? item.title : flattenFirstLine(item.raw_text)}
               </Link>
             </li>
           ))}

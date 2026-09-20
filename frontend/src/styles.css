@@ -330,6 +330,53 @@ button:disabled { opacity: .5; cursor: default; }
 .brief-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; text-transform: none; letter-spacing: 0; }
 .brief-text { margin: 10px 16px; white-space: pre-wrap; line-height: 1.6; }
 .brief-text.dim { opacity: .5; }
+
+/* Markdown, cut for mono the way slice 23 cut the rest of the scale. Headings step down in
+   weight and tracking rather than in size alone: at 14px base, mono headings that jump in size
+   the way a sans scale does look like a different font rather than a heading. The accent stays
+   where slice 23 put it -- chips, bars and buttons -- so nothing here is accent-coloured except
+   a link. */
+.md { white-space: normal; }
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+.md p { margin: 0 0 .7em; white-space: normal; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+  margin: 1.4em 0 .5em; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; text-wrap: balance;
+}
+.md h1 { font-size: 1.3em; }
+.md h2 { font-size: 1.15em; }
+.md h3 { font-size: 1.05em; }
+.md h4, .md h5, .md h6 { font-size: 1em; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.md ul, .md ol { margin: 0 0 .7em; padding-left: 1.6em; }
+.md li { margin: .15em 0; }
+.md li::marker { color: var(--muted); }
+.md li.md-task { list-style: none; margin-left: -1.4em; display: flex; gap: .55em; align-items: baseline; }
+.md li.md-task input { accent-color: var(--accent); flex: none; }
+.md blockquote {
+  margin: 0 0 .7em; padding: .1em 0 .1em .9em;
+  border-left: 2px solid var(--line); color: var(--muted);
+}
+.md code {
+  font-family: inherit; font-size: .92em; padding: .1em .35em; border-radius: 5px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent); overflow-wrap: anywhere;
+}
+.md pre {
+  margin: 0 0 .7em; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--field); overflow-x: auto;
+}
+.md pre code { background: none; padding: 0; font-size: .92em; }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 1.2em 0; }
+.md a { color: var(--accent); overflow-wrap: anywhere; }
+.md img { max-width: 100%; height: auto; border-radius: 8px; display: block; }
+.md strong { font-weight: 600; }
+.md del { color: var(--muted); }
+/* Raw HTML and anything the lexer could not place: shown as the characters it is. */
+.md .md-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
+.md-table { overflow-x: auto; margin: 0 0 .7em; }
+.md-table table { border-collapse: collapse; width: 100%; font-size: .95em; }
+.md-table th, .md-table td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; }
+.md-table th { background: var(--head); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: .85em; color: var(--muted); }
+
 .brief-cites { margin: 0 16px 10px; display: flex; gap: 8px; }
 .brief-cites a { color: var(--muted); text-decoration: none; }
 .brief-cites a:hover { color: var(--fg); }
@@ -469,8 +516,26 @@ button:disabled { opacity: .5; cursor: default; }
 .card-body > .confirm { margin: 8px 16px; }
 .item-aside { display: inline-flex; align-items: center; gap: 6px; }
 .item-aside .more { margin-left: 0; }
-.text-edit { padding: 8px 16px; display: flex; flex-direction: column; gap: 8px; }
-.text-edit textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); line-height: 1.55; resize: vertical; }
+/* The item's text (slice 24). The rendered block and the editor occupy the same box with the
+   same metrics, so tapping in does not make the page jump. `.raw.big` sets both. */
+.text-body { position: relative; }
+.text-body .raw.big { cursor: text; }
+.cm-host .cm-editor { background: none; }
+.cm-host .cm-scroller { overflow: visible; }
+.md-loading { white-space: pre-wrap; opacity: .6; }
+/* The save state is a readout, not a control: it never moves the text and never asks anything. */
+.save-state { margin: 0 16px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+.save-state.saving { opacity: .7; }
+.save-state.bad { display: flex; align-items: center; gap: 10px; text-transform: none; letter-spacing: 0; font-size: 12px; }
+.card-body .text-body .save-state { margin-left: 16px; }
+/* A conflict is a strip above the text, never a dialog: an autosave can refuse while you are
+   still typing, and your words must stay exactly where they are (slice 24, phase B). */
+.conflict-strip {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin: 8px 16px 12px; padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, transparent); border-radius: 10px;
+}
 .accordion .card-body:empty { padding: 0; }
 .original { margin: 8px 16px 10px; padding: 10px 12px; background: var(--head); border-radius: 10px; }
 .original .raw { white-space: pre-wrap; }

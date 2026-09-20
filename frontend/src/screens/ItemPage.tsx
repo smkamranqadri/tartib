@@ -4,7 +4,7 @@ import { ApiError, approveItem, deleteItem, editItem, getCapture, getItem } from
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import Confirm from "../components/Confirm";
-import Highlight from "../components/Highlight";
+import TextEditor, { type SaveResult } from "../components/TextEditor";
 import Thoughts from "../components/Thoughts";
 import ItemEditor from "../components/ItemEditor";
 import { ErrorLine, Loading } from "../components/Status";
@@ -37,8 +37,8 @@ export default function ItemPage({
   const { data: item, setData, error, loading } = useLoad(() => getItem(itemId), [itemId, version]);
   const spaces = useSpaces(version);
   const [capture, setCapture] = useState<CaptureRecord | null>(null);
-  const [text, setText] = useState("");
-  const [editingText, setEditingText] = useState(false);
+  // Bumped on Reload and on Overwrite: the editor remounts clean against the settled text.
+  const [editorKey, setEditorKey] = useState(0);
   const [open, setOpen] = useState<{ file: boolean; proposal: boolean } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -47,7 +47,6 @@ export default function ItemPage({
 
   useEffect(() => {
     if (!item) return;
-    setText(item.raw_text);
     if (open === null) setOpen({ file: item.stage === "attention", proposal: item.stage === "attention" });
     getCapture(item.capture_id).then(setCapture).catch(() => setCapture(null));
   }, [item?.id, item?.stage]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -83,9 +82,9 @@ export default function ItemPage({
   }
   /** Real edits carry the version this page loaded. False when refused as stale: the edit is
    *  held in `conflict` for the person to reload over or send anyway. */
-  async function saveChecked(edit: Edit): Promise<boolean> {
+  async function saveChecked(edit: Edit, keepalive = false): Promise<boolean> {
     try {
-      land(await editItem(itemId, { ...edit, expected_updated_at: item?.updated_at ?? undefined }));
+      land(await editItem(itemId, { ...edit, expected_updated_at: item?.updated_at ?? undefined }, keepalive));
       setConflict(null);
       return true;
     } catch (err) {
@@ -99,31 +98,29 @@ export default function ItemPage({
   async function reloadItem() {
     const fresh = await getItem(itemId);
     setData(fresh);
-    setText(fresh.raw_text);
-    setEditingText(false);
     setConflict(null);
+    setEditorKey((k) => k + 1);
   }
   async function overwrite() {
     if (!conflict) return;
     land(await editItem(itemId, conflict));
-    setEditingText(false);
     setConflict(null);
+    setEditorKey((k) => k + 1);
   }
   async function approve(edit: Edit) {
     land(await approveItem(itemId, edit));
     setOpen({ file: false, proposal: false });
   }
-  async function saveText() {
-    const value = text.trim();
-    if (!value || value === item?.raw_text) {
-      setEditingText(false);
-      return;
-    }
+  /** What `TextEditor` autosaves through. It never throws: the editor shows the outcome, and a
+   *  refusal must pause the loop rather than surface as an unhandled rejection every 2s. */
+  async function saveText(next: string, keepalive = false): Promise<SaveResult> {
     try {
-      if (await saveChecked({ text: value })) setEditingText(false);
+      const ok = await saveChecked({ text: next }, keepalive);
       setMsg(null);
+      return ok ? "ok" : "conflict";
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "failed");
+      return "failed";
     }
   }
   async function remove() {
@@ -163,9 +160,6 @@ export default function ItemPage({
                   Start session
                 </button>
               )}
-              <button type="button" className="ghost" onClick={() => setEditingText(true)}>
-                Edit
-              </button>
               <button type="button" className="ghost danger" onClick={() => setConfirmDelete(true)}>
                 Delete
               </button>
@@ -173,31 +167,10 @@ export default function ItemPage({
           </span>
         }
       >
-        {isTask && item.title && !editingText && item.title.trim() !== item.raw_text.trim() && <h2 className="item-title">{item.title}</h2>}
-        {editingText ? (
-          <div className="text-edit">
-            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(12, Math.max(3, text.split("\n").length + 1))} aria-label="Text" autoFocus />
-            <div className="editor-actions">
-              <button type="button" className="ghost" onClick={() => { setEditingText(false); setText(item.raw_text); }}>
-                Cancel
-              </button>
-              <button type="button" className="primary" onClick={() => void saveText()}>
-                Save
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="raw big" onDoubleClick={() => setEditingText(true)}>
-            <Highlight text={item.raw_text} query={query} />
-          </p>
-        )}
-        {confirmDelete && (
-          <Confirm question={<>Delete this {item.shape}? The original capture stays.</>} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />
-        )}
-        {msg && <ErrorLine>{msg}</ErrorLine>}
+        {isTask && item.title && item.title.trim() !== item.raw_text.trim() && <h2 className="item-title">{item.title}</h2>}
         {conflict && (
-          <div className="load-failed">
-            <ErrorLine>This changed on another device or tab since you opened it.</ErrorLine>
+          <div className="conflict-strip">
+            <span className="tone warn">Changed elsewhere since you opened it. Your text is kept.</span>
             <span className="toggles">
               <button type="button" className="ghost" onClick={() => void reloadItem()}>
                 Reload
@@ -208,6 +181,11 @@ export default function ItemPage({
             </span>
           </div>
         )}
+        <TextEditor key={editorKey} draftId={String(itemId)} value={item.raw_text} query={query} onSave={saveText} blocked={!!conflict} />
+        {confirmDelete && (
+          <Confirm question={<>Delete this {item.shape}? The original capture stays.</>} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />
+        )}
+        {msg && <ErrorLine>{msg}</ErrorLine>}
         {isTask && (
           <div className="item-meta">
             <span className="chip">{item.status}</span>

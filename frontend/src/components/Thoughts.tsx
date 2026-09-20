@@ -4,6 +4,7 @@ import { formatRelative } from "../format";
 import { useLoad } from "../useLoad";
 import Card from "./Card";
 import { NoteIcon } from "./Icons";
+import Markdown from "./Markdown";
 import { Empty, ErrorLine, Loading } from "./Status";
 
 /** The item's thought log: your own thinking, kept apart from its text. Append-only -- each
@@ -43,7 +44,7 @@ export default function Thoughts({ itemId, onAdded }: { itemId: number; onAdded?
           {entries.map((t) => (
             <li key={t.id}>
               <span className="muted small">{formatRelative(t.created_at)}</span>
-              <p>{t.body}</p>
+              <Markdown text={t.body} />
             </li>
           ))}
         </ol>
