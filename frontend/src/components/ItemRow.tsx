@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { editItem } from "../api";
 import { formatDueLong, formatRelative, formatRemind, todayLocal, waitingReason } from "../format";
 import type { Edit, Item } from "../types";
+import { useWide } from "../useWide";
 import { AlertIcon, NoteIcon } from "./Icons";
 import Row from "./Row";
 import { StartSession } from "./SessionBar";
@@ -26,6 +27,9 @@ export default function ItemRow({
   sessions?: number;
 }) {
   const [error, setError] = useState<string | null>(null);
+  // On a phone the item opens in a sheet over this list; `?item=` carries it, so Back closes it.
+  const wide = useWide(641);
+  const [, setParams] = useSearchParams();
   const isTask = item.shape === "task";
   const href = to ?? (query ? `/items/${item.id}?q=${encodeURIComponent(query)}` : `/items/${item.id}`);
   const editable = item.stage === "filed";
@@ -67,9 +71,24 @@ export default function ItemRow({
         )
       }
       title={
-        <Link to={href} className="row-text">
-          {headline}
-        </Link>
+        !wide && !to ? (
+          <button
+            type="button"
+            className="row-text"
+            onClick={() =>
+              setParams((p) => {
+                p.set("item", String(item.id));
+                return p;
+              })
+            }
+          >
+            {headline}
+          </button>
+        ) : (
+          <Link to={href} className="row-text">
+            {headline}
+          </Link>
+        )
       }
       meta={meta.map((m, i) => (
         <span key={i}>

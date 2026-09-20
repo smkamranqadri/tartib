@@ -31,7 +31,7 @@ export default function Panes({ space, version, query, onQuery, onChanged }: { s
   const wide = useWide();
   const [params, setParams] = useSearchParams();
   const shown = items.filter((i) => KEEP[filter](i) && matches(i, query));
-  const openId = Number(params.get("item")) || shown[0]?.id || null;
+  const openId = Number(params.get("item")) || (wide ? shown[0]?.id : null) || null;
 
   const open = (id: number) => setParams({ item: String(id) }, { replace: true });
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getCapture, setUnauthorizedHandler } from "./api";
 import { type Pending, onPending, watchForReconnect } from "./offline";
 import { takePendingNav } from "./push";
@@ -7,6 +7,7 @@ import Capture from "./Capture";
 import AskBar from "./components/AskBar";
 import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
 import CaptureSheet, { type SheetMode } from "./components/CaptureSheet";
+import ItemSheet from "./components/ItemSheet";
 import SessionBar from "./components/SessionBar";
 import TabBar from "./components/TabBar";
 import Toast, { type ToastState } from "./components/Toast";
@@ -121,6 +122,8 @@ export default function App() {
     };
   }, []);
   const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const openItem = Number(params.get("item")) || null;
   // 641px: the width where the header's pills and the two bars have room.
   const wideEnough = useWide(641);
 
@@ -296,6 +299,19 @@ export default function App() {
         {location.pathname !== "/" && <SessionBar placement="float" />}
         {wideEnough && <AskBar spaces={spaces} />}
         {!wideEnough && <TabBar onAdd={() => setSheet("capture")} />}
+        {!wideEnough && openItem && (
+          <ItemSheet
+            itemId={openItem}
+            version={version}
+            onChanged={bump}
+            onClose={() =>
+              setParams((p) => {
+                p.delete("item");
+                return p;
+              })
+            }
+          />
+        )}
         {sheet && (
           <CaptureSheet
             mode={sheet}

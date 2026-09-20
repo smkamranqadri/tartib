@@ -105,6 +105,21 @@ search box, navigation and sessions all work from the new bar; offline, a captur
 sheet toasted "Saved offline", showed as "waiting to send" on Home, and went up when the network
 came back. Screenshots in light and dark. The desktop is unchanged but for the larger targets.
 
+## After the first look, 2026-09-20
+
+The top safe area was gone: the only `env(safe-area-inset-top)` was on the header, which phones
+no longer render, so an installed app would have drawn its first line under the status bar. The
+page itself now reserves it (`.app` padding-top on phones) -- with a 47px notch emulated, the
+first thing on the page sits at 47.
+
+And an item is read in a sheet on a phone: a row puts `?item={id}` on the current URL and the
+sheet opens over the list, which keeps its place and its scroll; Back, Escape, the scrim and ✕
+all close it. The item page is the same component inside, so editing, thoughts and the menu work
+there. The desktop still opens `/items/{id}` as its own page, and a wide space page still uses
+its side pane. Proof: a row on a space and a row on Home each opened the sheet with the right
+item; Back closed it and cleared the URL; a thought added inside the sheet stuck; on a desktop
+the same row navigated to `/items/13` with no sheet.
+
 ## Out of scope
 
 Backups, the deploy, slices 13 and 14, and anything that changes what the app does rather than

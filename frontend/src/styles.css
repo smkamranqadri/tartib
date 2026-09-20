@@ -314,7 +314,8 @@ button:disabled { opacity: .5; cursor: default; }
   .area-session { order: 0; } .area-today { order: 1; } .area-attention { order: 2; } .area-recent { order: 3; }
 }
 @media (max-width: 640px) {
-  .app { --gutter: 16px; }
+  /* No header on a phone, so the page itself clears the status bar and the notch. */
+  .app { --gutter: 16px; padding-top: max(10px, env(safe-area-inset-top)); }
   .top { grid-template-columns: 1fr; row-gap: 10px; }
   .top-actions { display: none; }
   .pills { justify-self: stretch; }
@@ -569,3 +570,8 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   .row { min-height: 46px; }
   .line { min-height: 40px; }
 }
+
+/* An item read in a sheet on a phone: taller than the capture sheet, and it scrolls. */
+.item-sheet { max-height: 92vh; }
+.item-sheet .screen { padding: 0; gap: 12px; }
+.sheet-grip { flex: 1; height: 4px; max-width: 44px; margin: 4px auto; border-radius: 2px; background: color-mix(in srgb, var(--fg) 20%, transparent); }
