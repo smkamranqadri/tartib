@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 from tartib.clock import utcnow_iso, utcnow_ms_iso
@@ -67,6 +68,97 @@ def list_spaces(conn: sqlite3.Connection) -> list[str]:
 
 def space_policies(conn: sqlite3.Connection) -> dict[str, str]:
     return {r["name"]: r["policy"] for r in conn.execute("SELECT name, policy FROM spaces")}
+
+
+CONTEXT_PER_SPACE = 5  # most recent items shown per space in the classifier's context
+CONTEXT_EXCERPT = 60  # characters of a note shown there; a task shows its title instead
+
+
+def item_header(row: sqlite3.Row) -> str:
+    """The one line that identifies an item to the AI.
+
+    Both prompts use it: ask puts the item's text and thoughts underneath, classify shows it
+    alone as context. One format in one place, so the two prompts cannot drift apart about what
+    an item looks like -- which is the whole of the backlog's "shared rules" entry that mattered.
+    """
+    space = row["space"] or "(none)"
+    head = f"[id {row['id']}] {row['created_at'][:10]} · space: {space} · {row['shape']}"
+    if row["shape"] == "task":
+        head += f": {row['title'] or ''}"
+        if row["due"]:
+            head += f" · due {row['due']}"
+        head += f" · {row['status']}"
+    return head
+
+
+def context_line(row: sqlite3.Row) -> str:
+    """One item as the classifier sees it: its shared header, plus the start of a note's text,
+    since a note's header has no content in it."""
+    line = item_header(row)
+    if row["shape"] == "task":
+        return line
+    first = " ".join((row["raw_text"] or "").split())
+    if not first:
+        return line
+    if len(first) > CONTEXT_EXCERPT:
+        first = first[:CONTEXT_EXCERPT].rstrip() + "\u2026"
+    return f"{line}: {first}"
+
+
+@dataclass(frozen=True)
+class SpaceContext:
+    """One space as the classifier sees it."""
+
+    name: str
+    open_tasks: int
+    notes: int
+    recent: tuple[str, ...]  # item_header lines, most recent first
+
+
+def classify_context(
+    conn: sqlite3.Connection, per_space: int = CONTEXT_PER_SPACE
+) -> tuple[SpaceContext, ...]:
+    """What already exists, for the classifier: every configured space with its counts and its
+    most recent items.
+
+    Built here so there is one source of truth for what the classifier is shown. Filed items
+    only -- something sitting in attention is a guess nobody has confirmed, and showing guesses
+    as examples of what lives in a space teaches the classifier its own mistakes.
+
+    A task is its header, which carries its title. A note's header carries no content at all --
+    space, shape and date -- so notes get CONTEXT_EXCERPT characters of their first line too,
+    or the block would say nothing about the half of the database that is notes.
+
+    Nothing longer: this rides on every capture, and captures queue serially.
+    """
+    counts = {
+        r["space"]: r
+        for r in conn.execute(
+            """
+            SELECT space,
+                   SUM(shape = 'task' AND status = 'open') AS open_tasks,
+                   SUM(shape = 'note') AS notes
+            FROM items WHERE stage = 'filed' GROUP BY space
+            """
+        ).fetchall()
+    }
+    out = []
+    for name in list_spaces(conn):
+        row = counts.get(name)
+        recent = conn.execute(
+            "SELECT * FROM items WHERE space = ? AND stage = 'filed'"
+            " ORDER BY id DESC LIMIT ?",
+            (name, per_space),
+        ).fetchall()
+        out.append(
+            SpaceContext(
+                name=name,
+                open_tasks=int(row["open_tasks"] or 0) if row else 0,
+                notes=int(row["notes"] or 0) if row else 0,
+                recent=tuple(context_line(r) for r in recent),
+            )
+        )
+    return tuple(out)
 
 
 def should_file(

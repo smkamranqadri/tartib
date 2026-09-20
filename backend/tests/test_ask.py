@@ -5,7 +5,14 @@ import json
 import pytest
 
 from tartib.ask import retrieval_query
-from tests.conftest import capture, proposal, records, set_ask_reply, set_classify_reply
+from tests.conftest import (
+    capture,
+    proposal,
+    records,
+    set_ask_reply,
+    set_classify_reply,
+    set_terms_reply,
+)
 
 
 @pytest.mark.parametrize(
@@ -117,6 +124,7 @@ def test_ask_with_no_items(ai_client, monkeypatch):
         "item_ids": [],
         "items": [],
         "matched": False,
+        "expanded": False,
     }
     seed(ai_client, monkeypatch, [("work", "something")])
     r = ai_client.post("/api/ask", json={"question": "anything", "space": "travel"})
@@ -138,3 +146,119 @@ def test_ask_reply_shape_is_strict_json(ai_client, monkeypatch):
     monkeypatch.setenv("FAKE_CODEX_REPLY_ASK", json.dumps({"answer": "", "item_ids": ["x", 1.5]}))
     body = ai_client.post("/api/ask", json={"question": "something"}).json()
     assert body["answer"] == "No answer." and body["item_ids"] == []
+
+
+# --- slice 26: expansion when the question's own words find nothing, and one turn of carry ---
+
+
+def _corpus(client, monkeypatch):
+    """Five notes whose wording deliberately avoids the words the questions below use."""
+    return seed(
+        client,
+        monkeypatch,
+        [
+            ("health", "Physio said swim twice a week for the shoulder."),
+            ("health", "Bought new goggles and a kickboard."),
+            ("health", "Lane 3 is quietest before 7am."),
+            ("work", "Standup moved to 10:30."),
+            ("work", "Ali said the API rate limit is 100 requests per minute."),
+        ],
+    )
+
+
+def test_a_question_whose_own_words_find_nothing_is_answered_after_expansion(
+    ai_client, monkeypatch, tmp_path
+):
+    swim, goggles, _, _, _ = _corpus(ai_client, monkeypatch)
+    # Nothing in the corpus contains "cardio" or "routine".
+    assert retrieval_query("what is my cardio routine?") == '"cardio"* OR "routine"*'
+
+    record = tmp_path / "calls.jsonl"
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_terms_reply(monkeypatch, "swim", "physio", "goggles")
+    set_ask_reply(monkeypatch, "Swimming twice a week.", [swim])
+    r = ai_client.post("/api/ask", json={"question": "what is my cardio routine?"})
+
+    body = r.json()
+    assert body["matched"] is True and body["expanded"] is True
+    assert body["item_ids"] == [swim]
+    calls = records(record)
+    assert [c["terms"] for c in calls] == [True, False]  # expansion first, then the answer
+    prompt = calls[-1]["argv"][-1]
+    for item_id in (swim, goggles):
+        assert f"[id {item_id}] " in prompt
+
+
+def test_the_same_question_without_expansion_finds_nothing(ai_client, monkeypatch):
+    """The other half of the check above: with no terms proposed, the cheap path is all there is."""
+    _corpus(ai_client, monkeypatch)
+    set_terms_reply(monkeypatch)  # the model proposes nothing
+    set_ask_reply(monkeypatch, "I could not find it.", [])
+    body = ai_client.post("/api/ask", json={"question": "what is my cardio routine?"}).json()
+    assert body["matched"] is False and body["expanded"] is False
+
+
+def test_a_question_that_already_matches_costs_exactly_one_call(ai_client, monkeypatch, tmp_path):
+    _corpus(ai_client, monkeypatch)
+    record = tmp_path / "calls.jsonl"
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_ask_reply(monkeypatch, "Before 7am in lane 3.", [])
+    body = ai_client.post("/api/ask", json={"question": "swim lane goggles physio shoulder"}).json()
+    assert body["matched"] is True and body["expanded"] is False
+    calls = records(record)
+    assert len(calls) == 1 and calls[0]["ask"] is True
+
+
+def test_expansion_failing_does_not_fail_the_question(ai_client, monkeypatch):
+    """A broken expansion call must leave the question no worse off than before the feature."""
+    _corpus(ai_client, monkeypatch)
+    monkeypatch.setenv("FAKE_CODEX_REPLY_TERMS", "not json at all")
+    set_ask_reply(monkeypatch, "Nothing on that.", [])
+    r = ai_client.post("/api/ask", json={"question": "what is my cardio routine?"})
+    assert r.status_code == 200
+    assert r.json()["expanded"] is False
+
+
+def test_follow_up_resolves_against_the_previous_answer(ai_client, monkeypatch, tmp_path):
+    """The backlog's own worked example: 'what about the second one?' has no content words."""
+    swim, goggles, lane, _, _ = _corpus(ai_client, monkeypatch)
+    # Its words are searchable but match nothing in the corpus: the same dead end.
+
+    record = tmp_path / "calls.jsonl"
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_ask_reply(monkeypatch, "The goggles and kickboard.", [goggles])
+    body = ai_client.post(
+        "/api/ask",
+        json={
+            "question": "what about the second one?",
+            "prior_question": "what did physio say?",
+            "prior_item_ids": [swim, goggles, lane],
+        },
+    ).json()
+
+    assert body["matched"] is False  # the question's own words matched nothing
+    assert body["item_ids"] == [goggles]
+    prompt = records(record)[-1]["argv"][-1]
+    assert "Just before this, you were asked: what did physio say?" in prompt
+    assert f"in this order: {swim}, {goggles}, {lane}" in prompt
+    # The prior items lead the candidate list, in the order they were answered in.
+    assert prompt.index(f"[id {swim}] ") < prompt.index(f"[id {goggles}] ")
+
+
+def test_no_prior_turn_leaves_the_prompt_as_it_was(ai_client, monkeypatch, tmp_path):
+    _corpus(ai_client, monkeypatch)
+    record = tmp_path / "calls.jsonl"
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_terms_reply(monkeypatch, "swim")
+    set_ask_reply(monkeypatch, "ok", [])
+    ai_client.post("/api/ask", json={"question": "what is my cardio routine?"})
+    assert "Just before this" not in records(record)[-1]["argv"][-1]
+
+
+def test_terms_query_cannot_carry_fts_syntax():
+    from tartib.ask import terms_query
+
+    # The quote and the bare MATCH cannot survive: every term comes back quoted.
+    assert terms_query(['swim" OR items_fts MATCH "']) == '"swim"* OR "items_fts"* OR "match"*'
+    assert terms_query(["swim", "swim"]) == '"swim"*'
+    assert terms_query([]) == ""

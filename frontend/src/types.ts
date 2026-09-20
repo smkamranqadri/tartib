@@ -37,6 +37,8 @@ export interface Answer {
   item_ids: number[];
   items: Item[];
   matched?: boolean;
+  /** The question's own words found nothing, so the classifier proposed search terms (slice 26). */
+  expanded?: boolean;
 }
 
 export interface Capture {

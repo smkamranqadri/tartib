@@ -18,6 +18,7 @@ from tartib.deps import get_db, get_settings
 from tartib.store import (
     SpaceError,
     capture_by_client_id,
+    classify_context,
     create_capture,
     file_item,
     insert_item,
@@ -264,6 +265,7 @@ async def redo(
         zone=settings.zone,
         spaces=list_spaces(conn),
         codex=settings.codex(),
+        existing=classify_context(conn),
     )
     try:
         proposals = await classify(row["raw_text"], context, correction=(earlier, reason))

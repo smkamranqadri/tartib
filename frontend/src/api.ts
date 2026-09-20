@@ -139,8 +139,16 @@ export function listItems(params: ListParams) {
 }
 
 export const getItem = (id: number) => api<Item>(`/api/items/${id}`);
-export const ask = (question: string, space?: string) =>
-  send<Answer>("POST", "/api/ask", { question, space: space || undefined });
+/** `prior` is the turn just before this one. The server has no conversation of its own, so a
+ *  follow-up like "what about the second one?" only resolves if the client sends what it is a
+ *  follow-up to (slice 26). One turn, not a history. */
+export const ask = (question: string, space?: string, prior?: { question: string; item_ids: number[] }) =>
+  send<Answer>("POST", "/api/ask", {
+    question,
+    space: space || undefined,
+    prior_question: prior?.item_ids.length ? prior.question : undefined,
+    prior_item_ids: prior?.item_ids.length ? prior.item_ids : undefined,
+  });
 
 export const addItem = (item: { shape: "task" | "note"; space: string; text: string; due?: string }) =>
   send<Item>("POST", "/api/items", item);

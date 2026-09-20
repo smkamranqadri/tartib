@@ -12,7 +12,15 @@ from tartib.ask import AskError, answer_question
 from tartib.classify import ClassifyError, Context, Proposal, classify
 from tartib.clock import utcnow, utcnow_iso
 from tartib.config import Settings
-from tartib.store import SpaceError, insert_item, list_spaces, should_file, space_policies
+from tartib.store import (
+    SpaceContext,
+    SpaceError,
+    classify_context,
+    insert_item,
+    list_spaces,
+    should_file,
+    space_policies,
+)
 
 log = logging.getLogger("tartib.runner")
 
@@ -88,7 +96,7 @@ class Runner:
         loaded = await asyncio.to_thread(self._load, capture_id)
         if loaded is None:
             return
-        text, created_at, spaces = loaded
+        text, created_at, spaces, existing = loaded
         s = self.settings
         if not s.ai_enabled:
             await asyncio.to_thread(self._fallback, capture_id, NOT_CONFIGURED)
@@ -98,6 +106,7 @@ class Runner:
             zone=s.zone,
             spaces=spaces,
             codex=s.codex(),
+            existing=existing,
         )
         try:
             proposals = await classify(text, context)
@@ -192,7 +201,9 @@ class Runner:
         finally:
             conn.close()
 
-    def _load(self, capture_id: int) -> tuple[str, str, list[str]] | None:
+    def _load(
+        self, capture_id: int
+    ) -> tuple[str, str, list[str], tuple[SpaceContext, ...]] | None:
         conn = self._connect()
         try:
             row = conn.execute(
@@ -200,7 +211,7 @@ class Runner:
             ).fetchone()
             if row is None or row["status"] != "pending":
                 return None
-            return row["raw_text"], row["created_at"], list_spaces(conn)
+            return row["raw_text"], row["created_at"], list_spaces(conn), classify_context(conn)
         finally:
             conn.close()
 

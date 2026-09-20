@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from tartib import db
 from tartib.main import create_app
+from tartib.spaces import seed_spaces
 from tests.conftest import (
     AI_ENV,
     PASSWORD,
@@ -274,3 +275,128 @@ def test_crash_in_one_capture_does_not_stop_the_runner(ai_client, monkeypatch, s
     assert capture(ai_client, "still alive")["status"] == "done"
     conn = sqlite3.connect(ai_client.app.state.settings.db_path)
     assert conn.execute("SELECT COUNT(*) FROM captures WHERE status='pending'").fetchone()[0] == 0
+
+
+# --- slice 26: what the classifier is shown about what already exists ---
+
+
+def _seed(conn, space, shape, title, text, stage="filed", status="open"):
+    at = "2026-09-20T10:00:00Z"
+    cur = conn.execute(
+        "INSERT INTO captures (raw_text, status, created_at) VALUES (?, 'done', ?)", (text, at)
+    )
+    conn.execute(
+        "INSERT INTO items (capture_id, raw_text, shape, space, title, status, stage,"
+        " created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (cur.lastrowid, text, shape, space, title, status, stage, at, at),
+    )
+    conn.commit()
+
+
+def test_classify_context_counts_filed_items_per_space(settings):
+    from tartib.store import classify_context
+
+    conn = db.connect(settings.db_path)
+    db.migrate(conn)
+    seed_spaces(conn, settings.spaces)
+    _seed(conn, "work", "task", "Send the invoice", "send the invoice to Ahmed")
+    _seed(conn, "work", "note", None, "the API rate limit is 100/min")
+    _seed(conn, "health", "task", "Call the dentist", "call the dentist")
+    # A guess nobody confirmed must not teach the classifier what lives in a space.
+    _seed(conn, "work", "note", None, "unconfirmed guess", stage="attention")
+
+    by_name = {c.name: c for c in classify_context(conn)}
+    assert by_name["work"].open_tasks == 1 and by_name["work"].notes == 1
+    assert by_name["health"].open_tasks == 1
+    assert by_name["travel"].open_tasks == 0 and by_name["travel"].recent == ()
+    assert "Send the invoice" in " ".join(by_name["work"].recent)
+    assert "unconfirmed guess" not in " ".join(by_name["work"].recent)
+    conn.close()
+
+
+def test_classify_context_excerpts_a_note_and_stops(settings):
+    """A note's header carries no content, so it gets the start of its text -- and no more."""
+    from tartib.store import CONTEXT_EXCERPT, classify_context
+
+    conn = db.connect(settings.db_path)
+    db.migrate(conn)
+    seed_spaces(conn, settings.spaces)
+    body = "Meridian quoted 40k for the roof " + "and then said a great deal more " * 10
+    _seed(conn, "work", "note", None, body)
+    _seed(conn, "work", "task", "Call Meridian back", "call them back")
+
+    lines = next(c for c in classify_context(conn) if c.name == "work").recent
+    note = next(line for line in lines if "note" in line)
+    task = next(line for line in lines if "task" in line)
+    assert "Meridian quoted 40k" in note  # enough to tell the space apart
+    assert "said a great deal more" not in note  # but not the whole note
+    assert len(note) < len(body)
+    excerpt = note.split("\u00b7 note: ", 1)[1]
+    assert note.endswith("\u2026") and len(excerpt) <= CONTEXT_EXCERPT + 1
+    assert task.endswith("Call Meridian back \u00b7 open")  # a task needs no excerpt
+    conn.close()
+
+
+def test_render_existing_trims_examples_to_budget_but_keeps_counts():
+    from tartib.classify import render_existing
+    from tartib.store import SpaceContext
+
+    spaces = tuple(
+        SpaceContext(
+            name=f"space{i}",
+            open_tasks=i,
+            notes=i,
+            recent=tuple(f"[id {j}] 2026-09-20 · space: space{i} · note" for j in range(5)),
+        )
+        for i in range(6)
+    )
+    full = render_existing(spaces, budget=10_000)
+    trimmed = render_existing(spaces, budget=600)
+    assert len(full) > 600
+    assert len(trimmed) <= 600
+    for i in range(6):
+        assert f"- space{i}: {i} open task" in trimmed
+
+
+def test_render_existing_is_empty_without_a_database():
+    from tartib.classify import render_existing
+
+    assert render_existing(()) == ""
+
+
+def test_prompt_carries_what_already_lives_in_each_space(ai_client, monkeypatch, tmp_path):
+    """The context reaches the real prompt, not just the builder."""
+    set_classify_reply(
+        monkeypatch,
+        proposal(shape="task", text="send the invoice", space="work", title="Send the invoice"),
+    )
+    capture(ai_client, "send the invoice to Ahmed")
+
+    record = tmp_path / "calls.jsonl"
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_classify_reply(monkeypatch, proposal(shape="note", text="second", space="work"))
+    capture(ai_client, "another one")
+
+    prompt = records(record)[-1]["argv"][-1]
+    assert "What already lives in each space" in prompt
+    assert "Send the invoice" in prompt
+    assert "- work: 1 open task, 0 notes" in prompt
+
+
+def test_a_full_database_still_fits_the_budget(settings):
+    """The block rides on every capture, so its size must not follow the database's."""
+    from tartib.classify import CONTEXT_BUDGET, render_existing
+    from tartib.store import classify_context
+
+    conn = db.connect(settings.db_path)
+    db.migrate(conn)
+    seed_spaces(conn, settings.spaces)
+    for i in range(400):
+        space = settings.spaces[i % len(settings.spaces)]
+        _seed(conn, space, "note", None, f"note {i}: " + "a fairly wordy note body " * 12)
+
+    block = render_existing(classify_context(conn))
+    assert len(block) <= CONTEXT_BUDGET
+    for space in settings.spaces:
+        assert f"- {space}: " in block  # every space keeps its counts
+    conn.close()

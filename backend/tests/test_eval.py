@@ -19,6 +19,7 @@ import pytest
 
 from tartib.classify import Context, classify
 from tartib.codex import CodexConfig
+from tartib.store import SpaceContext
 
 SPACES = ["work", "home", "health", "finance", "ideas", "travel"]
 ZONE = ZoneInfo("Asia/Karachi")
@@ -218,3 +219,110 @@ def test_a_reason_moves_the_answer():
             failures.append(f"{text!r} + {reason!r}: got {got}, expected {(shape, space)}")
     if failures:
         pytest.fail("\n".join(failures))
+
+
+# --- slice 26: does showing the classifier what already exists make it file better? ---
+#
+# These captures are deliberately unanswerable from the space names alone. Each turns on a
+# proper noun -- a contractor, a transit card, a co-writer -- that means nothing until you have
+# seen where similar items already live. A flat list of six space names cannot place any of
+# them; the point of the measurement is whether the context can.
+
+CONTEXT_ITEMS = {
+    "work": [
+        ("task", "Send Ahmed the Q3 deck", None),
+        ("note", None, "Tartib deploy runs on CapRover, image tagged per version."),
+        ("task", "Move standup to 10:30", None),
+    ],
+    "home": [
+        ("note", None, "Meridian quoted 40k for the roof, valid until the 30th."),
+        ("task", "Ask Bilal to look at the kitchen leak", None),
+        ("note", None, "Spare keys are with the neighbour on the left."),
+    ],
+    "health": [
+        ("note", None, "Physio: swim twice a week, lane 3 before 7am."),
+        ("note", None, "The blue goggles are the ones that do not leak."),
+        ("task", "Book the next physio session", None),
+    ],
+    "finance": [
+        ("note", None, "Astra motor policy renews yearly, premium 48k."),
+        ("task", "Pay the electricity bill", None),
+        ("note", None, "Invoices go out on the first of the month."),
+    ],
+    "ideas": [
+        ("note", None, "Sahar is co-writing the piece on attention and tools."),
+        ("note", None, "A graph of items, sized by how often each is referenced."),
+        ("note", None, "Write something about why queues beat retries."),
+    ],
+    "travel": [
+        ("note", None, "Kalmar card is the transit card for the Stockholm trip."),
+        ("task", "Renew passport before the trip", None),
+        ("note", None, "Flights are cheapest on Tuesday mornings."),
+    ],
+}
+
+# (capture, the space only the context can point to)
+DISCRIMINATING = [
+    ("Chase up the Meridian quote", "home"),
+    ("Top up the Kalmar card", "travel"),
+    ("Ping Sahar about the draft", "ideas"),
+    ("Order more of the blue ones", "health"),
+    ("Renew Astra before the 30th", "finance"),
+    ("Ask Bilal to come back and look at it again", "home"),
+]
+
+
+def _fake_context() -> tuple[SpaceContext, ...]:
+    """The same shape store.classify_context builds, without needing a database."""
+    out = []
+    for i, name in enumerate(SPACES):
+        lines = []
+        for j, (shape, title, text) in enumerate(CONTEXT_ITEMS[name]):
+            head = f"[id {i * 10 + j}] 2026-09-1{j} · space: {name} · {shape}"
+            lines.append(f"{head}: {title} · open" if shape == "task" else f"{head}: {text}")
+        tasks = sum(1 for s, _, _ in CONTEXT_ITEMS[name] if s == "task")
+        out.append(
+            SpaceContext(
+                name=name,
+                open_tasks=tasks,
+                notes=len(CONTEXT_ITEMS[name]) - tasks,
+                recent=tuple(lines),
+            )
+        )
+    return tuple(out)
+
+
+def _score(existing: tuple[SpaceContext, ...]) -> tuple[int, list[str]]:
+    context = Context(
+        now=NOW, zone=ZONE, spaces=SPACES, codex=CodexConfig(command="codex"), existing=existing
+    )
+
+    async def run_all():
+        return await asyncio.gather(*(classify(text, context) for text, _ in DISCRIMINATING))
+
+    got = 0
+    detail = []
+    for (text, want), proposals in zip(DISCRIMINATING, asyncio.run(run_all()), strict=True):
+        p = next((p for p in proposals if p.shape != "question"), None)
+        space = p.space if p else None
+        if space == want:
+            got += 1
+        detail.append(f"{text[:34]!r} -> {space} (want {want})")
+    return got, detail
+
+
+@pytest.mark.eval
+def test_context_beats_a_flat_list_of_space_names():
+    """The measurement slice 26 exists for. Both numbers are reported either way."""
+    if shutil.which("codex") is None:
+        pytest.skip("codex CLI not installed")
+
+    blind, blind_detail = _score(())
+    seeing, seeing_detail = _score(_fake_context())
+    total = len(DISCRIMINATING)
+    report = (
+        f"\nspace names only: {blind}/{total}\n  " + "\n  ".join(blind_detail) +
+        f"\nwith what already exists: {seeing}/{total}\n  " + "\n  ".join(seeing_detail)
+    )
+    print(report)
+    assert seeing >= blind, f"the context made filing worse{report}"

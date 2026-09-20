@@ -21,6 +21,7 @@ FAKE_VARS = (
     "FAKE_CODEX_REPLY",
     "FAKE_CODEX_REPLY_CLASSIFY",
     "FAKE_CODEX_REPLY_ASK",
+    "FAKE_CODEX_REPLY_TERMS",
     "FAKE_CODEX_EXIT",
     "FAKE_CODEX_SLEEP",
     "FAKE_CODEX_RECORD",
@@ -85,6 +86,10 @@ def proposal(
 
 def set_classify_reply(monkeypatch, *proposals):
     monkeypatch.setenv("FAKE_CODEX_REPLY_CLASSIFY", json.dumps({"proposals": list(proposals)}))
+
+
+def set_terms_reply(monkeypatch, *terms):
+    monkeypatch.setenv("FAKE_CODEX_REPLY_TERMS", json.dumps({"terms": list(terms)}))
 
 
 def set_ask_reply(monkeypatch, answer="ok", item_ids=()):

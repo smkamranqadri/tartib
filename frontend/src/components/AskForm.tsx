@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ask, describe } from "../api";
 import type { Answer } from "../types";
 import AnswerView from "./AnswerView";
@@ -24,6 +24,9 @@ export default function AskForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Answer | null>(null);
+  /** The turn just before this one, sent so a follow-up has something to refer to. Cleared when
+   *  the answer is dismissed: the next question is then a fresh one, not a follow-up. */
+  const prior = useRef<{ question: string; item_ids: number[] } | null>(null);
 
   async function run(value: string, inSpace: string) {
     if (!value || busy) return;
@@ -31,7 +34,9 @@ export default function AskForm({
     setBusy(true);
     setError(null);
     try {
-      setResult(await ask(value, inSpace));
+      const answer = await ask(value, inSpace, prior.current ?? undefined);
+      prior.current = { question: value, item_ids: answer.item_ids };
+      setResult(answer);
     } catch (err) {
       /* Ask needs the classifier, so it cannot be queued -- it says so rather than failing blank. */
       setError(describe(err));
@@ -63,7 +68,15 @@ export default function AskForm({
 
   return (
     <>
-      {result && <AnswerView result={result} onClose={() => setResult(null)} />}
+      {result && (
+        <AnswerView
+          result={result}
+          onClose={() => {
+            prior.current = null;
+            setResult(null);
+          }}
+        />
+      )}
       {error && <p className="error">{error}</p>}
       <form className="ask" onSubmit={submit}>
         <input

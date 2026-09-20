@@ -744,7 +744,9 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   .row-text { display: flex; align-items: center; min-height: 44px; }
   .view-all a, .view-all button, .item-aside a, .side-note a, .brief-cites a { display: inline-flex; align-items: center; min-height: 44px; }
   /* The proposal sentence's tappable words: still words, but big enough to hit. */
-  .sentence .word, .sentence .word-input, .sentence select { min-height: 44px; }
+  /* Both axes: a short word like "Note" was 44px tall and 38px wide (found by the UI
+     suite, slice 26). min-width matters because these are buttons, not text. */
+  .sentence .word, .sentence .word-input, .sentence select { min-height: 44px; min-width: 44px; }
   .line, .brief-strip { min-height: 48px; }
   .row { min-height: 52px; }
   input.line-lead, .row input[type="checkbox"] { width: 22px; height: 22px; }

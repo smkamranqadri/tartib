@@ -10,8 +10,10 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from tartib.codex import CodexConfig, CodexError, run_json
+from tartib.store import SpaceContext
 
 NULL_SPACE_CONFIDENCE_CAP = 0.6
+CONTEXT_BUDGET = 4000  # characters; this block rides on every capture
 
 
 class ClassifyError(Exception):
@@ -70,6 +72,9 @@ class Context:
     zone: ZoneInfo
     spaces: list[str]
     codex: CodexConfig
+    # What already exists, from store.classify_context. Defaults to nothing so a caller with no
+    # database -- the eval's baseline run -- still builds a valid context.
+    existing: tuple[SpaceContext, ...] = ()
 
 
 PROMPT = """You file short personal captures for one person. Reply with one JSON object only:
@@ -104,9 +109,43 @@ Never rewrite or summarize the text itself. Do not run commands or read files.
 
 Current datetime: {now} ({zone})
 Existing spaces: {spaces}
-
+{existing}
 Text:
 {text}"""
+
+
+EXISTING = """
+What already lives in each space, most recent first. Use it to tell similar spaces apart: a
+capture belongs where comparable things already are. It is context, not a menu -- the space rule
+above still holds, and these items are not yours to change.
+{blocks}
+"""
+
+
+def render_existing(spaces: tuple[SpaceContext, ...], budget: int = CONTEXT_BUDGET) -> str:
+    """The context block, trimmed to `budget` by dropping the oldest example from the fullest
+    space until it fits. Counts survive trimming; examples are what is expendable."""
+    if not spaces:
+        return ""
+    recent = {s.name: list(s.recent) for s in spaces}
+
+    def build() -> str:
+        blocks = []
+        for s in spaces:
+            tasks = f"{s.open_tasks} open task{'' if s.open_tasks == 1 else 's'}"
+            notes = f"{s.notes} note{'' if s.notes == 1 else 's'}"
+            head = f"- {s.name}: {tasks}, {notes}"
+            blocks.append("\n".join([head, *(f"    {line}" for line in recent[s.name])]))
+        return EXISTING.format(blocks="\n".join(blocks))
+
+    text = build()
+    while len(text) > budget:
+        fullest = max(recent, key=lambda n: len(recent[n]))
+        if not recent[fullest]:
+            break  # counts alone are already over budget; send them anyway
+        recent[fullest].pop()
+        text = build()
+    return text
 
 
 CORRECTION = """
@@ -124,6 +163,7 @@ def build_prompt(text: str, context: Context, correction: tuple[str, str] | None
         now=context.now.isoformat(),
         zone=context.zone.key,
         spaces=", ".join(context.spaces),
+        existing=render_existing(context.existing),
         text=text,
     )
     if correction is not None:
