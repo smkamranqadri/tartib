@@ -9,6 +9,8 @@ import { ItemLead, ItemLine, matches, SessionLines, useSessions, useSpaceItems }
 
 type Filter = "all" | "task" | "note" | "done" | "sessions";
 
+const LABEL: Record<Filter, string> = { all: "All", task: "Tasks", note: "Notes", done: "Done", sessions: "Sessions" };
+
 const KEEP: Record<Filter, (i: ReturnType<typeof useSpaceItems>["items"][number]) => boolean> = {
   all: (i) => i.shape === "note" || i.status === "open",
   task: (i) => i.shape === "task" && i.status === "open",
@@ -25,6 +27,7 @@ export default function Panes({ space, version, query, onQuery, onChanged }: { s
   const [openBrief, setOpenBrief] = useState(false);
   const brief = useLoad(() => (openBrief ? getBrief(space) : Promise.resolve(null)), [openBrief, space, version]);
   const sessions = useSessions(space, version);
+  const count = (f: Filter) => (f === "sessions" ? sessions.length : items.filter(KEEP[f]).length);
   const wide = useWide();
   const [params, setParams] = useSearchParams();
   const shown = items.filter((i) => KEEP[filter](i) && matches(i, query));
@@ -53,13 +56,21 @@ export default function Panes({ space, version, query, onQuery, onChanged }: { s
         </button>
         {openBrief && <p className="brief-text">{brief.data?.text ?? (brief.error ?? "Reading the space…")}</p>}
         <SearchAsk value={query} onChange={onQuery} space={space} placeholder={`Search ${space}, or ask`} />
-        <div className="chips" role="group" aria-label="Filter">
-          {(["all", "task", "note", "done", "sessions"] as Filter[]).map((f) => (
-            <button key={f} type="button" className={`chip-btn ${filter === f ? "on" : ""}`} onClick={() => setFilter(f)}>
-              {f === "all" ? "All" : f === "task" ? "Tasks" : f === "note" ? "Notes" : f === "done" ? "Done" : "Sessions"}
-              <span className="muted"> {f === "sessions" ? sessions.length : items.filter(KEEP[f]).length}</span>
-            </button>
-          ))}
+        <div className="filter-row">
+          <div className="pills tabs" role="group" aria-label="Show">
+            {(["all", "task", "note"] as Filter[]).map((f) => (
+              <button key={f} type="button" className={filter === f ? "active" : ""} onClick={() => setFilter(f)}>
+                {LABEL[f]} <span className="count">{count(f)}</span>
+              </button>
+            ))}
+          </div>
+          <div className="pills tabs" role="group" aria-label="Also">
+            {(["done", "sessions"] as Filter[]).map((f) => (
+              <button key={f} type="button" className={filter === f ? "active" : ""} onClick={() => setFilter(f)}>
+                {LABEL[f]} <span className="count">{count(f)}</span>
+              </button>
+            ))}
+          </div>
         </div>
         {error && <p className="error">{error}</p>}
         {loading && <p className="muted">Loading…</p>}

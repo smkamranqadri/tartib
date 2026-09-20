@@ -475,3 +475,12 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .line-lead svg { width: 16px; height: 16px; }
 .line.static .line-lead { margin-left: 0; }
 input.line-lead { accent-color: var(--accent); cursor: pointer; }
+
+/* The space's filters: the nav's pills, what is open on the left, what is finished on the right. */
+.filter-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pills button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 0; border-radius: 999px;
+  background: none; color: var(--muted); font-size: 14px; white-space: nowrap; cursor: pointer;
+}
+.pills button.active { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.line.static .line-title { flex: 1; }

@@ -2,7 +2,9 @@
 
 **Closed: Panes won and is the space page.** Classic (the card column) and Tree are deleted, as Board and Timeline were before them; `/spaces/{name}/panes` and `/spaces/{name}/tree` redirect to `/spaces/{name}`, and the View picker and its stored preference are gone with them. The manage menu (filing policy, rename, delete) moved onto the new page, which keeps the brief strip, the scoped search, "+ Add", the filter chips with a Sessions tab, `j`/`k`, and the item beside the list.
 
-Added 2026-09-20 after a look: every line leads with what it is -- a checkbox for a task, which
+The filters are two pill groups in the nav's style rather than one chip strip: what is still
+open on the left (All, Tasks, Notes), what is finished or logged on the right (Done, Sessions),
+each with its count. On a phone the two groups stack. Added 2026-09-20 after a look: every line leads with what it is -- a checkbox for a task, which
 ticks it off in place; the note glyph for a note; a clock for a session. The checkbox is its own
 control beside the line, never inside the button that opens the item: a tick is not "read this".
 Proof: ticking "Service the bike" moved it open -> done on the server, dropped the list from 9
