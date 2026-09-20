@@ -1,4 +1,6 @@
-import { getRecentSessions, listItems } from "../../api";
+import { useState } from "react";
+import { editItem, getRecentSessions, listItems } from "../../api";
+import { ClockIcon, NoteIcon } from "../../components/Icons";
 import { describe } from "../../components/SessionPast";
 import { formatDue, formatRelative, todayLocal } from "../../format";
 import type { Item } from "../../types";
@@ -15,6 +17,32 @@ export function useSpaceItems(space: string, version: number) {
 
 export const isOverdue = (i: Item) => i.shape === "task" && i.status === "open" && !!i.due && i.due < todayLocal();
 export const isToday = (i: Item) => i.shape === "task" && i.status === "open" && !!i.due && i.due <= todayLocal();
+
+/** What a line leads with: a task's checkbox, which ticks it off where it stands, or a note's
+ *  glyph. The checkbox is its own control beside the line, never inside the button that opens
+ *  the item -- a tick is not "read this". */
+export function ItemLead({ item, onChanged }: { item: Item; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  if (item.shape !== "task") return <span className="line-lead muted"><NoteIcon /></span>;
+  return (
+    <input
+      type="checkbox"
+      className="line-lead"
+      checked={item.status === "done"}
+      disabled={busy}
+      aria-label={item.status === "done" ? "Mark open" : "Mark done"}
+      onChange={async () => {
+        setBusy(true);
+        try {
+          await editItem(item.id, { status: item.status === "done" ? "open" : "done" });
+          onChanged();
+        } finally {
+          setBusy(false);
+        }
+      }}
+    />
+  );
+}
 
 /** One line: the title, then what matters about it. No card frame anywhere in these layouts. */
 export function ItemLine({ item, meta = true }: { item: Item; meta?: boolean }) {
@@ -57,6 +85,7 @@ export function SessionLines({ rows }: { rows: ReturnType<typeof useSessions> })
         const d = describe(p);
         return (
           <li key={p.id} className="line static">
+            <span className="line-lead muted"><ClockIcon /></span>
             <span className="line-title">{d.what}</span>
             <span className="line-meta muted">{d.meta}</span>
           </li>

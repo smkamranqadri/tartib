@@ -5,7 +5,7 @@ import { useLoad } from "../../useLoad";
 import { useWide } from "../../useWide";
 import ItemPage from "../ItemPage";
 import SearchAsk from "../../components/SearchAsk";
-import { ItemLine, matches, SessionLines, useSessions, useSpaceItems } from "./shared";
+import { ItemLead, ItemLine, matches, SessionLines, useSessions, useSpaceItems } from "./shared";
 
 type Filter = "all" | "task" | "note" | "done" | "sessions";
 
@@ -20,7 +20,7 @@ const KEEP: Record<Filter, (i: ReturnType<typeof useSpaceItems>["items"][number]
 /** Panes: no card frames. The brief folded into a strip, filter chips, one dense list, the item
  *  beside it. `j` and `k` walk the list, so a space can be read without the mouse. */
 export default function Panes({ space, version, query, onQuery, onChanged }: { space: string; version: number; query: string; onQuery: (q: string) => void; onChanged: () => void }) {
-  const { items, loading, error } = useSpaceItems(space, version);
+  const { items, loading, error, reload } = useSpaceItems(space, version);
   const [filter, setFilter] = useState<Filter>("all");
   const [openBrief, setOpenBrief] = useState(false);
   const brief = useLoad(() => (openBrief ? getBrief(space) : Promise.resolve(null)), [openBrief, space, version]);
@@ -70,7 +70,8 @@ export default function Panes({ space, version, query, onQuery, onChanged }: { s
             {!loading && shown.length === 0 && <p className="empty muted">Nothing here.</p>}
             <ul className="lines">
               {shown.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} className="line-row">
+                  <ItemLead item={item} onChanged={reload} />
                   <button type="button" className={`line ${item.id === openId ? "on" : ""}`} onClick={() => open(item.id)}>
                     <ItemLine item={item} />
                   </button>
