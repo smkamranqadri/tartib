@@ -120,6 +120,15 @@ its side pane. Proof: a row on a space and a row on Home each opened the sheet w
 item; Back closed it and cleared the URL; a thought added inside the sheet stuck; on a desktop
 the same row navigated to `/items/13` with no sheet.
 
+Then, same day, three from the device: the Inbox tabs stretched to equal widths on a phone, which
+cut "Needs attention 18" through its own count -- each pill keeps its own width now and the strip
+scrolls if it must. On a decision card, "Tell it why…" left the "…" menu for the row of buttons
+where the decision is made, and the capture's own words became the way into the item (a link on a
+wide screen, the sheet on a phone), which emptied the menu, so it is gone. Proof: the three tabs
+measure 148/82/66px with their counts inside and no page overflow; a card shows Approve, Not now
+and Tell it why… with no menu, the reason field opens from the button, and the title opened
+`?item=17` in the sheet on a phone and `/items/17` on a desktop.
+
 ## Out of scope
 
 Backups, the deploy, slices 13 and 14, and anything that changes what the app does rather than

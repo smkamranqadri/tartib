@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { approveItem, redoItem } from "../api";
 import { formatDue, waitingReason } from "../format";
 import type { Item, Shape } from "../types";
-import Menu from "./Menu";
+import { useWide } from "../useWide";
 import SpaceSelect from "./SpaceSelect";
 
 interface Draft {
@@ -42,6 +43,8 @@ export default function ApprovalCard({
   // Tell it why: the reason being written, and whether the classifier is on it.
   const [why, setWhy] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  const wide = useWide(641);
+  const [, setParams] = useSearchParams();
 
   useEffect(() => {
     setDraft(draftOf(item));
@@ -106,7 +109,24 @@ export default function ApprovalCard({
 
   return (
     <div className={`one ${hotkey ? "hot" : ""}`}>
-      <p className="raw big">{item.raw_text}</p>
+      {wide ? (
+        <Link className="raw big" to={`/items/${item.id}`}>
+          {item.raw_text}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className="raw big"
+          onClick={() =>
+            setParams((p) => {
+              p.set("item", String(item.id));
+              return p;
+            })
+          }
+        >
+          {item.raw_text}
+        </button>
+      )}
       <p className="sentence">
         <button type="button" className="word" onClick={() => setDraft({ ...draft, shape: draft.shape === "task" ? "note" : "task" })}>
           {draft.shape === "task" ? "Task" : "Note"}
@@ -179,12 +199,9 @@ export default function ApprovalCard({
             Not now
           </button>
         )}
-        <Menu
-          items={[
-            { label: "Tell it why…", onSelect: () => setWhy("") },
-            { label: "Open", to: `/items/${item.id}` },
-          ]}
-        />
+        <button type="button" className="ghost" onClick={() => setWhy("")}>
+          Tell it why…
+        </button>
       </div>
     </div>
   );

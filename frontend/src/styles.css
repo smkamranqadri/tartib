@@ -209,7 +209,13 @@ button:disabled { opacity: .5; cursor: default; }
 .search-row .primary { padding: 9px 16px; }
 /* Inbox tabs: the nav's pills, at the right of the title; the count beside each label. */
 .tabs .count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 8%, transparent); font-size: 12px; line-height: 20px; text-align: center; }
-@media (max-width: 640px) { .title-actions .tabs { width: 100%; } .title-actions .tabs a { flex: 1; justify-content: center; padding: 7px 8px; } .title-actions { width: 100%; margin-bottom: 16px; } }
+/* On a phone the tabs keep their own widths and the strip scrolls; stretching them cut
+   "Needs attention 18" in half. */
+@media (max-width: 640px) {
+  .title-actions .tabs { width: 100%; }
+  .title-actions .tabs a { flex: 0 0 auto; justify-content: center; padding: 7px 12px; }
+  .title-actions { width: 100%; margin-bottom: 16px; }
+}
 .chip-rows { display: flex; gap: 10px; flex-wrap: wrap; }
 .chips { display: inline-flex; gap: 2px; padding: 3px; background: var(--pill); border-radius: 10px; flex-wrap: wrap; }
 .chip-btn { background: none; border: 0; padding: 6px 12px; border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 14px; }
@@ -575,3 +581,7 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
 .item-sheet { max-height: 92vh; }
 .item-sheet .screen { padding: 0; gap: 12px; }
 .sheet-grip { flex: 1; height: 4px; max-width: 44px; margin: 4px auto; border-radius: 2px; background: color-mix(in srgb, var(--fg) 20%, transparent); }
+
+/* The capture's own words on a decision card: the way into the item. */
+a.raw.big, button.raw.big { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+a.raw.big:hover, button.raw.big:hover { text-decoration: underline; text-underline-offset: 3px; }
