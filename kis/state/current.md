@@ -42,27 +42,20 @@
 ## Commands
 
 - Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (two tests: 22 classify
-  fixtures and 3 tell-it-why cases, ~30s, needs a Codex login); `cd frontend && npm run typecheck && npm run build`. As of 2026-09-19
-  pytest is **193 passed, 2 deselected** as of 2026-09-20; the two deselected are the evals. Any
-  red is real.
+  fixtures and 3 tell-it-why cases, ~30s, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
+  As of 2026-09-20 pytest is **193 passed, 2 deselected** (the two deselected are the evals).
+  Any red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
 
 ## Proof
 
-Finished slices keep their step-by-step proof in the commit messages, not here. Slices 11 and 12:
-`34ab011`, `fc75770`, `e2e31cc`, `91d7a22`, `970348e`, `7e7f294`. Slice 15: `81ffc81`, `e11dcf1`,
-`5423d4d`. Slice 16: `bb1df57`, `90ac360`, `7ec12e1`. Slice 17: `1a2bbcb`, `5031388`, `6d7170c`,
-`5c103b2`, `3a966db`, `57837ea`, `5b36d25`, `c315141`.
-
-Proved on the deployed app, not only in tests: a capture classifies and files itself; the session
-cookie carries `Secure` behind the proxy; a session ending pushes and the phone buzzes **with a
-desktop tab open on the same countdown**, which is the migration 0008 case that had never been
-tested on real devices; `http://` redirects.
-
-The SHAs above are post-rewrite and current; history is not rewritten again (`technical.md`,
-Maintenance).
+Each slice keeps its proof in its plan file and its commits; `../intent/history.md` says what
+each one changed. Proved on the deployed app rather than only in tests: a capture classifies and
+files itself, the session cookie carries `Secure` behind the proxy, a session ending pushes and
+the phone buzzes with a desktop tab open on the same countdown (the migration 0008 case), and
+`http://` redirects.
 
 ## Known gaps
 
@@ -70,22 +63,12 @@ Maintenance).
   real device: a phone has no header at all now, and the page itself reserves the top inset.
   Unchecked on glass until it is on the phone -- which needs `v1.1`, or the local container over
   the LAN.
-- **The app shows no data offline.** The shell opens and a capture still queues, but Today,
-  Needs Attention and Recent are all empty, because the service worker never caches an `/api/`
-  response. Deliberate -- slice 15 scoped offline *read* out -- and proved in Chrome on
-  2026-09-19. Now an approved backlog item, with offline editing, which has no queue at all.
-- Voice capture depends on the browser; it was proved with an injected engine, not real dictation.
+- **The app shows no data offline.** The shell opens and a capture still queues, but the screens
+  are empty, because the service worker never caches an `/api/` response. Deliberate -- slice 15
+  scoped offline *read* out -- and an approved backlog item now, with offline editing.
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
-  Inbox screen also shows.
-- `pushsubscriptionchange` is handled since slice 15, but unproved: it needs a push service to
-  retire an endpoint, and Safari never fires the event.
-- Tapping a reminder on iOS opens Tartib but does not navigate to `/today`. Whether iOS runs the
-  worker's `notificationclick` at all was never established; `technical.md` records what was tried.
-- One device is subscribed to push. A desktop Chrome fails to subscribe with "Registration failed
-  - push service error", which is the browser failing to register with FCM and not a Tartib
-  problem: `pushManager.subscribe()` never contacts the server, and iOS accepted the same key.
-  Not worth chasing unless wanted -- one switch covers all three pushers, so a desktop
-  subscription means two buzzes for every reminder and digest.
-- The service worker shows nothing when a session ends with the app on screen. Browsers allow
-  that only within a budget for `userVisibleOnly` pushes; if Chrome ever says "This site has been
-  updated in the background", make that path a silent notification instead of none.
+  Inbox also shows.
+
+Browser and device behaviour that will not change by deploying -- iOS `notificationclick`, the
+desktop Chrome FCM refusal, `pushsubscriptionchange`, the silent worker at session end, voice
+capture -- is Knowledge: `../knowledge/technical.md`, "What browsers do to this app".

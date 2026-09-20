@@ -3,9 +3,9 @@
 Approved work waiting for a plan, then defects, then candidates that are not required and may
 never happen. How Tartib is built lives in `../knowledge/technical.md`.
 
-Slices 15, 16 and 17 -- PWA, public repo, deploy -- were put ahead of everything here on
-2026-09-18 and all closed that day; their plans stay in `slice-1{5,6,7}-*.md`. Nothing below is
-ordered yet.
+Slices 18 to 22 (2026-09-19 and -20) took most of what used to be here -- the two defects, the
+small items, the session card, the space page and the phone layout -- and each left its proof in
+its plan file. What is below is what is left, and nothing in it is ordered yet.
 
 Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 

@@ -160,6 +160,25 @@ One component per pattern, each the only owner of its markup:
 One primary button class (`.primary`), one ghost, one icon button. The space page is one list with filter pills, so it keeps no collapse state (the old `tartib-space-<name>` key is dead since slice 21).
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 
+## What browsers do to this app
+
+Found by testing, and none of it changes by deploying:
+
+- Tapping a reminder on iOS opens Tartib but does not route to the notification's URL. Whether
+  iOS runs the worker's `notificationclick` at all was never established; what was tried is under
+  Reminders above.
+- A desktop Chrome fails to subscribe to push with "Registration failed - push service error":
+  the browser cannot register with FCM and `pushManager.subscribe()` never reaches Tartib. iOS
+  accepted the same key. Not worth chasing -- one switch covers all three pushers, so a second
+  subscription means two buzzes for every reminder and digest.
+- `pushsubscriptionchange` is handled (slice 15) but unproved: it needs a push service to retire
+  an endpoint, and Safari never fires it.
+- The service worker shows nothing when a session ends with the app on screen. Browsers allow
+  that only within a budget for `userVisibleOnly` pushes; if Chrome ever says "This site has been
+  updated in the background", make that path a silent notification instead of none.
+- Voice capture is the browser's own speech recognition, and was proved with an injected engine
+  rather than real dictation.
+
 ## Deploy
 
 `captain-definition` (schemaVersion 2, pointing at the Dockerfile) exists so anyone else can

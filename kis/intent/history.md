@@ -1,12 +1,18 @@
 # Slice history
 
-What each slice changed, newest first. All are done and deployed. Current truth lives in
+What each slice changed, newest first. All are done; **slices 18 and after are not deployed** --
+the server still runs `v1.0` (State has the deploy truth). Current truth lives in
 `SPEC.md` (product), `../knowledge/technical.md` (how it is built), and `../knowledge/rules.md`
 (hard rules). Where a slice below disagrees with those, they win; the full plans are in git.
 
 Scope rules changed on 2026-09-17: rule 4 stopped banning push and pomodoro, and SPEC's Out of
 scope list dropped the ask feature and the Claude fallback, both of which had already shipped.
 
+- **22 · the phone comes first** (2026-09-20) A phone's fixed furniture went from 290px of 844 to 65px: the nav became a bottom bar in the top nav's own shape, capture and ask moved into a ⊕ sheet, an item opens in a sheet over the list it was tapped in, headings dropped to one line, the page took over the top safe area, and nothing is under 44px. The desktop kept its shell and took the bigger targets.
+- **21 · space layouts** (2026-09-20) Four alternative space pages were built and tried side by side: Board and Timeline went first, then Classic and Tree. Panes is the space page now -- a brief strip, scoped search, filter pills with counts (All, Tasks, Notes, Done, Sessions), one dense list of lines, the item beside it on a wide screen. A question in the search box goes to the ask bar rather than answering in place.
+- **20 · round three** (2026-09-19) Eight items: skeleton rows, filing an item by hand from a space (migration 0011), a filing policy per space (0012), search landing on the matched line, a red session card with a space's sessions, the space split view, "Tell it why" replacing Reject (0013, rule 8 rewritten), and an append-only thought log read by search, Ask and the brief (0014).
+- **19 · small items, round two** (2026-09-19) Failed captures retry themselves (0010), undated tasks get a proposed due date, each waiting item says why it waits, the Inbox became tabs that are routes, a session end rings, and a stale save is refused with Reload or Overwrite.
+- **18 · small fixes** (2026-09-19) The Claude fallback removed and rule 3 rewritten to Codex-only, Settings saying why it cannot load, Recent no longer repeating Needs Attention, new spaces reaching every picker, 16px fields so iOS stops zooming, and a sticky glass nav clear of the notch.
 - **17 · deploy** (2026-09-18) Off the laptop and onto the CapRover VPS behind public HTTPS: auth hardened first (rate limit and lockout), the image cross-built for amd64 and pushed to Docker Hub by `deploy.sh` with immutable tags, Codex logged in on the server by device code, tagged and released as v1.0. Backups deferred; the Claude fallback recorded as broken on that host.
 - **16 · public repo** (2026-09-18) Everything that had to be true before the first push: one identity across history, no secrets, the domain and private-network detail moved to a gitignored State file, CONTRIBUTING, screenshots and docs. History rewritten before publication and not since.
 - **15 · PWA** (2026-09-18) Installable and launchable offline: the shell precached on install, a new worker offered as a reload rather than taking over silently, and captures written to an IndexedDB queue first and sent second, deduplicated by `client_id`. Offline *read* was scoped out deliberately.
