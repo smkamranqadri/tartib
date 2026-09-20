@@ -38,8 +38,11 @@
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
      everything on that server exists exactly once. This is the one open item whose cost is
      unbounded.
-  2. Slice 13 (presentation), slice 14 (AI contract) and the rest of `kis/intent/backlog.md`,
-     with the theme palettes as data in `kis/intent/themes.md`.
+  2. **Look at slice 23 on a device**, which is the only thing that can settle whether mono at
+     14px suits a long note and whether `background-attachment: fixed` survives iOS.
+  3. What is left of backlog 13 -- markdown on the item page and in briefs, the CodeMirror
+     editor, the pencil restored -- whose decisions are already settled there. Then slice 14
+     (AI contract) and the rest of `kis/intent/backlog.md`. The themes half of 13 is closed.
 
 ## The deployment
 

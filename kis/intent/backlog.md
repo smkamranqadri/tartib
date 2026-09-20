@@ -12,14 +12,12 @@ Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 - **13 presentation** — markdown on the item page, note bodies and briefs, rendered and edited
   in the same place: no edit mode to enter and no button to enter it, the text styles as you type,
   and the stored bytes are never rewritten.
-  Six themes in Settings -- slate, bronze and nous, each in light and dark, with slate dark the
-  default, the current teal pair dropped, and no OS-following. The palettes, the token mapping and
-  the measured contrast are recorded as data in `themes.md`.
-  **The themes half was attempted on 2026-09-20 and scrapped.** It was built five times -- the
-  six above, then eight named palettes (Tokyo Night, Catppuccin, Gruvbox, Nord, Rose Pine,
-  Dracula), then thirteen, then ten -- and the owner did not like any of them. Everything was
-  reverted; nothing shipped. Read the lessons below before starting it again, because the next
-  attempt will otherwise rediscover them one round at a time.
+  **The themes half is closed, not waiting.** It was attempted twice on 2026-09-20 -- six own
+  palettes, then eight named ones, thirteen, ten, all scrapped; then seven generated ones, built,
+  committed and removed the same day on the owner's call ("we have already spent too much time on
+  it"). The app ships one theme, bronze. Do not re-open this without a reason that is not "more
+  palettes"; what the two attempts actually established is below, and it survives in
+  `frontend/tools/themes.py` and `themes.md`.
   The row keeps its pencil and the title stops being a link instead. This reverses the
   2026-09-17 decision to delete the pencil: it was redundant because the title went to the same
   place, but a title that is a link cannot be selected and copied, and copying the title is worth
