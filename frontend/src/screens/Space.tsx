@@ -11,7 +11,7 @@ import SearchAsk from "../components/SearchAsk";
 import { useLoad } from "../useLoad";
 import { useWide } from "../useWide";
 import ItemPage from "./ItemPage";
-import { LayoutSwitch, spaceView } from "./layouts/shared";
+import { LayoutSwitch, setSpaceView, spaceView } from "./layouts/shared";
 import SpaceDetail, { type ShapeFilter } from "./SpaceDetail";
 
 const POLICY: Record<SpacePolicy, { menu: string; note: string }> = {
@@ -35,6 +35,10 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const [adding, setAdding] = useState(false);
   // The view this device prefers. Classic is "", so landing here confirms it.
   const preferred = spaceView();
+  // Being here is the choice: record it, so the picker's "Classic" sticks like the others.
+  useEffect(() => {
+    if (preferred === "classic") setSpaceView("classic");
+  }, [preferred]);
   // Wide screens keep the open item beside the list, in the URL so Back and links still work.
   const wide = useWide();
   const [params, setParams] = useSearchParams();
@@ -88,7 +92,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
     }
   }
 
-  if (preferred) return <Navigate to={`/spaces/${encodeURIComponent(space)}/${preferred}`} replace />;
+  if (preferred !== "classic") return <Navigate to={`/spaces/${encodeURIComponent(space)}/${preferred}`} replace />;
 
   return (
     <div className="screen">
@@ -103,7 +107,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
               </button>
             ))}
           </div>
-          <LayoutSwitch space={space} current="" />
+          <LayoutSwitch space={space} current="classic" />
           {!adding && (
             <button type="button" className="ghost" onClick={() => setAdding(true)}>
               + Add

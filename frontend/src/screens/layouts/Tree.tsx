@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { getBrief } from "../../api";
+import SearchAsk from "../../components/SearchAsk";
+import { useLoad } from "../../useLoad";
 import { Link, useSearchParams } from "react-router-dom";
 import type { Item } from "../../types";
 import { useWide } from "../../useWide";
 import ItemPage from "../ItemPage";
-import { ItemLine, isOverdue, matches, SpaceSessions, useSpaceItems } from "./shared";
+import { ItemLine, isOverdue, matches, SessionLines, useSessions, useSpaceItems } from "./shared";
 
 type Branch = { key: string; label: string; keep: (i: Item) => boolean; children?: Branch[] };
 
@@ -23,10 +26,13 @@ const TREE: Branch[] = [
 
 /** Tree: the space as branches you open and close -- Tasks (Overdue, Open, Done) and Notes, each
  *  counted. The item opens beside the tree, so the branch you are in stays where it was. */
-export default function Tree({ space, version, query, onChanged }: { space: string; version: number; query: string; onChanged: () => void }) {
+export default function Tree({ space, version, query, onQuery, onChanged }: { space: string; version: number; query: string; onQuery: (q: string) => void; onChanged: () => void }) {
   const { items: all, loading, error } = useSpaceItems(space, version);
   const items = all.filter((i) => matches(i, query));
-  const [shut, setShut] = useState<string[]>([]);
+  const [shut, setShut] = useState<string[]>(["sessions"]);
+  const [openBrief, setOpenBrief] = useState(false);
+  const brief = useLoad(() => (openBrief ? getBrief(space) : Promise.resolve(null)), [openBrief, space, version]);
+  const sessions = useSessions(space, version);
   const wide = useWide();
   const [params, setParams] = useSearchParams();
   const openId = Number(params.get("item")) || null;
@@ -71,14 +77,29 @@ export default function Tree({ space, version, query, onChanged }: { space: stri
   return (
     <div className={wide ? "split" : undefined}>
       <div className="tree">
+        <button type="button" className="brief-strip" onClick={() => setOpenBrief((b) => !b)} aria-expanded={openBrief}>
+          <span>{openBrief ? "▾" : "▸"} Brief</span>
+          <span className="muted small">{openBrief ? "" : "what is going on here"}</span>
+        </button>
+        {openBrief && <p className="brief-text">{brief.data?.text ?? brief.error ?? "Reading the space…"}</p>}
+        <SearchAsk value={query} onChange={onQuery} space={space} placeholder={`Search ${space}, or ask`} />
         {error && <p className="error">{error}</p>}
         {loading && <p className="muted">Loading…</p>}
         <ul className="lines">
           {TREE.map((branch) => (
             <Node key={branch.key} branch={branch} depth={0} />
           ))}
+          <li className="node depth-0">
+            <button type="button" className="branch" onClick={() => toggle("sessions")} aria-expanded={!shut.includes("sessions")}>
+              <span className="twist">{shut.includes("sessions") ? "▸" : "▾"}</span> Sessions <span className="muted">{sessions.length}</span>
+            </button>
+            {!shut.includes("sessions") && (
+              <div className="node depth-1">
+                <SessionLines rows={sessions} />
+              </div>
+            )}
+          </li>
         </ul>
-        <SpaceSessions space={space} version={version} />
       </div>
       {wide && (
         <aside className="split-item">

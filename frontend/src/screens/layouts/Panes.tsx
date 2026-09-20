@@ -4,24 +4,27 @@ import { getBrief } from "../../api";
 import { useLoad } from "../../useLoad";
 import { useWide } from "../../useWide";
 import ItemPage from "../ItemPage";
-import { ItemLine, matches, SpaceSessions, useSpaceItems } from "./shared";
+import SearchAsk from "../../components/SearchAsk";
+import { ItemLine, matches, SessionLines, useSessions, useSpaceItems } from "./shared";
 
-type Filter = "all" | "task" | "note" | "done";
+type Filter = "all" | "task" | "note" | "done" | "sessions";
 
 const KEEP: Record<Filter, (i: ReturnType<typeof useSpaceItems>["items"][number]) => boolean> = {
   all: (i) => i.shape === "note" || i.status === "open",
   task: (i) => i.shape === "task" && i.status === "open",
   note: (i) => i.shape === "note",
   done: (i) => i.status === "done",
+  sessions: () => false, // its own tab: sessions are not items
 };
 
 /** Panes: no card frames. The brief folded into a strip, filter chips, one dense list, the item
  *  beside it. `j` and `k` walk the list, so a space can be read without the mouse. */
-export default function Panes({ space, version, query, onChanged }: { space: string; version: number; query: string; onChanged: () => void }) {
+export default function Panes({ space, version, query, onQuery, onChanged }: { space: string; version: number; query: string; onQuery: (q: string) => void; onChanged: () => void }) {
   const { items, loading, error } = useSpaceItems(space, version);
   const [filter, setFilter] = useState<Filter>("all");
   const [openBrief, setOpenBrief] = useState(false);
   const brief = useLoad(() => (openBrief ? getBrief(space) : Promise.resolve(null)), [openBrief, space, version]);
+  const sessions = useSessions(space, version);
   const wide = useWide();
   const [params, setParams] = useSearchParams();
   const shown = items.filter((i) => KEEP[filter](i) && matches(i, query));
@@ -49,28 +52,34 @@ export default function Panes({ space, version, query, onChanged }: { space: str
           <span className="muted small">{openBrief ? "" : "what is going on here"}</span>
         </button>
         {openBrief && <p className="brief-text">{brief.data?.text ?? (brief.error ?? "Reading the space…")}</p>}
+        <SearchAsk value={query} onChange={onQuery} space={space} placeholder={`Search ${space}, or ask`} />
         <div className="chips" role="group" aria-label="Filter">
-          {(["all", "task", "note", "done"] as Filter[]).map((f) => (
+          {(["all", "task", "note", "done", "sessions"] as Filter[]).map((f) => (
             <button key={f} type="button" className={`chip-btn ${filter === f ? "on" : ""}`} onClick={() => setFilter(f)}>
-              {f === "all" ? "All" : f === "task" ? "Tasks" : f === "note" ? "Notes" : "Done"}
-              <span className="muted"> {items.filter(KEEP[f]).length}</span>
+              {f === "all" ? "All" : f === "task" ? "Tasks" : f === "note" ? "Notes" : f === "done" ? "Done" : "Sessions"}
+              <span className="muted"> {f === "sessions" ? sessions.length : items.filter(KEEP[f]).length}</span>
             </button>
           ))}
         </div>
         {error && <p className="error">{error}</p>}
         {loading && <p className="muted">Loading…</p>}
-        {!loading && shown.length === 0 && <p className="empty muted">Nothing here.</p>}
-        <ul className="lines">
-          {shown.map((item) => (
-            <li key={item.id}>
-              <button type="button" className={`line ${item.id === openId ? "on" : ""}`} onClick={() => open(item.id)}>
-                <ItemLine item={item} />
-              </button>
-            </li>
-          ))}
-        </ul>
-        <p className="muted small hint">j and k move through the list.</p>
-        <SpaceSessions space={space} version={version} />
+        {filter === "sessions" ? (
+          <SessionLines rows={sessions} />
+        ) : (
+          <>
+            {!loading && shown.length === 0 && <p className="empty muted">Nothing here.</p>}
+            <ul className="lines">
+              {shown.map((item) => (
+                <li key={item.id}>
+                  <button type="button" className={`line ${item.id === openId ? "on" : ""}`} onClick={() => open(item.id)}>
+                    <ItemLine item={item} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {filter !== "sessions" && <p className="muted small hint">j and k move through the list.</p>}
       </div>
       {wide && (
         <aside className="split-item">

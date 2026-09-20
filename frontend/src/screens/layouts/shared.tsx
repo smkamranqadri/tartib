@@ -1,7 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { getRecentSessions, listItems } from "../../api";
-import Card from "../../components/Card";
-import { ClockIcon } from "../../components/Icons";
 import { describe } from "../../components/SessionPast";
 import { formatDue, formatRelative, todayLocal } from "../../format";
 import type { Item } from "../../types";
@@ -10,15 +8,20 @@ import { useLoad } from "../../useLoad";
 /** The five ways to read a space. Classic is the one the app has always had; the other four are
  *  here to be tried against it (slice 21). */
 export const LAYOUTS = [
-  { slug: "", label: "Classic" },
   { slug: "panes", label: "Panes" },
   { slug: "tree", label: "Tree" },
+  { slug: "classic", label: "Classic" },
 ];
 
 const KEY = "tartib-space-view";
 
-/** The view a space opens in, per device. A space page sets it whenever one is picked, so the
- *  next space opens the same way. */
+export function viewPath(space: string, slug: string): string {
+  const base = `/spaces/${encodeURIComponent(space)}`;
+  return slug === "classic" ? base : `${base}/${slug}`;
+}
+
+/** The view a space opens in, per device. Panes until a device says otherwise; "classic" is
+ *  stored as itself, so choosing it is a choice and not an empty setting. */
 export function spaceView(): string {
   try {
     const v = localStorage.getItem(KEY);
@@ -26,7 +29,7 @@ export function spaceView(): string {
   } catch {
     /* private mode */
   }
-  return "panes"; // the default until a device says otherwise
+  return "panes";
 }
 
 export function setSpaceView(slug: string): void {
@@ -40,7 +43,6 @@ export function setSpaceView(slug: string): void {
 /** Pick how to read this space. Remembered, so it is a preference and not a per-visit detour. */
 export function LayoutSwitch({ space, current }: { space: string; current: string }) {
   const navigate = useNavigate();
-  const base = `/spaces/${encodeURIComponent(space)}`;
   return (
     <label className="view-pick muted small">
       View
@@ -49,7 +51,7 @@ export function LayoutSwitch({ space, current }: { space: string; current: strin
         aria-label="View"
         onChange={(e) => {
           setSpaceView(e.target.value);
-          navigate(e.target.value ? `${base}/${e.target.value}` : base, { replace: true });
+          navigate(viewPath(space, e.target.value), { replace: true });
         }}
       >
         {LAYOUTS.map((l) => (
@@ -99,24 +101,25 @@ export function matches(item: Item, q: string): boolean {
   return needle.split(/\s+/).every((word) => hay.includes(word));
 }
 
-/** This space's own sessions, the same list the classic page shows, in these layouts' shape. */
-export function SpaceSessions({ space, version }: { space: string; version: number }) {
+/** This space's own sessions as plain lines: a tab in Panes, a branch in Tree. */
+export function useSessions(space: string, version: number) {
   const { data } = useLoad(() => getRecentSessions(20, space), [space, version]);
-  const past = data?.sessions ?? [];
-  if (past.length === 0) return null;
+  return data?.sessions ?? [];
+}
+
+export function SessionLines({ rows }: { rows: ReturnType<typeof useSessions> }) {
+  if (rows.length === 0) return <p className="empty muted">No sessions in this space yet.</p>;
   return (
-    <Card icon={<ClockIcon />} label="Sessions" aside={<span className="muted">last {past.length}</span>}>
-      <ul className="lines">
-        {past.map((p) => {
-          const d = describe(p);
-          return (
-            <li key={p.id} className="line static">
-              <span className="line-title">{d.what}</span>
-              <span className="line-meta muted">{d.meta}</span>
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
+    <ul className="lines">
+      {rows.map((p) => {
+        const d = describe(p);
+        return (
+          <li key={p.id} className="line static">
+            <span className="line-title">{d.what}</span>
+            <span className="line-meta muted">{d.meta}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

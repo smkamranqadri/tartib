@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
 import PageHead from "../components/PageHead";
-import SearchAsk from "../components/SearchAsk";
 import Panes from "./layouts/Panes";
 import { LayoutSwitch, setSpaceView } from "./layouts/shared";
 import Tree from "./layouts/Tree";
@@ -53,8 +52,7 @@ export default function SpaceLayout({ kind, version, onChanged }: { kind: keyof 
           onCancel={() => setAdding(false)}
         />
       )}
-      <SearchAsk value={q} onChange={setQ} space={space} placeholder={`Search ${space}, or ask`} />
-      <Layout space={space} version={version} query={q} onChanged={onChanged} />
+      <Layout space={space} version={version} query={q} onQuery={setQ} onChanged={onChanged} />
     </div>
   );
 }
