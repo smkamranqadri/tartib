@@ -5,12 +5,11 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 25 (offline) is done and proved, not committed and not
-  deployed.** Plan, decisions and proof: `kis/intent/slice-25-offline.md`. The app reads offline
-  and says how old what it shows is; ticking, starring, editing text and adding a thought all
-  work with no network and replay on reconnect. **The whole slice is in the working tree,
-  uncommitted**, and it also carries a fix to slice 24's conflict strip, which broke a phone's
-  width whenever it appeared.
+- Task: none in flight. **Slice 25 (offline) is committed on `main` and not deployed.** Plan,
+  decisions and proof: `kis/intent/slice-25-offline.md`. The app reads offline and says how old
+  what it shows is; ticking, starring, editing text and adding a thought all work with no
+  network and replay on reconnect. It also carries a fix to slice 24's conflict strip, which
+  broke a phone's width whenever it appeared.
 - **Slice 24 (presentation) is committed on `main` and not deployed.**
   Plan, every decision and the proof: `kis/intent/slice-24-presentation.md`. Work mode **Phase**.
   A rendered markdown on the item body, thought entries, Ask answers and the space brief,
@@ -23,7 +22,7 @@
 - Neither 23 nor 24 has been seen on a device. What that leaves unsettled is under Known gaps.
 - **Slices 18 to 22 are closed and accepted on a device.** Plans: `kis/intent/slice-1{8,9}-*.md`,
   `kis/intent/slice-2{0,1,2}-*.md`; what each one changed, in a line: `kis/intent/history.md`.
-- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 24 are local commits on `main`
+- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 25 are local commits on `main`
   (unpushed). On the next deploy: migrations 0010-0014 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config, and **`SW_VERSION` in `sw.js` is bumped by hand** -- slices 23
