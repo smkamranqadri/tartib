@@ -14,7 +14,6 @@ import Inbox from "./screens/Inbox";
 import ItemPage from "./screens/ItemPage";
 import Login from "./screens/Login";
 import Space from "./screens/Space";
-import SpaceLayout from "./screens/SpaceLayout";
 import Spaces from "./screens/Spaces";
 import Settings from "./screens/Settings";
 import { SessionProvider } from "./session";
@@ -257,10 +256,9 @@ export default function App() {
             <Route path="/recent" element={<Navigate to="/inbox/recent" replace />} />
             <Route path="/spaces" element={<Spaces version={version} onChanged={bump} />} />
             <Route path="/spaces/:name" element={<Space version={version} onChanged={bump} />} />
-            {/* Four other space pages, tried side by side with the classic one (slice 21). */}
-            {(["panes", "tree"] as const).map((kind) => (
-              <Route key={kind} path={`/spaces/:name/${kind}`} element={<SpaceLayout kind={kind} version={version} onChanged={bump} />} />
-            ))}
+            {/* The layouts tried in slice 21: Panes won and is the space page now. */}
+            <Route path="/spaces/:name/panes" element={<Navigate to=".." relative="path" replace />} />
+            <Route path="/spaces/:name/tree" element={<Navigate to=".." relative="path" replace />} />
             <Route path="/search" element={<Navigate to="/spaces" replace />} />
             <Route path="/all" element={<Navigate to="/spaces" replace />} />
             <Route path="/settings" element={<Settings onSignedOut={() => setAuthed(false)} />} />

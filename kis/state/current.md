@@ -5,9 +5,9 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 21, four other space pages** -- built 2026-09-20, waiting on the user's
-  judgement: `/spaces/{name}/{panes,board,timeline,tree}` beside the unchanged classic page.
-  Plan: `kis/intent/slice-21-space-layouts.md`.
+- Task: none in flight. **Slice 21** closed 2026-09-20: four space layouts were tried and Panes
+  is now the space page; Classic, Tree, Board and Timeline are deleted
+  (`kis/intent/slice-21-space-layouts.md`).
 - **Slice 20, round three** -- approved 2026-09-19. All eight steps done locally; waiting on the user to try it. Plan:
   `kis/intent/slice-20-round-three.md`. Mode: Phase, eight steps.
 - Slice 19, small items round two, closed 2026-09-19, not deployed:

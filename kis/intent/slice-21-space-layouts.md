@@ -1,31 +1,10 @@
-# Slice 21: four other space pages (approved 2026-09-20)
+# Slice 21: four other space pages (closed 2026-09-20)
 
-**Three kept, 2026-09-20, with a View picker.** No single winner: Classic, Panes and Tree all
-stay, and the picker decides which one a space opens in. Proof: headless
-Chrome, no page errors -- Classic opens with `?item=11` in its pane, 16px between search and
-brief; the switcher reads Classic | Panes | Tree; `j` in Panes moves the selection and the brief
-strip opens; a tree leaf sets `?item=7` and fills the pane, with nothing expanding in the tree
-itself, and collapsing Notes removes its rows; `/board` and `/timeline` no longer resolve (they
-fall through to Home); at 390px the tree has no pane and a leaf links to `/items/{id}`. Second pass: in Panes the
-search sits above the chips (329 < 385) and Sessions is a tab (4 session lines, no item rows);
-in Tree the brief strip, the search box and a Sessions branch (4, shut by default) are all
-there; picking Classic stays on `/spaces/home` and the next space opens Classic too. Fixed 2026-09-20: picking Classic bounced back to Panes -- "classic" was stored as `""`, which
-reads as nothing set, so the default took over. The slug is stored as `classic` now.
-Search, Add and sessions: on both, "gate" cut Panes 7 rows to 3 and Tree 9 to 4, each has one
-Sessions card and one "+ Add", and an item added from each appeared in its list. With nothing
-stored, `/spaces/home` lands on `/spaces/home/panes`. Picker: Classic ->
-Tree stores `tree` and moves there, another space then opens in Tree, picking Panes stores
-`panes`, picking Classic stores `""` and Classic stays Classic.
+**Closed: Panes won and is the space page.** Classic (the card column) and Tree are deleted, as Board and Timeline were before them; `/spaces/{name}/panes` and `/spaces/{name}/tree` redirect to `/spaces/{name}`, and the View picker and its stored preference are gone with them. The manage menu (filing policy, rename, delete) moved onto the new page, which keeps the brief strip, the scoped search, "+ Add", the filter chips with a Sessions tab, `j`/`k`, and the item beside the list.
 
-The space page works, but it is a column of cards and the user wants to see what else it could
-be. Four alternatives were built at their own URLs beside the current page, which does not
-change. **2026-09-20, after trying them: Board and Timeline are out** -- deleted, not kept as
-dead routes -- Tree opens its item in the pane instead of expanding in place, and all three that
-remain are kept, chosen from a "View" select in the title row and remembered per device
-(`tartib-space-view`), **Panes by default**, so the next space opens the same way. Panes and
-Tree carry the same furniture as Classic, each in its own idiom: the search box above the filter
-chips in Panes and above the tree in Tree, "+ Add" beside the picker, the brief as a strip in
-both, and the space's sessions as a Panes tab and a Tree branch. What remains:
+Proof of the final page: headless Chrome at 1280px and 390px, no page errors -- the space page is Panes with no View picker, chips All/Tasks/Notes/Done/Sessions, "+ Add" and Manage space present, the item pane at 1280px and none at 390px, both old layout URLs redirecting to the space, the manage menu listing the three policies with the current one ticked, Rename, and Delete disabled while the space holds items. No horizontal overflow.
+
+What was tried, and why it went:
 
 - `/spaces/{name}` — **Classic**, today's page. Untouched.
 - `/spaces/{name}/panes` — **Panes**: no card frames. A collapsible brief strip, filter chips,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { deleteSpace, getSpaces, listItems, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
@@ -7,12 +7,8 @@ import Confirm from "../components/Confirm";
 import Menu from "../components/Menu";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
-import SearchAsk from "../components/SearchAsk";
 import { useLoad } from "../useLoad";
-import { useWide } from "../useWide";
-import ItemPage from "./ItemPage";
-import { LayoutSwitch, setSpaceView, spaceView } from "./layouts/shared";
-import SpaceDetail, { type ShapeFilter } from "./SpaceDetail";
+import Panes from "./layouts/Panes";
 
 const POLICY: Record<SpacePolicy, { menu: string; note: string }> = {
   auto: { menu: "Files when sure", note: "" },
@@ -20,42 +16,30 @@ const POLICY: Record<SpacePolicy, { menu: string; note: string }> = {
   file: { menu: "Always file here", note: "Anything proposed for here files itself." },
 };
 
-/** One space on its own page: back, title row with filter and manage, scoped search, detail. */
+/** One space: back, title row with "+ Add" and manage, then the list with the item beside it.
+ *  This is the Panes layout from slice 21, kept over the card column and the tree. */
 export default function Space({ version, onChanged }: { version: number; onChanged: () => void }) {
   const { name = "" } = useParams();
   const space = name.toLowerCase();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [filter, setFilter] = useState<ShapeFilter>("all");
   const [renaming, setRenaming] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [manageError, setManageError] = useState<string | null>(null);
-  const [itemCount, setItemCount] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
-  // The view this device prefers. Classic is "", so landing here confirms it.
-  const preferred = spaceView();
-  // Being here is the choice: record it, so the picker's "Classic" sticks like the others.
-  useEffect(() => {
-    if (preferred === "classic") setSpaceView("classic");
-  }, [preferred]);
-  // Wide screens keep the open item beside the list, in the URL so Back and links still work.
-  const wide = useWide();
-  const [params, setParams] = useSearchParams();
-  const openId = Number(params.get("item")) || null;
-  // Opening a space on a wide screen lands on its newest item, so the pane is never an empty
-  // panel waiting to be clicked. Replaces the history entry: Back still leaves the space.
-  const newest = useLoad(() => (wide ? listItems({ space, limit: 1 }) : Promise.resolve(null)), [wide, space, version]);
-  const firstId = newest.data?.items[0]?.id;
-  useEffect(() => {
-    if (wide && !openId && firstId) setParams({ item: String(firstId) }, { replace: true });
-  }, [wide, openId, firstId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const rowTo = wide
-    ? (item: { id: number }) => `/spaces/${encodeURIComponent(space)}?item=${item.id}${debounced ? `&q=${encodeURIComponent(debounced)}` : ""}`
-    : undefined;
   const spaces = useLoad(getSpaces, [version]);
   const policy: SpacePolicy = spaces.data?.policies[space] ?? "auto";
+  // Delete is offered only for an empty space, so the page needs to know whether it is one.
+  const count = useLoad(() => listItems({ space, limit: 200 }), [space, version]);
+  const itemCount = count.data?.items.length ?? null;
+
+  useEffect(() => {
+    setQ("");
+    setAdding(false);
+    setRenaming(false);
+    setConfirmDelete(false);
+    setManageError(null);
+  }, [space]);
 
   async function choosePolicy(next: SpacePolicy) {
     setManageError(null);
@@ -66,19 +50,6 @@ export default function Space({ version, onChanged }: { version: number; onChang
       setManageError(err instanceof Error ? err.message : "failed");
     }
   }
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(q.trim()), 200);
-    return () => clearTimeout(t);
-  }, [q]);
-  useEffect(() => {
-    setQ("");
-    setFilter("all");
-    setRenaming(false);
-    setConfirmDelete(false);
-    setManageError(null);
-    setAdding(false);
-  }, [space]);
 
   async function doDelete() {
     setManageError(null);
@@ -92,22 +63,16 @@ export default function Space({ version, onChanged }: { version: number; onChang
     }
   }
 
-  if (preferred !== "classic") return <Navigate to={`/spaces/${encodeURIComponent(space)}/${preferred}`} replace />;
-
   return (
     <div className="screen">
       <BackLink fallback="/spaces" />
       <div className="title-row">
-        <PageHead eyebrow="Spaces" title={space} subtitle={`Brief, tasks, and notes in this space.${POLICY[policy].note ? ` ${POLICY[policy].note}` : ""}`} />
+        <PageHead
+          eyebrow="Spaces"
+          title={space}
+          subtitle={`Tasks, notes and sessions in this space.${POLICY[policy].note ? ` ${POLICY[policy].note}` : ""}`}
+        />
         <div className="title-actions">
-          <div className="seg" role="group" aria-label="Shape">
-            {(["all", "task", "note"] as ShapeFilter[]).map((f) => (
-              <button key={f} type="button" className={filter === f ? "on" : ""} onClick={() => setFilter(f)}>
-                {f === "all" ? "All" : f === "task" ? "Tasks" : "Notes"}
-              </button>
-            ))}
-          </div>
-          <LayoutSwitch space={space} current="classic" />
           {!adding && (
             <button type="button" className="ghost" onClick={() => setAdding(true)}>
               + Add
@@ -151,40 +116,17 @@ export default function Space({ version, onChanged }: { version: number; onChang
           {manageError && <span className="error">{manageError}</span>}
         </div>
       </div>
-      <div className={wide ? "split" : undefined}>
-        <div className="split-list">
-          {adding && (
-            <AddItemForm
-              space={space}
-              onAdded={() => {
-                setAdding(false);
-                onChanged();
-              }}
-              onCancel={() => setAdding(false)}
-            />
-          )}
-          <SearchAsk value={q} onChange={setQ} space={space} placeholder={`Search ${space}, or ask`} />
-          <SpaceDetail space={space} query={debounced} version={version} filter={filter} onCount={setItemCount} rowTo={rowTo} />
-        </div>
-        {wide && (
-          <aside className="split-item">
-            {openId ? (
-              <ItemPage
-                key={openId}
-                version={version}
-                itemId={openId}
-                onChanged={onChanged}
-                onClosed={() => setParams((p) => {
-                  p.delete("item");
-                  return p;
-                })}
-              />
-            ) : (
-              <p className="split-empty muted">Pick an item to read it here.</p>
-            )}
-          </aside>
-        )}
-      </div>
+      {adding && (
+        <AddItemForm
+          space={space}
+          onAdded={() => {
+            setAdding(false);
+            onChanged();
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
+      <Panes space={space} version={version} query={q} onQuery={setQ} onChanged={onChanged} />
     </div>
   );
 }
