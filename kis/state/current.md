@@ -25,9 +25,12 @@
   Tree, Board and Timeline deleted), **slice 20** (eight items, round three), **slice 19** and
   **slice 18**. Plans: `kis/intent/slice-1{8,9}-*.md`, `kis/intent/slice-2{0,1,2}-*.md`.
 - **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 24 are local commits on `main`
-  (unpushed). On the next deploy: migrations 0010-0014 run, and
+  (unpushed). On the next deploy: migrations 0010-0014 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
-  out of the CapRover app config.
+  out of the CapRover app config, and **`SW_VERSION` in `sw.js` is bumped by hand** -- slices 23
+  and 24 both changed the bundle without changing `sw.js`, and a browser re-installs a worker
+  only when its bytes differ, so without the bump a phone sits on the old worker and is never
+  offered the reload (the rule is in `../knowledge/technical.md`, Frontend shell).
 - Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
@@ -59,7 +62,7 @@
 
 - Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (two tests: 22 classify
   fixtures and 3 tell-it-why cases, ~30s, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
-  As of 2026-09-20 pytest is **193 passed, 2 deselected** (the two deselected are the evals).
+  As of 2026-09-21 pytest is **193 passed, 2 deselected** (the two deselected are the evals).
   Any red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
@@ -90,9 +93,12 @@ the phone buzzes with a desktop tab open on the same countdown (the migration 00
   scoped offline *read* out -- and an approved backlog item now, with offline editing.
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
   Inbox also shows.
-- Slice 23's type was proved in headless Chrome only. Whether mono at 14px is comfortable for a
-  long note on a phone is the one decision in it taken knowingly against readability, and it
-  needs real glass to settle.
+- **Slices 23 and 24 were proved in headless Chrome only.** Whether mono at 14px is comfortable
+  for a long note on a phone is the one decision in slice 23 taken knowingly against
+  readability; slice 24's markdown is the strongest answer that can be given to it without a
+  device, and it still needs real glass to settle. Slice 24 adds two of its own: whether tapping
+  a word is a discoverable way into editing when no button says so, and whether a debounced
+  autosave feels safe without a Save button to press.
 
 Browser and device behaviour that will not change by deploying -- iOS `notificationclick`, the
 desktop Chrome FCM refusal, `pushsubscriptionchange`, the silent worker at session end, voice

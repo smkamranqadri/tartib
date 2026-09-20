@@ -1,6 +1,7 @@
 # Slice 24: presentation
 
-Planned 2026-09-20, straight after slice 23 closed. This is the presentation half of backlog
+Planned and built 2026-09-20, committed just after midnight on 2026-09-21, straight after
+slice 23 closed. This is the presentation half of backlog
 entry 13, whose themes half was closed the same day and must not be re-opened.
 
 Slice 23 made the whole app monospace at 14px and left one question it could not answer headless:
