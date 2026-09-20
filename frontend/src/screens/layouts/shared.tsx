@@ -9,8 +9,6 @@ import { useLoad } from "../../useLoad";
 export const LAYOUTS = [
   { slug: "", label: "Classic" },
   { slug: "panes", label: "Panes" },
-  { slug: "board", label: "Board" },
-  { slug: "timeline", label: "Timeline" },
   { slug: "tree", label: "Tree" },
 ];
 

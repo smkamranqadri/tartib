@@ -258,7 +258,7 @@ export default function App() {
             <Route path="/spaces" element={<Spaces version={version} onChanged={bump} />} />
             <Route path="/spaces/:name" element={<Space version={version} onChanged={bump} />} />
             {/* Four other space pages, tried side by side with the classic one (slice 21). */}
-            {(["panes", "board", "timeline", "tree"] as const).map((kind) => (
+            {(["panes", "tree"] as const).map((kind) => (
               <Route key={kind} path={`/spaces/:name/${kind}`} element={<SpaceLayout kind={kind} version={version} onChanged={bump} />} />
             ))}
             <Route path="/search" element={<Navigate to="/spaces" replace />} />

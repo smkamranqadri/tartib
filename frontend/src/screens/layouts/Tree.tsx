@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import type { Item } from "../../types";
+import { useWide } from "../../useWide";
 import ItemPage from "../ItemPage";
 import { ItemLine, isOverdue, useSpaceItems } from "./shared";
 
@@ -20,12 +22,31 @@ const TREE: Branch[] = [
 ];
 
 /** Tree: the space as branches you open and close -- Tasks (Overdue, Open, Done) and Notes, each
- *  counted. A leaf opens the item underneath it, indented, so where you are stays visible. */
+ *  counted. The item opens beside the tree, so the branch you are in stays where it was. */
 export default function Tree({ space, version, onChanged }: { space: string; version: number; onChanged: () => void }) {
   const { items, loading, error } = useSpaceItems(space, version);
   const [shut, setShut] = useState<string[]>([]);
-  const [open, setOpen] = useState<number | null>(null);
+  const wide = useWide();
+  const [params, setParams] = useSearchParams();
+  const openId = Number(params.get("item")) || null;
   const toggle = (key: string) => setShut((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
+
+  function Leaf({ item, depth }: { item: Item; depth: number }) {
+    const inner = <ItemLine item={item} />;
+    return (
+      <li className={`node depth-${depth}`}>
+        {wide ? (
+          <button type="button" className={`line ${item.id === openId ? "on" : ""}`} onClick={() => setParams({ item: String(item.id) }, { replace: true })}>
+            {inner}
+          </button>
+        ) : (
+          <Link className="line" to={`/items/${item.id}`}>
+            {inner}
+          </Link>
+        )}
+      </li>
+    );
+  }
 
   function Node({ branch, depth }: { branch: Branch; depth: number }) {
     const rows = items.filter(branch.keep);
@@ -39,18 +60,7 @@ export default function Tree({ space, version, onChanged }: { space: string; ver
           <ul className="lines">
             {branch.children
               ? branch.children.map((child) => <Node key={child.key} branch={child} depth={depth + 1} />)
-              : rows.map((item) => (
-                  <li key={item.id} className={`node depth-${depth + 1}`}>
-                    <button type="button" className={`line ${open === item.id ? "on" : ""}`} onClick={() => setOpen(open === item.id ? null : item.id)}>
-                      <ItemLine item={item} />
-                    </button>
-                    {open === item.id && (
-                      <div className="tree-open">
-                        <ItemPage version={version} itemId={item.id} onChanged={onChanged} onClosed={() => setOpen(null)} />
-                      </div>
-                    )}
-                  </li>
-                ))}
+              : rows.map((item) => <Leaf key={item.id} item={item} depth={depth + 1} />)}
           </ul>
         )}
       </li>
@@ -58,14 +68,25 @@ export default function Tree({ space, version, onChanged }: { space: string; ver
   }
 
   return (
-    <div className="tree">
-      {error && <p className="error">{error}</p>}
-      {loading && <p className="muted">Loading…</p>}
-      <ul className="lines">
-        {TREE.map((branch) => (
-          <Node key={branch.key} branch={branch} depth={0} />
-        ))}
-      </ul>
+    <div className={wide ? "split" : undefined}>
+      <div className="tree">
+        {error && <p className="error">{error}</p>}
+        {loading && <p className="muted">Loading…</p>}
+        <ul className="lines">
+          {TREE.map((branch) => (
+            <Node key={branch.key} branch={branch} depth={0} />
+          ))}
+        </ul>
+      </div>
+      {wide && (
+        <aside className="split-item">
+          {openId ? (
+            <ItemPage key={openId} version={version} itemId={openId} onChanged={onChanged} onClosed={() => setParams({}, { replace: true })} />
+          ) : (
+            <p className="split-empty muted">Pick something from the tree.</p>
+          )}
+        </aside>
+      )}
     </div>
   );
 }

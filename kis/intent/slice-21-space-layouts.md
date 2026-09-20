@@ -1,23 +1,22 @@
 # Slice 21: four other space pages (approved 2026-09-20)
 
-**Built 2026-09-20; waiting on the user's judgement.** Proof: headless Chrome at 1280px, no page
-errors -- Classic opens with `?item=11` in the pane and 16px between the search box and the
-brief; each layout renders its lines and the five-way switcher with no horizontal overflow;
-`j` in Panes moved the selection to the next item, the brief strip opened; a tree leaf and a
-timeline row each opened the item in place.
+**Three kept, 2026-09-20; still the user's call which becomes the space page.** Proof: headless
+Chrome, no page errors -- Classic opens with `?item=11` in its pane, 16px between search and
+brief; the switcher reads Classic | Panes | Tree; `j` in Panes moves the selection and the brief
+strip opens; a tree leaf sets `?item=7` and fills the pane, with nothing expanding in the tree
+itself, and collapsing Notes removes its rows; `/board` and `/timeline` no longer resolve (they
+fall through to Home); at 390px the tree has no pane and a leaf links to `/items/{id}`.
 
 The space page works, but it is a column of cards and the user wants to see what else it could
-be. Four alternatives, each at its own URL beside the current one, which does not change:
+be. Four alternatives were built at their own URLs beside the current page, which does not
+change. **2026-09-20, after trying them: Board and Timeline are out** -- deleted, not kept as
+dead routes -- and Tree opens its item in the pane instead of expanding in place. What remains:
 
 - `/spaces/{name}` — **Classic**, today's page. Untouched.
 - `/spaces/{name}/panes` — **Panes**: no card frames. A collapsible brief strip, filter chips,
   one dense list of tasks and notes, the item open beside it. `j`/`k` move down and up the list.
-- `/spaces/{name}/board` — **Board**: columns by state (Today, Open, Notes, Done); a click opens
-  the item beside the board on a wide screen, or its own page on a phone.
-- `/spaces/{name}/timeline` — **Timeline**: one stream newest first under day headings, tasks and
-  notes together; a row expands in place to hold the whole item.
-- `/spaces/{name}/tree` — **Tree**: everything as a tree -- Tasks (Open, Done), Notes -- each
-  branch counted and collapsible, a leaf expanding to the item.
+- `/spaces/{name}/tree` — **Tree**: everything as a tree -- Tasks (Overdue, Open, Done), Notes
+  -- each branch counted and collapsible, a leaf opening the item beside the tree.
 
 Every layout shares the same data (`/api/items` for the space), the same row actions where it has
 them, and a switcher linking the five. Judgement is the user's: these exist to be tried, and
