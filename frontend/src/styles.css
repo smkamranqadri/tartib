@@ -512,3 +512,17 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   .session-bar.floating { bottom: calc(var(--askbar-h, 0px) + var(--tabbar-h, 0px) + 10px); }
   .has-askbar .toast { bottom: calc(var(--askbar-h, 96px) + var(--session-h, 0px) + var(--tabbar-h, 0px) + 12px); }
 }
+
+/* The ⊕ sheet: capture or ask, on a phone. */
+.sheet-scrim { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-end; background: color-mix(in srgb, #000 35%, transparent); }
+.sheet {
+  width: 100%; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+  padding: 10px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-radius: 18px 18px 0 0; border-top: 1px solid var(--line);
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sheet .capture-bar { margin: 0; }
+.sheet .ask { flex-wrap: wrap; }
+.sheet .ask input { flex: 1 1 100%; }

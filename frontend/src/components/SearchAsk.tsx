@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
-import { askInBar } from "./AskBar";
+import { askInBar } from "./AskForm";
 
 /** One field that searches as you type and hands a question to the ask bar on demand (button,
  *  trailing "?", Cmd/Ctrl+Enter). The answer belongs in one place, at the foot of the app, not

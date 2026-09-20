@@ -26,6 +26,18 @@ the page title and its actions, nothing else. The desktop nav does not change.
 
 ## Step 2 — the ⊕ sheet: capture, or ask
 
+**Done 2026-09-20.** The ask form left `AskBar` into `AskForm`, so the bar (wide) and the sheet
+(phone) share it and only one is ever mounted -- App renders the capture bar and the ask bar
+above 641px, the tab bar and the sheet below. Two modes in the sheet, Escape or the scrim
+closes it, capture closes it on success. One thing the plan missed: with the sheet shut, a phone
+has no ask form at all, so a question handed over from a space's search box was dropped; App now
+catches `tartib:ask` on phones, opens the sheet in Ask mode and hands the question to the form,
+which asks it on mount. Proof at 390x844: with the sheet closed, capture bar 0, ask bar 0, tab
+bar 65 -- chrome 439 -> 214 with a session live, Inbox content 786 -> 973; ⊕ opens focused on the
+box, "Captured from the sheet" reached the server and the sheet closed; Ask mode shows question
+and space; scrim and Escape both close; a question typed in a space opened the sheet in Ask mode
+holding it.
+
 ⊕ opens a sheet from the bottom, most of the screen tall, with two modes: Capture (the box, the
 mic, Add -- the offline queue and every existing behaviour unchanged) and Ask (the question, the
 space, the answer in place). Escape, a tap outside, or the handle closes it; opening focuses the

@@ -6,6 +6,7 @@ import { takePendingNav } from "./push";
 import Capture from "./Capture";
 import AskBar from "./components/AskBar";
 import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./components/Icons";
+import CaptureSheet, { type SheetMode } from "./components/CaptureSheet";
 import SessionBar from "./components/SessionBar";
 import TabBar from "./components/TabBar";
 import Toast, { type ToastState } from "./components/Toast";
@@ -18,6 +19,7 @@ import Space from "./screens/Space";
 import Spaces from "./screens/Spaces";
 import Settings from "./screens/Settings";
 import { SessionProvider } from "./session";
+import { useWide } from "./useWide";
 import { ThemeContext, type Theme } from "./theme";
 import type { Answer, Capture as CaptureRecord } from "./types";
 import { useSpaces } from "./useSpaces";
@@ -51,6 +53,9 @@ function outcome(cap: CaptureRecord): string {
 export default function App() {
   const [authed, setAuthed] = useState(true);
   const [version, setVersion] = useState(0);
+  // On a phone capture and ask live in the ⊕ sheet; null means it is closed.
+  const [sheet, setSheet] = useState<SheetMode | null>(null);
+  const [asked, setAsked] = useState<{ question: string; space: string } | undefined>();
   const [theme, setTheme] = useState<Theme>(readTheme);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -116,6 +121,21 @@ export default function App() {
     };
   }, []);
   const location = useLocation();
+  // 641px: the width where the header's pills and the two bars have room.
+  const wideEnough = useWide(641);
+
+  // On a phone no ask form exists until the sheet is open, so a question handed over from a
+  // space's search box opens it holding that question.
+  useEffect(() => {
+    if (wideEnough) return;
+    const onAsk = (e: Event) => {
+      setAsked((e as CustomEvent<{ question: string; space: string }>).detail);
+      setSheet("ask");
+    };
+    window.addEventListener("tartib:ask", onAsk);
+    return () => window.removeEventListener("tartib:ask", onAsk);
+  }, [wideEnough]);
+
   const bump = () => setVersion((v) => v + 1);
 
   /* The queue, and sending it when the network or the app comes back. A capture that landed
@@ -240,10 +260,12 @@ export default function App() {
           <div className="top-actions" />
         </header>
         <UpdateBar />
-        <Capture
-          onCaptured={onCaptured}
-          onQueued={() => showToast({ text: "Saved offline", phase: "final" })}
-        />
+        {wideEnough && (
+          <Capture
+            onCaptured={onCaptured}
+            onQueued={() => showToast({ text: "Saved offline", phase: "final" })}
+          />
+        )}
         <main>
           <Routes>
             <Route path="/" element={<Home version={version} answer={answer} pending={pending} onCloseAnswer={() => setAnswer(null)} />} />
@@ -272,8 +294,22 @@ export default function App() {
         {/* Home has the session as a card of its own; elsewhere a live one sits pinned just
             above the ask bar while the page scrolls. */}
         {location.pathname !== "/" && <SessionBar placement="float" />}
-        <AskBar spaces={spaces} />
-        <TabBar onAdd={() => window.dispatchEvent(new Event("tartib:focus-capture"))} />
+        {wideEnough && <AskBar spaces={spaces} />}
+        {!wideEnough && <TabBar onAdd={() => setSheet("capture")} />}
+        {sheet && (
+          <CaptureSheet
+            mode={sheet}
+            spaces={spaces}
+            onMode={setSheet}
+            onClose={() => {
+              setSheet(null);
+              setAsked(undefined);
+            }}
+            onCaptured={onCaptured}
+            onQueued={() => showToast({ text: "Saved offline", phase: "final" })}
+            question={asked}
+          />
+        )}
         <Toast toast={toast} />
       </div>
       </SessionProvider>

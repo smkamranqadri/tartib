@@ -29,10 +29,13 @@ function makeRecognition(): Recognition | null {
 export default function Capture({
   onCaptured,
   onQueued,
+  autoFocus,
 }: {
   onCaptured: (id: number) => void;
   /** It is written down but not sent. Nothing is lost; it goes when the network comes back. */
   onQueued: () => void;
+  /** Opened for this box (the ⊕ sheet), so put the cursor in it. */
+  autoFocus?: boolean;
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -44,6 +47,7 @@ export default function Capture({
 
   useEffect(() => {
     const focus = () => ref.current?.focus();
+    if (autoFocus) focus();
     window.addEventListener("tartib:focus-capture", focus);
     return () => window.removeEventListener("tartib:focus-capture", focus);
   }, []);
