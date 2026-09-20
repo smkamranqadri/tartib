@@ -53,13 +53,15 @@ export default function ItemRow({
       className={`${item.status === "done" ? "done" : ""} ${overdue ? "overdue" : ""} ${waiting ? "waiting" : ""}`}
       leading={
         isTask && editable ? (
-          <input
-            type="checkbox"
-            className="check"
-            checked={item.status === "done"}
-            onChange={(e) => void patch({ status: e.target.checked ? "done" : "open" })}
-            aria-label="Done"
-          />
+          <label className="tap-box">
+            <input
+              type="checkbox"
+              className="check"
+              checked={item.status === "done"}
+              onChange={(e) => void patch({ status: e.target.checked ? "done" : "open" })}
+              aria-label="Done"
+            />
+          </label>
         ) : (
           <span className="row-icon muted">{waiting ? <AlertIcon /> : <NoteIcon />}</span>
         )

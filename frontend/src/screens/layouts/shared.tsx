@@ -25,7 +25,8 @@ export function ItemLead({ item, onChanged }: { item: Item; onChanged: () => voi
   const [busy, setBusy] = useState(false);
   if (item.shape !== "task") return <span className="line-lead muted"><NoteIcon /></span>;
   return (
-    <input
+    <label className="tap-box">
+      <input
       type="checkbox"
       className="line-lead"
       checked={item.status === "done"}
@@ -40,7 +41,8 @@ export function ItemLead({ item, onChanged }: { item: Item; onChanged: () => voi
           setBusy(false);
         }
       }}
-    />
+      />
+    </label>
   );
 }
 

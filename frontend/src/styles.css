@@ -533,3 +533,26 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
 .sheet .capture-bar { margin: 0; }
 .sheet .ask { flex-wrap: wrap; }
 .sheet .ask input { flex: 1 1 100%; }
+
+/* A phone is touched, not clicked: nothing to hit is under 44px. */
+@media (max-width: 640px) {
+  .icon-btn, .pills a, .pills button, .chip-btn, .seg button, .tabs a, .star, .section-toggle, .crumbs a, .item-head a { min-height: 44px; min-width: 44px; }
+  .star, .section-toggle, .crumbs a { display: inline-flex; align-items: center; }
+  .row-text { display: flex; align-items: center; min-height: 44px; }
+  .view-all a, .view-all button, .item-aside a, .side-note a, .brief-cites a { display: inline-flex; align-items: center; min-height: 44px; }
+  /* The proposal sentence's tappable words: still words, but big enough to hit. */
+  .sentence .word, .sentence .word-input, .sentence select { min-height: 44px; }
+  .line, .brief-strip { min-height: 48px; }
+  .row { min-height: 52px; }
+  input.line-lead, .row input[type="checkbox"] { width: 22px; height: 22px; }
+  .tap-box { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+  .line-row { gap: 12px; }
+  .line-lead { width: 22px; height: 22px; }
+  .line-lead svg { width: 20px; height: 20px; }
+  .menu button, .menu a { min-height: 44px; display: flex; align-items: center; }
+  button.ghost, button.primary { min-height: 44px; }
+  /* The floating session card is one line while it runs; the outcome question may take two. */
+  .session-bar.floating { padding: 8px 12px; }
+  .session-bar.floating .session-ring { width: 34px; height: 34px; }
+  .session-bar.floating .session-time { font-size: 17px; }
+}

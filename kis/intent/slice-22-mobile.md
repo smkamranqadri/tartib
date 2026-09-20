@@ -59,10 +59,24 @@ that row. The desktop keeps its headings.
 
 ## Step 4 — targets worth hitting
 
+**Done 2026-09-20.** Minimums on phones for every control: icon buttons, pills, chips, segmented
+buttons, the star, accordion toggles, "View all" and the other inline links, the proposal
+sentence's tappable words, and the row and line buttons. The checkboxes keep their 22px look
+inside a 44px label, so the hit area is real without a giant box. Rows settled at 48px (a line)
+and 52px (a card row) -- a first pass gave the title its own 44px and rows came out at 125px,
+which read as a list of five things on a screen. Proof: the audit that found 16 to 30 controls
+under 44px a screen now finds none on Home, Inbox, Recent, a space, an item or Settings, with
+rows at 48px and nine of them on one screen.
+
 Every control reaches 44x44 on a phone: the row checkbox and star, the "…" buttons, the pills,
 the brief strip, the session card's buttons. Counted before and after.
 
 ## Step 5 — the session, smaller
+
+**Done 2026-09-20 with step 4.** The floating card is tighter on a phone: 8px padding, a 34px
+ring, 17px clock. Running it is one line. Asking for an outcome is 134px, because three outcome
+buttons cannot sit on one 390px row and still be 44px tall -- that is the two lines the plan
+allowed.
 
 While floating on a phone the session card is one line -- ring, time, task, Stop -- and the
 outcome buttons wrap to a second only when it is asking. Home's card is unchanged.
