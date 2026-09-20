@@ -496,21 +496,27 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
 .tabbar { display: none; }
 @media (max-width: 640px) {
   header.top { display: none; }
+  /* The nav's own shape, moved to the bottom: a rounded glass pill floating clear of the edges
+     and of the home indicator. */
   .tabbar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-    display: flex; align-items: stretch; justify-content: space-around;
-    padding: 6px max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
-    background: color-mix(in srgb, var(--bg) 62%, transparent);
+    position: fixed; z-index: 25;
+    left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right));
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    display: flex; align-items: stretch; justify-content: space-around; gap: 2px; padding: 4px;
+    background: color-mix(in srgb, var(--pill) 72%, transparent);
     -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-    border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+    border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.14);
   }
   .tabbar a, .tabbar button {
-    flex: 1; min-width: 44px; min-height: 44px; display: inline-flex; flex-direction: column;
+    flex: 1; min-width: 44px; min-height: 48px; display: inline-flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; border: 0;
-    background: none; color: var(--muted); text-decoration: none; font-size: 11px; cursor: pointer;
+    background: none; border-radius: 999px; color: var(--muted); text-decoration: none;
+    font-size: 11px; cursor: pointer;
   }
+  /* The active tab wears the same white pill the top nav's does. */
+  .tabbar a.active { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
   .tabbar a svg { width: 22px; height: 22px; }
-  .tabbar a.active { color: var(--accent); }
   .tabbar .tab-add { flex: 0 0 56px; }
   .tabbar .tab-add span { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 26px; line-height: 1; }
   /* Everything fixed at the bottom stacks above it. */

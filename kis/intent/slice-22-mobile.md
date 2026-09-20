@@ -13,7 +13,10 @@ taking a sixth tab -- five is what fits at 390px, and Spaces cannot be dropped.
 
 ## Step 1 — a bottom bar under the thumb
 
-**Done 2026-09-20.** `TabBar` on phones only; the top header is hidden there entirely, since the
+**Done 2026-09-20.** `TabBar` on phones only, wearing the top nav's own shape: a rounded glass
+pill floating clear of the edges, the active tab in a panel-coloured pill, the ⊕ in the accent.
+Safe areas on all three sides that matter -- with a 34px home indicator emulated it sits 42px
+above the screen edge, 10px in from each side. the top header is hidden there entirely, since the
 page's own title says where you are. It publishes `--tabbar-h`, so the ask bar, the floating
 session card, the toast and the page's bottom padding all stack above it. Proof: 390x844 --
 header 0 (was 104), tab bar 65, the ask bar sitting exactly on top of it, chrome down from 439
