@@ -5,14 +5,13 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 24 (presentation). Both phases done and proved. Not committed and not deployed.**
+- Task: none in flight. **Slice 24 (presentation) is committed on `main` and not deployed.**
   Plan, every decision and the proof: `kis/intent/slice-24-presentation.md`. Work mode **Phase**.
   A rendered markdown on the item body, thought entries, Ask answers and the space brief,
   flattened the row headline in all five places that compute one, and kept slice 20's search hit
   marked inside the rendered output. B made the item text an editor you tap into rather than a
   mode you enter -- CodeMirror lazily, debounced autosave, a non-modal 409 strip, and a local
-  draft so a teardown cannot take your words. **The whole slice is in the working tree,
-  uncommitted.**
+  draft so a teardown cannot take your words.
   **Unproved on a device:** whether mono at 14px with markdown suits a long note on a phone.
 - **Slice 23 (the UI language) is committed on `main` and not deployed.**
   What it is and why, step by step with its proof: `kis/intent/slice-23-ui.md`; what it changed
@@ -25,8 +24,8 @@
   of 844 to 65px), **slice 21** (four space layouts tried, Panes kept as the space page; Classic,
   Tree, Board and Timeline deleted), **slice 20** (eight items, round three), **slice 19** and
   **slice 18**. Plans: `kis/intent/slice-1{8,9}-*.md`, `kis/intent/slice-2{0,1,2}-*.md`.
-- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 23 are local commits on `main`
-  (69 ahead of `origin/main`, and Phase A is not yet committed). On the next deploy: migrations 0010-0014 run, and
+- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 24 are local commits on `main`
+  (unpushed). On the next deploy: migrations 0010-0014 run, and
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config.
 - Next, in no fixed order:
