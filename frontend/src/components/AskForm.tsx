@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { ask } from "../api";
+import { ask, describe } from "../api";
 import type { Answer } from "../types";
 import AnswerView from "./AnswerView";
 
@@ -33,7 +33,8 @@ export default function AskForm({
     try {
       setResult(await ask(value, inSpace));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ask failed");
+      /* Ask needs the classifier, so it cannot be queued -- it says so rather than failing blank. */
+      setError(describe(err));
     } finally {
       setBusy(false);
     }

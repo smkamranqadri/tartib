@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, approveItem, deleteItem, editItem, getCapture, getItem } from "../api";
+import { enqueueEdit, resolveEdit } from "../offline";
+import { applyTo, editFor } from "../pending";
+import { usePending } from "../usePending";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import Confirm from "../components/Confirm";
 import TextEditor, { type SaveResult } from "../components/TextEditor";
 import Thoughts from "../components/Thoughts";
 import ItemEditor from "../components/ItemEditor";
-import { ErrorLine, Loading } from "../components/Status";
+import { ErrorLine, Loading, Stale } from "../components/Status";
 import { formatDue, formatRelative, formatRemind } from "../format";
 import { useSession } from "../session";
 import type { Capture as CaptureRecord, Edit, Item } from "../types";
@@ -34,13 +37,14 @@ export default function ItemPage({
   const embedded = embeddedId !== undefined;
   const itemId = embedded ? embeddedId : Number(id);
   const navigate = useNavigate();
-  const { data: item, setData, error, loading } = useLoad(() => getItem(itemId), [itemId, version]);
+  const { data: item, setData, error, loading, cachedAt } = useLoad(() => getItem(itemId), [itemId, version]);
   const spaces = useSpaces(version);
   const [capture, setCapture] = useState<CaptureRecord | null>(null);
   // Bumped on Reload and on Overwrite: the editor remounts clean against the settled text.
   const [editorKey, setEditorKey] = useState(0);
   const [open, setOpen] = useState<{ file: boolean; proposal: boolean } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const pending = usePending();
   const [msg, setMsg] = useState<string | null>(null);
   // An edit the server refused because the item moved on elsewhere, kept so it can be sent anyway.
   const [conflict, setConflict] = useState<Edit | null>(null);
@@ -67,7 +71,14 @@ export default function ItemPage({
       </div>
     );
 
-  const isTask = item.shape === "task";
+  /* What is queued for this item, over what the server last said (slice 25). */
+  const shown = applyTo(item, pending);
+  const queued = editFor(item.id, pending);
+  /* Two ways to arrive at the same question: a live save refused while you were typing, or a
+     queued one refused when the network came back. Both get the same strip and the same two
+     answers -- the second is just discovered later. */
+  const stale = conflict ?? (queued?.conflict ? queued.edit ?? null : null);
+  const isTask = shown.shape === "task";
   const waiting = item.stage === "attention";
   const originalDiffers = capture && capture.raw_text.trim() !== item.raw_text.trim();
 
@@ -99,12 +110,14 @@ export default function ItemPage({
     const fresh = await getItem(itemId);
     setData(fresh);
     setConflict(null);
+    await resolveEdit(itemId); // the queued version loses; the server's copy is what you asked for
     setEditorKey((k) => k + 1);
   }
   async function overwrite() {
-    if (!conflict) return;
-    land(await editItem(itemId, conflict));
+    if (!stale) return;
+    land(await editItem(itemId, stale));
     setConflict(null);
+    await resolveEdit(itemId);
     setEditorKey((k) => k + 1);
   }
   async function approve(edit: Edit) {
@@ -119,6 +132,12 @@ export default function ItemPage({
       setMsg(null);
       return ok ? "ok" : "conflict";
     } catch (err) {
+      /* The network rather than the server: the text becomes a queued edit, which is what lets
+         the editor stop saying "not saved" and start saying "waiting to send" (slice 25). */
+      if (!(err instanceof ApiError) && (await enqueueEdit(itemId, { text: next }, item?.updated_at ?? null))) {
+        setMsg(null);
+        return "queued";
+      }
       setMsg(err instanceof Error ? err.message : "failed");
       return "failed";
     }
@@ -138,6 +157,7 @@ export default function ItemPage({
   return (
     <div className="screen item-page">
       {!embedded && <BackLink fallback={item.space ? `/spaces/${item.space}` : "/inbox"} />}
+      <Stale at={cachedAt} />
       <Card
         label={isTask ? "Task" : "Note"}
         aside={
@@ -155,11 +175,14 @@ export default function ItemPage({
             {/* Three actions, three buttons. They were behind a "…" that hid what the page could
                 do; there was never enough in there to be worth a menu. */}
             <span className="item-actions">
-              {isTask && item.stage === "filed" && item.status === "open" && (
+              {isTask && shown.stage === "filed" && shown.status === "open" && (
                 <button type="button" className="ghost" onClick={() => void session.start(item.id)}>
                   Start session
                 </button>
               )}
+              {/* A session needs the server's clock, so it is never queued. Offline the session
+                  bar does not render at all, so the reason belongs here (slice 25). */}
+              {session.error && <span className="error small">{session.error}</span>}
               <button type="button" className="ghost danger" onClick={() => setConfirmDelete(true)}>
                 Delete
               </button>
@@ -168,7 +191,7 @@ export default function ItemPage({
         }
       >
         {isTask && item.title && item.title.trim() !== item.raw_text.trim() && <h2 className="item-title">{item.title}</h2>}
-        {conflict && (
+        {stale && (
           <div className="conflict-strip">
             <span className="tone warn">Changed elsewhere since you opened it. Your text is kept.</span>
             <span className="toggles">
@@ -181,7 +204,15 @@ export default function ItemPage({
             </span>
           </div>
         )}
-        <TextEditor key={editorKey} draftId={String(itemId)} value={item.raw_text} query={query} onSave={saveText} blocked={!!conflict} />
+        <TextEditor
+          key={editorKey}
+          draftId={String(itemId)}
+          value={shown.raw_text}
+          query={query}
+          onSave={saveText}
+          blocked={!!stale}
+          queued={!!queued && !queued.conflict}
+        />
         {confirmDelete && (
           <Confirm question={<>Delete this {item.shape}? The original capture stays.</>} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />
         )}

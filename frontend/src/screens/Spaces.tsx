@@ -7,7 +7,7 @@ import ItemRow from "../components/ItemRow";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import SearchAsk from "../components/SearchAsk";
-import { Empty, ErrorLine, Loading } from "../components/Status";
+import { Empty, ErrorLine, Loading, Stale } from "../components/Status";
 import { formatRelative } from "../format";
 import type { Item, SpaceSummary } from "../types";
 import { useLoad } from "../useLoad";
@@ -25,6 +25,7 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
   }, [q]);
 
   const summary = useLoad(getSpacesSummary, [version]);
+  const cachedAt = summary.cachedAt;
   const results = useLoad(() => (debounced ? listItems({ q: debounced, limit: 100 }) : Promise.resolve(null)), [debounced, version]);
 
   const legacy = params.get("space");
@@ -41,6 +42,7 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
     <div className="screen">
       <div className="title-row">
         <PageHead crumb="Spaces" title="Spaces" subtitle="Where things live. Search across all of them, or end with ? to ask." />
+        <Stale at={cachedAt} />
         <div className="title-actions">
           {creating ? (
             <NameForm

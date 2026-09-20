@@ -17,7 +17,7 @@ import { describe } from "./SessionPast";
  *  sheet that blocks the app to ask about 25 minutes that already happened would be the
  *  nagging rule 4 exists to prevent. */
 export default function SessionBar({ placement }: { placement: "card" | "float" }) {
-  const { current, remaining, busy, stop, answer, start } = useSession();
+  const { current, remaining, busy, stop, answer, start, error } = useSession();
   const state = current?.state ?? null;
   // The last few, on Home's card only: floating above the ask bar it would be a list in the
   // way of the page. Under the question once a session stops, on their own when none runs.
@@ -62,7 +62,9 @@ export default function SessionBar({ placement }: { placement: "card" | "float" 
         <Ring fraction={0} />
         <div className="session-main">
           <span className="session-time">No session running</span>
-          <span className="session-what muted">{recent.length ? "Run one again, or start fresh." : "Start one when you are ready."}</span>
+          <span className="session-what muted">
+            {error ?? (recent.length ? "Run one again, or start fresh." : "Start one when you are ready.")}
+          </span>
         </div>
         <button type="button" className="ghost" disabled={busy} onClick={() => void start(null)}>
           Start
@@ -177,18 +179,25 @@ export function StartSession({
   /** Given, the button reads as words. Without it, it is the row's play glyph. */
   label?: string;
 }) {
-  const { current, busy, start } = useSession();
+  const { current, busy, start, error } = useSession();
   if (current?.state === "running") return null;
   return (
-    <button
-      type="button"
-      className={className}
-      disabled={busy}
-      onClick={() => void start(itemId)}
-      aria-label={label ?? "Start session"}
-      title="Start a session"
-    >
-      {label ?? "▶"}
-    </button>
+    <>
+      <button
+        type="button"
+        className={className}
+        disabled={busy}
+        onClick={() => void start(itemId)}
+        aria-label={label ?? "Start session"}
+        title="Start a session"
+      >
+        {label ?? "▶"}
+      </button>
+      {/* Offline the session bar does not render at all -- `getCurrentSession` fails and it
+          stays away by design -- so without this the button is the only thing on screen and
+          pressing it would do nothing visible. A session is not queued (slice 25), so the
+          honest answer belongs next to the button that cannot do it. */}
+      {error && <span className="error small">{error}</span>}
+    </>
   );
 }

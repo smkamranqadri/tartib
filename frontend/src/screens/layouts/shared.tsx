@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { editItem, getRecentSessions, listItems } from "../../api";
+import { ApiError, editItem, getRecentSessions, listItems } from "../../api";
+import { enqueueEdit } from "../../offline";
+import { applyTo, isPending } from "../../pending";
+import { usePending } from "../../usePending";
 import { ClockIcon, NoteIcon } from "../../components/Icons";
 import { describe } from "../../components/SessionPast";
 import { formatDue, formatRelative, todayLocal } from "../../format";
@@ -22,8 +25,10 @@ export const isToday = (i: Item) => i.shape === "task" && i.status === "open" &&
 /** What a line leads with: a task's checkbox, which ticks it off where it stands, or a note's
  *  glyph. The checkbox is its own control beside the line, never inside the button that opens
  *  the item -- a tick is not "read this". */
-export function ItemLead({ item, onChanged }: { item: Item; onChanged: () => void }) {
+export function ItemLead({ item: serverItem, onChanged }: { item: Item; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
+  const pending = usePending();
+  const item = applyTo(serverItem, pending);
   if (item.shape !== "task") return <span className="line-lead muted"><NoteIcon /></span>;
   return (
     <label className="tap-box">
@@ -35,9 +40,14 @@ export function ItemLead({ item, onChanged }: { item: Item; onChanged: () => voi
       aria-label={item.status === "done" ? "Mark open" : "Mark done"}
       onChange={async () => {
         setBusy(true);
+        const edit = { status: item.status === "done" ? ("open" as const) : ("done" as const) };
         try {
-          await editItem(item.id, { status: item.status === "done" ? "open" : "done" });
+          await editItem(item.id, edit);
           onChanged();
+        } catch (err) {
+          /* The network, not the server: write it down and the row keeps the tick (slice 25). */
+          if (err instanceof ApiError) throw err;
+          await enqueueEdit(item.id, edit, null);
         } finally {
           setBusy(false);
         }
@@ -48,7 +58,9 @@ export function ItemLead({ item, onChanged }: { item: Item; onChanged: () => voi
 }
 
 /** One line: the title, then what matters about it. No card frame anywhere in these layouts. */
-export function ItemLine({ item, meta = true }: { item: Item; meta?: boolean }) {
+export function ItemLine({ item: serverItem, meta = true }: { item: Item; meta?: boolean }) {
+  const pending = usePending();
+  const item = applyTo(serverItem, pending);
   const title = item.shape === "task" ? item.title || flattenFirstLine(item.raw_text) : flattenFirstLine(item.raw_text);
   return (
     <>
@@ -58,6 +70,7 @@ export function ItemLine({ item, meta = true }: { item: Item; meta?: boolean }) 
           {item.due && <span className={isOverdue(item) ? "error" : ""}>{formatDue(item.due)}</span>}
           {item.starred && <span>★</span>}
           {item.thought_count > 0 && <span>{item.thought_count}💭</span>}
+          {isPending(item.id, pending) && <span className="pending-mark">waiting to send</span>}
           <span>{formatRelative(item.updated_at ?? item.created_at)}</span>
         </span>
       )}

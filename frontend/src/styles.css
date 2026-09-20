@@ -521,10 +521,25 @@ button:disabled { opacity: .5; cursor: default; }
 /* The save state is a readout, not a control: it never moves the text and never asks anything. */
 .save-state { margin: 0 16px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
 .save-state.saving { opacity: .7; }
+/* Offline (slice 25). One line per screen saying what is on it and how old, rather than one
+   banner saying only that the connection is down. Muted, never alarming: the data is good, it
+   is just not live. */
+.stale-line { margin: 0 0 12px; font-size: 12px; display: flex; align-items: center; gap: 7px; }
+.card .stale-line { margin: 8px 16px 10px; }
+.stale-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex: none; }
+/* A change that is written down but not yet sent -- the same words slice 15 uses for a capture. */
+.pending-mark { color: var(--warn); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+
 .save-state.bad { display: flex; align-items: center; gap: 10px; text-transform: none; letter-spacing: 0; font-size: 12px; }
 .card-body .text-body .save-state { margin-left: 16px; }
 /* A conflict is a strip above the text, never a dialog: an autosave can refuse while you are
    still typing, and your words must stay exactly where they are (slice 24, phase B). */
+/* The message here is a sentence, not a chip. `.tone` is nowrap and uppercase because a chip
+   says one or two words; left like that this ran 430px wide and pushed a phone into horizontal
+   scroll the moment a conflict appeared. */
+.conflict-strip .tone {
+  white-space: normal; text-transform: none; letter-spacing: 0; font-size: 12px; min-width: 0;
+}
 .conflict-strip {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   margin: 8px 16px 12px; padding: 9px 12px;

@@ -1,6 +1,16 @@
-/* App-shell service worker. Hashed assets are cached forever; navigations are
-   network-first with the cached shell as a fallback. API calls are never cached. */
+/* App-shell service worker. Hashed assets are cached forever; navigations and API reads are
+   network-first with the cached copy as a fallback. */
 const CACHE = "tartib-shell-v1";
+/* API reads live in their own cache, so the shell's precache can be reasoned about on its own
+   and a stale read never survives a shell rebuild it was not made against. */
+const API_CACHE = "tartib-api-v1";
+/* Activation deletes every cache not in here. It used to be `k !== CACHE`, which would have
+   deleted the API cache on every update -- intermittently, and only after a release, which is
+   the worst way to find a bug. */
+const KEEP = [CACHE, API_CACHE];
+/* When a cached API response was stored. The app reads it to say how old what you are looking
+   at is, rather than quietly serving yesterday. */
+const CACHED_AT = "x-tartib-cached-at";
 /* Where a tapped notification leaves the URL it wants opened. The page reads this when it
    wakes, which is the only thing that works on iOS: a home-screen app is frozen while this
    worker runs, so it cannot answer a message in time, and navigate() does nothing to it. */
@@ -10,7 +20,7 @@ const PENDING_NAV = "/__pending-nav";
    old worker active: its precache still holds the previous build, and nothing offers the reload.
    The app shows this in Settings, so "is the phone actually running this worker?" is a question
    with an answer instead of a guess. */
-const SW_VERSION = "2026-09-20.1";
+const SW_VERSION = "2026-09-21.1";
 const VERSION_KEY = "/__sw-version";
 /* Where the page leaves the VAPID public key, so this worker can re-subscribe on its own when
    the push service rotates an endpoint. The page is not running when that happens. */
@@ -55,7 +65,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+      await Promise.all(keys.filter((k) => !KEEP.includes(k)).map((k) => caches.delete(k)));
       const cache = await caches.open(CACHE);
       await cache.put(VERSION_KEY, new Response(SW_VERSION));
       await self.clients.claim();
@@ -63,10 +73,40 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+/* A read is stored with the time it was stored, so the app can say how old it is. The header
+   has to go on at put time: a cached Response's headers are what come back, and there is
+   nowhere else to keep this that survives a restart. */
+async function putStamped(cache, request, res) {
+  const headers = new Headers(res.headers);
+  headers.set(CACHED_AT, new Date().toISOString());
+  const body = await res.clone().arrayBuffer();
+  await cache.put(request, new Response(body, { status: res.status, statusText: res.statusText, headers }));
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
+  if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/api/")) {
+    /* Sessions are not cached. A countdown is only true at the moment it is read, and a stale
+       one is a lie rather than old news; starting and stopping needs the network anyway. */
+    if (url.pathname.startsWith("/api/sessions/")) return;
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(API_CACHE);
+        try {
+          const res = await fetch(request);
+          /* Only a good answer is worth keeping. A 401 or a 500 cached would be served back
+             as though it were the truth for as long as the network stayed down. */
+          if (res.ok) await putStamped(cache, request, res);
+          return res;
+        } catch (err) {
+          const hit = await cache.match(request);
+          if (hit) return hit;
+          throw err;
+        }
+      })(),
+    );
     return;
   }
   if (url.pathname.startsWith("/assets/")) {

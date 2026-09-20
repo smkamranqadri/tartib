@@ -5,7 +5,13 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 24 (presentation) is committed on `main` and not deployed.**
+- Task: none in flight. **Slice 25 (offline) is done and proved, not committed and not
+  deployed.** Plan, decisions and proof: `kis/intent/slice-25-offline.md`. The app reads offline
+  and says how old what it shows is; ticking, starring, editing text and adding a thought all
+  work with no network and replay on reconnect. **The whole slice is in the working tree,
+  uncommitted**, and it also carries a fix to slice 24's conflict strip, which broke a phone's
+  width whenever it appeared.
+- **Slice 24 (presentation) is committed on `main` and not deployed.**
   Plan, every decision and the proof: `kis/intent/slice-24-presentation.md`. Work mode **Phase**.
   A rendered markdown on the item body, thought entries, Ask answers and the space brief,
   flattened the row headline in all five places that compute one, and kept slice 20's search hit
@@ -21,14 +27,15 @@
   (unpushed). On the next deploy: migrations 0010-0014 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config, and **`SW_VERSION` in `sw.js` is bumped by hand** -- slices 23
-  and 24 changed the bundle without changing `sw.js`, and the rule and its reason are in
-  `../knowledge/technical.md`, Frontend shell.
+  and 24 changed the bundle without changing `sw.js`; slice 25 changed `sw.js` itself and bumped
+  it to `2026-09-21.1`, so that debt is paid unless another bundle-only change lands first. The
+  rule and its reason are in `../knowledge/technical.md`, Frontend shell.
 - Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
      everything on that server exists exactly once. This is the one open item whose cost is
      unbounded.
-  2. **Look at slices 23 and 24 on a device** -- the only thing that can settle what Known gaps
+  2. **Look at slices 23, 24 and 25 on a device** -- the only thing that can settle what Known gaps
      lists against them. Needs `v1.1`, or the local container over the LAN.
   3. Then slice 14 (AI contract) and the rest of `kis/intent/backlog.md`. Both halves of
      backlog 13 are now accounted for: themes closed, presentation is slice 24.
@@ -62,7 +69,7 @@
 ## Proof
 
 Each slice keeps its proof in its plan file and its commits; `../intent/history.md` says what
-each one changed. Slice 24's is the fullest, if an example is wanted.
+each one changed. Slices 24 and 25 are the fullest, if an example is wanted.
 
 Proved on the deployed app rather than only in tests: a capture classifies and files itself, the
 session cookie carries `Secure` behind the proxy, a session ending pushes and the phone buzzes
@@ -70,12 +77,17 @@ with a desktop tab open on the same countdown (the migration 0008 case), and `ht
 
 ## Known gaps
 
-- **The app shows no data offline.** The shell opens and a capture still queues, but the screens
-  are empty, because the service worker never caches an `/api/` response. Deliberate -- slice 15
-  scoped offline *read* out -- and an approved backlog item now, with offline editing.
+- Offline, **counts lag**. Slice 25 shows a queued change on the item wherever it appears, but
+  tiles, counts and a space's brief are computed by the server and do not move until the queue
+  drains. Deliberate: the alternative was reimplementing the backend's aggregation in the client
+  and keeping a second source of truth for it. The stale line explains the gap.
+- Offline, **editing text needs one unhurried moment online first**. The editor is a lazy chunk
+  and the worker only caches what it has fetched, so a device that has never opened an item page
+  cannot edit text offline. Reading, ticking, starring and thoughts all work from the first
+  offline moment.
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
   Inbox also shows.
-- **Slices 23 and 24 were proved in headless Chrome only.** Four things wait on glass:
+- **Slices 23, 24 and 25 were proved in headless Chrome only.** Four things wait on glass:
   whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
   against readability, and slice 24's markdown is the best answer to it that can be given
   without a device; whether `background-attachment: fixed` survives iOS; whether tapping a word

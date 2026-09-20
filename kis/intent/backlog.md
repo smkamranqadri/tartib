@@ -153,7 +153,13 @@ Deferred from a slice rather than never planned:
   whatever the confidence. Today one global 0.85 threshold decides everything. A rule the database
   enforces, not an instruction in a prompt -- a prompt can be ignored, and elsewhere this exact
   gate exists because the prose version was ignored once.
-- **Offline read, and offline edit.** The app goes blank of data the moment the network does.
+- **Offline read, and offline edit.** — **done as slice 25** (`slice-25-offline.md`), proved,
+  not yet deployed. This entry closes when the slice is committed; what outlives it is in
+  `../knowledge/technical.md`. Two things it settled differently than written: editing text
+  offline needs one idle moment online first (the editor is a lazy chunk the worker can only
+  cache once it has been fetched), and counts lag by decision rather than by oversight.
+  The original entry, for the record:
+  The app goes blank of data the moment the network does.
   Proved in Chrome at 390px on 2026-09-19 against the local container: with the context offline,
   the shell and the nav render, Today says "You're offline.", Needs Attention and Recent are
   empty, and an item captured minutes earlier is not there. A cold start in a new tab behaves the

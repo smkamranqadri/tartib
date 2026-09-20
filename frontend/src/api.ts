@@ -1,5 +1,14 @@
 import type { Answer, Brief, Capture, Edit, Item, Outcome, PastSession, Session, SessionState, SpaceSummary, Thought } from "./types";
 
+/** What went wrong, in words that are true. A failed fetch reports "Failed to fetch", which is
+ *  the browser's sentence and not an answer to anything the reader was asking. Shared, because
+ *  since slice 25 several places other than a screen load have to say it. */
+export function describe(e: unknown): string {
+  if (e instanceof ApiError) return e.message;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return "You're offline.";
+  return "Can't reach Tartib.";
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -14,6 +23,29 @@ export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn;
 }
 
+/* Whether what a screen just loaded came from the worker's cache, and when it was stored.
+ *
+ * `useLoad` is handed a closure, not a path, so there is nothing to look the answer up by.
+ * Instead a load opens a window and every `api()` call inside it reports what it got. Two
+ * loads that overlap see each other's stamps -- accepted, because a null stamp (a live
+ * response) never raises the line, so the only cross-talk is between calls that were all
+ * served from cache anyway, which is the case the line is describing. */
+const windows = new Set<(string | null)[]>();
+
+export async function tracked<T>(fn: () => Promise<T>): Promise<{ data: T; cachedAt: Date | null }> {
+  const seen: (string | null)[] = [];
+  windows.add(seen);
+  try {
+    const data = await fn();
+    /* The oldest of them: if a screen is drawn from several cached reads, it is only as fresh
+       as the stalest one, and saying otherwise would overstate it. */
+    const stamps = seen.filter((s): s is string => !!s).sort();
+    return { data, cachedAt: stamps.length ? new Date(stamps[0]) : null };
+  } finally {
+    windows.delete(seen);
+  }
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -23,6 +55,10 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 401) {
     onUnauthorized();
     throw new ApiError(401, "not logged in");
+  }
+  if (windows.size) {
+    const stamp = res.headers.get("x-tartib-cached-at");
+    for (const w of windows) w.push(stamp);
   }
   if (!res.ok) {
     let detail = res.statusText;

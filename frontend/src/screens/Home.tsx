@@ -9,7 +9,7 @@ import Tiles from "../components/Tiles";
 import PageHead from "../components/PageHead";
 import RecentList from "../components/RecentList";
 import type { Pending } from "../offline";
-import { Empty, ErrorLine, Loading } from "../components/Status";
+import { Empty, ErrorLine, Loading, Stale } from "../components/Status";
 import { formatLongDate, todayLocal } from "../format";
 import type { Answer, Item } from "../types";
 import { useLoad } from "../useLoad";
@@ -24,7 +24,7 @@ function rank(item: Item, today: string): number {
 /** Dashboard. DOM order is Today, Needs attention, Recent, which is the phone order;
  *  the desktop grid places Needs attention in the right column. */
 export default function Home({ version, answer, pending, onCloseAnswer }: { version: number; answer: Answer | null; pending: Pending[]; onCloseAnswer: () => void }) {
-  const { data, setData, error, loading } = useLoad(getToday, [version]);
+  const { data, setData, error, loading, cachedAt } = useLoad(getToday, [version]);
   const sessions = data?.sessions.total ?? 0;
   const attention = useLoad(getAttention, [version]);
   const today = todayLocal();
@@ -54,6 +54,7 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
   return (
     <div className="screen">
       <PageHead crumb="Today" title={formatLongDate()} subtitle="Today, what needs you, and what you captured." />
+      <Stale at={cachedAt} />
       {answer && <AnswerView result={answer} onClose={onCloseAnswer} />}
       <Tiles
         tiles={[

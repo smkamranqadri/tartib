@@ -23,11 +23,13 @@ function EditorUnavailable({ value }: { value: string }) {
   );
 }
 
-export type SaveResult = "ok" | "conflict" | "failed";
+/** `queued` is slice 25: the network would not take it, so it was written down instead. That is
+ *  not a failure and must not read as one -- the words are safe, they are just not there yet. */
+export type SaveResult = "ok" | "conflict" | "failed" | "queued";
 
 export type Save = (text: string, keepalive?: boolean) => Promise<SaveResult>;
 
-type Status = "clean" | "pending" | "saving" | "saved" | "failed" | "empty";
+type Status = "clean" | "pending" | "saving" | "saved" | "failed" | "empty" | "queued";
 
 const DEBOUNCE = 2000;
 
@@ -79,12 +81,28 @@ function writeDraft(id: string, d: Draft | null) {
  *  an edit against a version the previous save has already moved past; and a refused save stops
  *  the loop instead of retrying into the same 409 every two seconds. The state is always on
  *  screen, because an autosave that fails silently is worse than no autosave. */
+/** Pull the editor's chunk down quietly once the page is idle.
+ *
+ *  Two reasons, and the second is why it is here rather than nice-to-have. It hides the beat
+ *  between the first tap and the caret. And it is what makes editing text offline possible at
+ *  all: `sw.js` caches assets it has fetched before, so a chunk nobody has ever needed is a
+ *  chunk that is not there when the network goes. Slice 24 kept the editor out of the install
+ *  precache on purpose -- the shell should not carry 600kB for a note you only read -- and this
+ *  gets it cached after one unhurried moment online instead, which costs the install nothing. */
+function warm() {
+  const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
+  const run = () => void import("./MarkdownEditor").catch(() => {});
+  if (idle) idle(run);
+  else setTimeout(run, 2000);
+}
+
 export default function TextEditor({
   value,
   query,
   onSave,
   blocked,
   draftId,
+  queued = false,
 }: {
   value: string;
   query: string | null;
@@ -93,6 +111,8 @@ export default function TextEditor({
   blocked: boolean;
   /** Identifies the draft held for this item. */
   draftId: string;
+  /** An edit for this item is already written down and waiting to go (slice 25). */
+  queued?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [spot, setSpot] = useState<Spot | null>(null);
@@ -101,7 +121,7 @@ export default function TextEditor({
   const held = readDraft(draftId);
   const restored = held && held.draft !== value ? held.draft : null;
   const [draft, setDraft] = useState(restored ?? value);
-  const [status, setStatus] = useState<Status>(restored ? "pending" : "clean");
+  const [status, setStatus] = useState<Status>(restored ? "pending" : queued ? "queued" : "clean");
   const [offline, setOffline] = useState(false);
 
   const draftRef = useRef(draft);
@@ -126,15 +146,18 @@ export default function TextEditor({
     if (alive.current) setStatus("saving");
     const result = await sending;
     inflight.current = false;
-    if (result === "ok") {
+    if (result === "ok" || result === "queued") {
       savedRef.current = text;
-      // It is on the server now; the local copy has nothing left to protect.
+      /* On the server, or written down in the queue which survives the tab closing either way.
+         Both mean the localStorage draft -- which only ever covered the seconds between
+         keystrokes and a save -- has nothing left to protect. */
       if (draftRef.current === text) writeDraft(draftId, null);
     }
     if (!alive.current) return;
-    if (result === "ok") {
+    if (result === "ok" || result === "queued") {
       // Something was typed while that request was out: it is still unsaved, so say so.
-      setStatus(draftRef.current === text ? "saved" : "pending");
+      const settled = result === "queued" ? "queued" : "saved";
+      setStatus(draftRef.current === text ? settled : "pending");
     } else {
       setOffline(!navigator.onLine);
       // A refusal leaves the text unsaved, and it keeps saying so. The strip above explains what
@@ -161,10 +184,31 @@ export default function TextEditor({
 
   // "Saved" is an acknowledgement, not a permanent label.
   useEffect(() => {
+    // "Queued" is not an acknowledgement that fades: it is a state the item is in until the
+    // network comes back, and the row says the same thing.
     if (status !== "saved") return;
     const t = setTimeout(() => setStatus((s) => (s === "saved" ? "clean" : s)), 2500);
     return () => clearTimeout(t);
   }, [status]);
+
+  useEffect(warm, []);
+
+  /* A save flushed as the page was torn down lands, but the page is gone before it can clear
+     the draft it was protecting. Nothing is lost by that -- the restore only fires when the
+     draft differs from the server -- but the key would sit there for good, so it goes as soon
+     as the server is seen holding the same words. */
+  useEffect(() => {
+    const held = readDraft(draftId);
+    if (held && held.draft === value) writeDraft(draftId, null);
+  }, [draftId, value]);
+
+  /* The queue is read from IndexedDB, so `queued` is false on the first render and true a tick
+     later. Without this the status is fixed at mount and an item reopened with an edit still
+     waiting says nothing at all until you type into it. */
+  useEffect(() => {
+    if (queued) setStatus((s) => (s === "clean" ? "queued" : s));
+    else setStatus((s) => (s === "queued" ? "clean" : s));
+  }, [queued]);
 
   // Leaving the page, and closing the tab. Without this a two-second pause before tapping Back
   // loses whatever came after the last save.
@@ -233,6 +277,13 @@ function SaveState({ status, offline, onRetry }: { status: Status; offline: bool
             Retry
           </button>
         )}
+      </p>
+    );
+  }
+  if (status === "queued") {
+    return (
+      <p className="save-state">
+        <span className="pending-mark">waiting to send</span>
       </p>
     );
   }

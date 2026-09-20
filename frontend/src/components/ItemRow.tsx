@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { editItem } from "../api";
+import { ApiError, editItem } from "../api";
+import { enqueueEdit } from "../offline";
+import { applyTo, isPending } from "../pending";
+import { usePending } from "../usePending";
 import { formatDueLong, formatRelative, formatRemind, todayLocal, waitingReason } from "../format";
 import type { Edit, Item } from "../types";
 import { flattenFirstLine } from "../markdown";
@@ -12,7 +15,7 @@ import { StartSession } from "./SessionBar";
 /** An item as a row. Leading glyph: checkbox for a filed task, alert for something
  *  awaiting a decision, note for a note. */
 export default function ItemRow({
-  item,
+  item: serverItem,
   onChange,
   sessions = 0,
   query,
@@ -28,6 +31,11 @@ export default function ItemRow({
   sessions?: number;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const pending = usePending();
+  /* What is queued for this item, laid over what the server last said. The row shows your
+     change, not the version that has not heard about it yet (slice 25). */
+  const item = applyTo(serverItem, pending);
+  const waitingToSend = isPending(item.id, pending);
   // On a phone the item opens in a sheet over this list; `?item=` carries it, so Back closes it.
   const wide = useWide(641);
   const [, setParams] = useSearchParams();
@@ -42,6 +50,11 @@ export default function ItemRow({
     try {
       onChange(await editItem(item.id, edit));
     } catch (err) {
+      /* An ApiError means the server answered and would answer the same way again, so queueing
+         it would only defer the same refusal. Anything else is the network, and that is what
+         the queue is for. A tick or a star queues with no base version, so it replays exactly
+         as an online one would. */
+      if (!(err instanceof ApiError) && (await enqueueEdit(item.id, edit, null))) return;
       setError(err instanceof Error ? err.message : "failed");
     }
   }
@@ -103,6 +116,12 @@ export default function ItemRow({
       meta={
         <>
           {lead}
+          {waitingToSend && (
+            <span>
+              <span className="sep"> · </span>
+              <span className="pending-mark">waiting to send</span>
+            </span>
+          )}
           {meta.map((m, i) => (
             <span key={i}>
               <span className="sep"> · </span>

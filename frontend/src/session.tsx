@@ -4,7 +4,7 @@
  * and asks again when the app comes back. Closing the tab loses nothing.
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { answerSession, getCurrentSession, startSession, stopSession } from "./api";
+import { answerSession, describe, getCurrentSession, startSession, stopSession } from "./api";
 import { playChime, unlockChime } from "./chime";
 import type { Outcome, SessionState } from "./types";
 
@@ -14,6 +14,8 @@ interface SessionContextValue {
   remaining: number;
   busy: boolean;
   start: (itemId: number | null) => Promise<void>;
+  /** Why the last start or stop did not happen, if it did not. */
+  error: string | null;
   stop: () => Promise<void>;
   answer: (outcome: Outcome) => Promise<void>;
   reload: () => Promise<void>;
@@ -36,6 +38,7 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
   const [current, setCurrent] = useState<SessionState | null>(null);
   const [remaining, setRemaining] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // The session this tab has already rung for: the countdown can read zero on more than one tick
   // before the server confirms the end.
   const rung = useRef<number | null>(null);
@@ -91,9 +94,14 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
   const act = useCallback(
     async (fn: () => Promise<unknown>) => {
       setBusy(true);
+      setError(null);
       try {
         await fn();
         await reload();
+      } catch (err) {
+        /* A session is not queued: a timer you start with no network is a fiction, and the
+           server is what holds the clock. So it says what is wrong instead (slice 25). */
+        setError(describe(err));
       } finally {
         setBusy(false);
       }
@@ -105,6 +113,7 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
     current,
     remaining,
     busy,
+    error,
     reload,
     start: (itemId) => {
       unlockChime(); // inside the tap, or iOS will not play the chime at the end

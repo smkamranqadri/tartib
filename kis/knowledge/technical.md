@@ -136,6 +136,17 @@ does not fire that event, so on the phone it is insurance rather than a fix.
 launch paid one). Since slice 23 there is one theme, so `index.html` carries a single
 `theme-color` of `#0d0f12`, the manifest's `background_color` matches it, and no script rewrites
 either: the first paint is right before any JavaScript runs, and the splash cannot mismatch.
+Since slice 25 the worker also caches **`GET /api/`**, network-first, in a second cache
+(`tartib-api-v1`): online is unchanged and the network answers, offline the stored copy does.
+`/api/sessions/` is excluded -- a countdown is only true at the moment it is read, and a stale
+one is a lie rather than old news. Only `res.ok` is stored, or a 401 would be served back as the
+truth for as long as the network stayed down. Each entry is stamped `x-tartib-cached-at` at put
+time, which `api()` reports into whatever `tracked()` window is open and `useLoad` turns into the
+one line every screen shows; no screen knows how it works. **Activation deletes every cache not
+in `KEEP`** -- it was `k !== CACHE`, which would have deleted the API cache on every update.
+The editor chunk is pulled down on idle by `TextEditor` (slice 25): the worker only caches assets
+it has fetched, so without that a chunk nobody had opened was missing exactly when the network
+was, and editing text offline could not work at all. The install still carries nothing extra.
 `offline.ts` is the capture queue and the only path a capture takes: `enqueue` writes it to an
 IndexedDB store keyed by `client_id`, then `flush` sends what is queued oldest first and stops at
 the first one that does not go, so a later capture cannot overtake an earlier one. Ordering lives
@@ -146,6 +157,24 @@ same wake points `push.ts` watches, not Background Sync, which Safari does not h
 lists render pending rows even when their server load failed, which is exactly when there are any.
 `useLoad` owns every screen's load error and says "You're offline." rather than the browser's
 "Failed to fetch".
+Since slice 25 `offline.ts` is at **IndexedDB v2** and holds a second store, `pending-edits`,
+for changes to items that already exist. The upgrade is additive and must stay that way: a phone
+coming from v1 may be holding captures typed offline and never sent. An edit's key is
+`edit:<item id>` so a second change to the same item **merges into the first** rather than
+queueing behind it -- two writes carrying the same `expected_updated_at` would have the first
+land and the second refused, the queue conflicting with itself over edits made seconds apart. A
+thought cannot merge (the log is append-only) so it takes a key of its own. Four things queue:
+status, starred, the item's text, and a thought. A tick or a star queues with **no** base
+version, because those go out unchecked when online and a queued one must behave the same.
+Unlike the capture queue, a refusal does not stop the replay: captures stop because order is
+their guarantee, while edits are already coalesced per item, so one conflict says nothing about
+the next. A 409 marks that entry and the item page offers slice 24's strip.
+`pending.ts` is the layer reads look through: a queued change is applied to **item fields**
+wherever that item appears, and never to counts, tiles or a brief, which the server computes.
+Aggregates therefore lag until the queue drains, and the stale line is what explains it.
+Sessions, Ask, approve, redo, filing directly, delete and space create/rename/delete stay online
+and say so; nothing is ever classified locally, because an earlier build let two devices classify
+the same queued capture into two different shapes.
 `push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible. Bump it on every release that changes the app, not only when `sw.js` changes: a browser re-installs a worker only when its bytes differ, so a bundle-only release leaves the old worker active and never offers the reload.
 `App` owns: the nav's readouts (the waiting count, which links to the Inbox, and a clock ticking every 30s), which of the two shells renders (`useWide(641)`: header + capture bar + ask bar above it, `TabBar` + `CaptureSheet` + `ItemSheet` below), the `Capture` panel (a bordered box: an auto-growing textarea up to 6 lines on top, then a rule and a control row -- mic via Web Speech API when `SpeechRecognition` exists, a hint, and the one filled button; Enter saves, Shift+Enter newlines), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
 

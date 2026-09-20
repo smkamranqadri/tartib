@@ -6,7 +6,7 @@ import Card from "../components/Card";
 import { AlertIcon, CheckSquareIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
 import PageHead from "../components/PageHead";
-import { Empty, ErrorLine, Loading } from "../components/Status";
+import { Empty, ErrorLine, Loading, Stale } from "../components/Status";
 import type { Pending } from "../offline";
 import type { Item } from "../types";
 import { useLoad } from "../useLoad";
@@ -34,7 +34,7 @@ export default function Inbox({
   onDecided: () => void;
   pending: Pending[];
 }) {
-  const { data, setData, error, loading } = useLoad(getAttention, [version]);
+  const { data, setData, error, loading, cachedAt } = useLoad(getAttention, [version]);
   const spaces = useSpaces(version);
   // "Not now" sends a card to the end; newest first otherwise.
   const [deferred, setDeferred] = useState<number[]>([]);
@@ -61,6 +61,7 @@ export default function Inbox({
     <div className="screen">
       <div className="title-row">
         <PageHead crumb="Inbox" title="Inbox" subtitle={SUBTITLE[tab]} />
+        <Stale at={cachedAt} />
         <div className="title-actions">
           <nav className="pills tabs" aria-label="Inbox">
             <NavLink to="/inbox" end>

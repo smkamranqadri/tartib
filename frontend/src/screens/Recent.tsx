@@ -4,7 +4,7 @@ import Card from "../components/Card";
 import { ClockIcon } from "../components/Icons";
 import RecentList from "../components/RecentList";
 import type { Pending } from "../offline";
-import { ErrorLine, Loading } from "../components/Status";
+import { ErrorLine, Loading, Stale } from "../components/Status";
 import type { Capture } from "../types";
 import { useLoad } from "../useLoad";
 
@@ -13,7 +13,7 @@ const PAGE = 50;
 /** The Inbox's Recent tab: every capture, paged. What waits in Needs attention is left out by
  *  the server, since it has a tab of its own. */
 export default function RecentTab({ version, pending }: { version: number; pending: Pending[] }) {
-  const { data, error, loading } = useLoad(() => getRecent(PAGE), [version]);
+  const { data, error, loading, cachedAt } = useLoad(() => getRecent(PAGE), [version]);
   const [more, setMore] = useState<{ captures: Capture[]; next: number | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const captures = [...(data?.captures ?? []), ...(more?.captures ?? [])];
@@ -32,6 +32,7 @@ export default function RecentTab({ version, pending }: { version: number; pendi
 
   return (
   <Card icon={<ClockIcon />} label="Captures" aside={data ? `${captures.length}${next !== null ? "+" : ""}` : "…"}>
+      <Stale at={cachedAt} />
       {error && <ErrorLine>{error}</ErrorLine>}
       {loading && !data && <Loading />}
       {(data || pending.length > 0) && <RecentList captures={captures} pending={pending} />}

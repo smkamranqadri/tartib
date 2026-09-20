@@ -6,6 +6,7 @@ import BackLink from "../components/BackLink";
 import Confirm from "../components/Confirm";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
+import { Stale } from "../components/Status";
 import { useLoad } from "../useLoad";
 import Panes from "./layouts/Panes";
 
@@ -30,6 +31,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const policy: SpacePolicy = spaces.data?.policies[space] ?? "auto";
   // Delete is offered only for an empty space, so the page needs to know whether it is one.
   const count = useLoad(() => listItems({ space, limit: 200 }), [space, version]);
+  const cachedAt = count.cachedAt;
   const itemCount = count.data?.items.length ?? null;
 
   useEffect(() => {
@@ -127,6 +129,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
           {manageError && <span className="error">{manageError}</span>}
         </div>
       </div>
+      <Stale at={cachedAt} />
       {adding && (
         <AddItemForm
           space={space}
