@@ -5,13 +5,14 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 22, the phone comes first** -- all six steps done 2026-09-20, waiting on the user to try it. Plan:
-  `kis/intent/slice-22-mobile.md`. Fixed furniture on a phone went from 290px of 844 to 65px
-  (the tab bar alone); no control is under 44px. Not deployed.
+- Task: none in flight. **Slice 22, the phone comes first**, closed 2026-09-20 and accepted on
+  the device: a bottom bar in the nav's shape, capture and ask in a ⊕ sheet, items read in a
+  sheet, one-line headings, 44px targets, the top safe area. Fixed furniture on a phone went
+  from 290px of 844 to 65px. `kis/intent/slice-22-mobile.md`.
 - **Slice 21** closed 2026-09-20: four space layouts were tried and Panes
   is now the space page; Classic, Tree, Board and Timeline are deleted
   (`kis/intent/slice-21-space-layouts.md`).
-- **Slice 20, round three** -- approved 2026-09-19. All eight steps done locally; waiting on the user to try it. Plan:
+- **Slice 20, round three** (closed 2026-09-20) -- approved 2026-09-19. All eight steps done locally; waiting on the user to try it. Plan:
   `kis/intent/slice-20-round-three.md`. Mode: Phase, eight steps.
 - Slice 19, small items round two, closed 2026-09-19, not deployed:
   `kis/intent/slice-19-small-items-2.md`. Migration 0010 (`captures.attempts`) runs on the next
@@ -19,6 +20,10 @@
 - Slice 18, small fixes, closed 2026-09-19, not deployed:
   `kis/intent/slice-18-small-fixes.md`. When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`,
   `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come out of the CapRover app config.
+- **Nothing since `v1.0` is deployed or pushed.** Slices 18 to 22 are local commits on `main`
+  only: migrations 0010-0014 run on the next deploy, and
+  `TARTIB_AI_FALLBACK_COMMAND`/`TARTIB_AI_FALLBACK_MODEL`/`CLAUDE_CODE_OAUTH_TOKEN` come out of
+  the CapRover app config when `v1.1` ships.
 - Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so

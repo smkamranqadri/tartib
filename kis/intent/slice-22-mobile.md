@@ -1,4 +1,8 @@
-# Slice 22: the phone comes first (approved 2026-09-20)
+# Slice 22: the phone comes first (closed 2026-09-20)
+
+**Closed: accepted by the user on the device** after the bottom bar took the nav's shape, the
+page took the top safe area, items opened in a sheet, the Inbox tabs stopped cutting their own
+counts, and a decision card lost its menu.
 
 Measured at 390x844 before starting: the header (104px), the capture box (70px) and the ask bar
 (116px) are always on screen -- 290px of 844. With a session live that is 439px, **52% of the
