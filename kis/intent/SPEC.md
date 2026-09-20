@@ -36,7 +36,7 @@ A background call to `classify(text, context)` returns a list of proposals `{tex
 ## Needs Attention decisions
 
 - Approve: file with the stored proposal, overridden by any fields in the request. A space is required.
-- Reject: discard the proposal (note, space null, dates cleared). The item stays in `attention`. Nothing is deleted.
+- Tell it why (since 2026-09-19, replacing Reject): a sentence of reason re-runs the classifier on the item's text with it, the reason is kept on the item, and the new proposal follows the normal rules -- a confident one files itself. Nothing is deleted.
 - Delete (item page, confirmed inline): removes the item; the capture stays.
 
 ## Editing

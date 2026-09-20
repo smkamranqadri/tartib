@@ -8,7 +8,7 @@ How Tartib is built. Proven by the Phase 1 to 4 scaffold on 2026-09-17.
 backend/tartib/     FastAPI app. config, db, deps, auth, captures, items, spaces, queries, ask, briefs, classify, codex, runner, reminders, sessions, push, vapid, store, clock, reclassify, main
 backend/tartib/migrations/   numbered .sql, applied at startup, tracked in schema_version
 backend/tests/      pytest + TestClient; the AI runs as a real subprocess pointed at fake_codex.py
-frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, push.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Waiting, Recent, Spaces, Space, SpaceDetail, Settings, ItemPage, Login), components/ (one per pattern, listed under Frontend shell)
+frontend/src/       React + Vite + TS. App.tsx, Capture.tsx, api.ts, push.ts, types.ts, format.ts, useLoad.ts, theme.tsx, screens/ (Home, Inbox, Recent, Spaces, Space, Settings, ItemPage, Login; Space renders `screens/layouts/Panes.tsx`, which shares `layouts/shared.tsx`), components/ (one per pattern, listed under Frontend shell)
 frontend/public/    manifest.webmanifest, sw.js (app shell + push; hand-bumped SW_VERSION), icons 180/192/512
 Dockerfile          multi-stage: node builds dist; python:3.12-slim + node runtime + @openai/codex runs uvicorn
 docker-compose.yml  one service, volume tartib-data at /data, ~/.codex mounted at /root/.codex, mem_limit 512m
@@ -146,17 +146,18 @@ lists render pending rows even when their server load failed, which is exactly w
 `useLoad` owns every screen's load error and says "You're offline." rather than the browser's
 "Failed to fetch".
 `push.ts` owns the browser side: permission is only ever requested from the Settings button, a subscription is re-minted when it was made with a superseded VAPID key (and the dead row deleted, since that push fails 403 and nothing prunes it), turning off unsubscribes the browser before the server, and opening Settings re-registers an existing subscription so the card cannot read "on" over a row the server dropped. `sw.js` shows the notification and, on a tap, writes the destination into the shell cache and messages the open tab; the app acts on whichever arrives first, when it next wakes. That routing works on desktop and not on iOS, where the app opens but stays where it was. `sw.js` carries a hand-bumped `SW_VERSION` that Settings displays, because a phone sitting on a stale worker is otherwise invisible. Bump it on every release that changes the app, not only when `sw.js` changes: a browser re-installs a worker only when its bytes differ, so a bundle-only release leaves the old worker active and never offers the reload.
-`App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), the header `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
+`App` owns: theme (context in `theme.tsx`, localStorage `tartib-theme`, `data-theme` on `<html>`), which of the two shells renders (`useWide(641)`: header + capture bar + ask bar above it, `TabBar` + `CaptureSheet` + `ItemSheet` below), the `Capture` bar (auto-growing textarea up to 6 lines, Enter saves, Shift+Enter newline, mic via Web Speech API when `SpeechRecognition` exists, Add), capture polling and the toast, question answers (navigates to Home to show them), the chat bar (`AskBar`) on `/` and `/inbox` only, and keys `c` / `/`.
 
 One component per pattern, each the only owner of its markup:
 - `Row` is the list row primitive (leading, title, meta, right, trailing, actions; long-press reveal). `ItemRow` and `RecentList` compose it; no screen writes row markup.
-- `Menu` is the "…" dropdown, taking an items array, closing on selection, Escape, and outside click.
+- `Menu` is the "…" dropdown, taking an items array, closing on selection, Escape, and outside click. A decision card has none since slice 22: its words open the item and its buttons are Approve, Not now, Tell it why.
 - `Confirm` is the inline "Delete X? Yes / No" line. `NameForm` is the create-and-rename field, owning its own error state.
 - `Card` renders section cards and, with `collapsible`/`open`/`onToggle`, the accordions on the space and item pages.
 - `PageHead` (optional eyebrow, title, subtitle) and `BackLink` (history-aware, per-page fallback) carry the header convention in SPEC.
 - `Status` exports `Loading`, `ErrorLine`, and `Empty`.
-- `ApprovalCard` is one waiting item as a decision; `hotkey` binds Enter. `SearchAsk` is the search-or-ask field.
-One primary button class (`.primary`), one ghost, one icon button. Space page collapse state lives in localStorage `tartib-space-<name>`.
+- `ApprovalCard` is one waiting item as a decision; `hotkey` binds Enter. `SearchAsk` is the search field; a question in it goes to `AskForm`, which the ask bar (wide) and the ⊕ sheet (phone) share.
+- `TabBar`, `CaptureSheet` and `ItemSheet` are the phone shell (slice 22); `layouts/shared.tsx` holds the space list's pieces (`ItemLead`, `ItemLine`, `SessionLines`, `useSpaceItems`).
+One primary button class (`.primary`), one ghost, one icon button. The space page is one list with filter pills, so it keeps no collapse state (the old `tartib-space-<name>` key is dead since slice 21).
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 
 ## Deploy

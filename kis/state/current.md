@@ -5,25 +5,16 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 22, the phone comes first**, closed 2026-09-20 and accepted on
-  the device: a bottom bar in the nav's shape, capture and ask in a ⊕ sheet, items read in a
-  sheet, one-line headings, 44px targets, the top safe area. Fixed furniture on a phone went
-  from 290px of 844 to 65px. `kis/intent/slice-22-mobile.md`.
-- **Slice 21** closed 2026-09-20: four space layouts were tried and Panes
-  is now the space page; Classic, Tree, Board and Timeline are deleted
-  (`kis/intent/slice-21-space-layouts.md`).
-- **Slice 20, round three** (closed 2026-09-20) -- approved 2026-09-19. All eight steps done locally; waiting on the user to try it. Plan:
-  `kis/intent/slice-20-round-three.md`. Mode: Phase, eight steps.
-- Slice 19, small items round two, closed 2026-09-19, not deployed:
-  `kis/intent/slice-19-small-items-2.md`. Migration 0010 (`captures.attempts`) runs on the next
-  deploy.
-- Slice 18, small fixes, closed 2026-09-19, not deployed:
-  `kis/intent/slice-18-small-fixes.md`. When `v1.1` ships, `TARTIB_AI_FALLBACK_COMMAND`,
-  `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come out of the CapRover app config.
-- **Nothing since `v1.0` is deployed or pushed.** Slices 18 to 22 are local commits on `main`
-  only: migrations 0010-0014 run on the next deploy, and
-  `TARTIB_AI_FALLBACK_COMMAND`/`TARTIB_AI_FALLBACK_MODEL`/`CLAUDE_CODE_OAUTH_TOKEN` come out of
-  the CapRover app config when `v1.1` ships.
+- Task: none in flight. Closed and accepted on the device: **slice 22** (the phone comes first --
+  a bottom bar in the nav's shape, capture and ask in a ⊕ sheet, an item read in a sheet,
+  one-line headings, 44px targets, the top safe area; fixed furniture on a phone went from 290px
+  of 844 to 65px), **slice 21** (four space layouts tried, Panes kept as the space page; Classic,
+  Tree, Board and Timeline deleted), **slice 20** (eight items, round three), **slice 19** and
+  **slice 18**. Plans: `kis/intent/slice-1{8,9}-*.md`, `kis/intent/slice-2{0,1,2}-*.md`.
+- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 22 are local commits on `main`
+  (60 ahead of `origin/main`). On the next deploy: migrations 0010-0014 run, and
+  `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
+  out of the CapRover app config.
 - Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
@@ -41,10 +32,6 @@
 
 ## Open
 
-- **Codex usage limit hit on 2026-09-19**, "try again at Sep 20th, 2026 1:51 AM" (seen during
-  the slice 20 eval). If the deployed server uses the same account, captures there park in Needs
-  Attention with `proposal_error` until then; v1.0 has no automatic retry (slice 19, undeployed),
-  so they wait for a person or `reclassify --attention`.
 - **The deployed `v1.0` still carries the Claude fallback**, which hangs for the full 120s
   timeout on that host, so a Codex failure there costs 120s per capture and fails anyway. Removed
   from the code in slice 18 step 1; gone from the server at `v1.1`. Until then, unsetting
@@ -54,9 +41,10 @@
 
 ## Commands
 
-- Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (22 real-Codex fixtures,
-  needs a Codex login); `cd frontend && npm run typecheck && npm run build`. As of 2026-09-19
-  pytest is **159 passed** (slice 18 removed the 5 fallback tests and added 1); any red is real.
+- Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (two tests: 22 classify
+  fixtures and 3 tell-it-why cases, ~30s, needs a Codex login); `cd frontend && npm run typecheck && npm run build`. As of 2026-09-19
+  pytest is **193 passed, 2 deselected** as of 2026-09-20; the two deselected are the evals. Any
+  red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
@@ -78,8 +66,10 @@ Maintenance).
 
 ## Known gaps
 
-- Slice 18's sticky glass nav and safe-area insets were checked on the phone only in the browser
-  over the LAN. The installed app's header against the real notch is unchecked until `v1.1`.
+- The phone layout (slice 22) was proved in headless Chrome with the insets emulated, not on a
+  real device: a phone has no header at all now, and the page itself reserves the top inset.
+  Unchecked on glass until it is on the phone -- which needs `v1.1`, or the local container over
+  the LAN.
 - **The app shows no data offline.** The shell opens and a capture still queues, but Today,
   Needs Attention and Recent are all empty, because the service worker never caches an `/api/`
   response. Deliberate -- slice 15 scoped offline *read* out -- and proved in Chrome on
