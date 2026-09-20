@@ -24,7 +24,7 @@ From the app, a capture is written to a local queue before it is sent, so the bo
 
 ## Classify
 
-A background call to `classify(text, context)` returns a list of proposals `{text, shape, space, title, due, remind_at, confidence}`, one per independent item in the capture. Context: current datetime in `TARTIB_TZ` and the configured spaces. A task with no date in its text is given a proposed near-term one -- a day or two for follow-ups and errands, within a week otherwise -- so it reaches Today; open-ended and someday tasks, habits, and notes stay undated (since 2026-09-19).
+A background call to `classify(text, context)` returns a list of proposals `{text, shape, space, title, due, remind_at, confidence}`, one per independent item in the capture. Context: current datetime in `TARTIB_TZ`, the configured spaces, and -- since slice 26 -- what already lives in each of them: per-space counts and the most recent few items, a task by its title and a note by the first 60 characters of its text. It is shown so that a capture can be filed where comparable things already are; it never lets the classifier invent a space. A task with no date in its text is given a proposed near-term one -- a day or two for follow-ups and errands, within a week otherwise -- so it reaches Today; open-ended and someday tasks, habits, and notes stay undated (since 2026-09-19).
 
 - shape `question`: no item. The runner answers it from existing items and stores the answer on the capture.
 - space outside the configured list: null, confidence capped at 0.6.
@@ -32,6 +32,14 @@ A background call to `classify(text, context)` returns a list of proposals `{tex
 - otherwise: `stage=filed`.
 - classifier off, CLI missing, failing, timing out, or invalid output: one note with space null in `attention`, `proposal_error` set, capture `status=error`.
 - on startup, pending captures are re-queued, so a restart mid-classify loses nothing.
+
+## Ask
+
+A question is answered only from the person's own items, never from what the model knows. Retrieval is FTS5 over item text and the thoughts attached to it, best first, capped at 20.
+
+- When the question's own words match little or nothing **and the database holds more than they matched**, Codex proposes 3 to 5 search terms and retrieval runs again on those (since 2026-09-21). One extra call, spent only where the cheap path failed: a question whose own words already find enough costs exactly one call, as it always did, and a database with nothing left to find spends nothing. A failed expansion is not a failed question -- the answer comes back from whatever the first pass found.
+- The answer says whether anything matched, and whether proposed terms are what found it. "Found it by other words" is a fact about the answer, not about the spend: expansion that runs and finds nothing reports nothing.
+- **One turn of context.** The client sends the previous question and the items that answered it, so "what about the second one?" has a referent -- the server keeps no conversation of its own. One turn, not a history, and dismissing an answer ends it. Ask becoming continuous is a later, larger thing.
 
 ## Needs Attention decisions
 

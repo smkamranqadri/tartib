@@ -5,29 +5,32 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight.
-- **Slices 23 (the UI language), 24 (presentation) and 25 (offline) are committed on `main`,
-  not deployed, and have never been seen on a device.** What each changed, in a line:
-  `kis/intent/history.md`; the decisions and the proof: `kis/intent/slice-2{3,4,5}-*.md`.
+- Task: none in flight. **Slice 26 (retrieval) is done and committed on `main`**, not deployed.
+  The plan, the three things it did not foresee, and the proof: `kis/intent/slice-26-retrieval.md`.
+- **Slices 23 (the UI language), 24 (presentation), 25 (offline) and 26 (retrieval) are
+  committed on `main`, not deployed, and have never been seen on a device.** What each changed,
+  in a line: `kis/intent/history.md`; the decisions and the proof: `kis/intent/slice-2{3,4,5,6}-*.md`.
   What being unseen leaves unsettled is under Known gaps.
 - **Slices 18 to 22 are closed and accepted on a device.** Plans: `kis/intent/slice-1{8,9}-*.md`,
   `kis/intent/slice-2{0,1,2}-*.md`; what each one changed, in a line: `kis/intent/history.md`.
-- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 25 are local commits on `main`
+- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 26 are local commits on `main`
   (unpushed). On the next deploy: migrations 0010-0014 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
-  out of the CapRover app config, and **`SW_VERSION` in `sw.js` is bumped by hand** -- slices 23
-  and 24 changed the bundle without changing `sw.js`; slice 25 changed `sw.js` itself and bumped
-  it to `2026-09-21.1`, so that debt is paid unless another bundle-only change lands first. The
-  rule and its reason are in `../knowledge/technical.md`, Frontend shell.
+  out of the CapRover app config, and **`SW_VERSION` in `sw.js` is bumped by hand**. It is at
+  `2026-09-21.2`: slice 26 changed the bundle without touching `sw.js`, which is exactly the
+  case the rule exists for, so it was bumped with the slice rather than left for the deploy.
+  Nothing outstanding unless another bundle-only change lands before `v1.1`. The rule and its
+  reason are in `../knowledge/technical.md`, Frontend shell.
 - Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
      everything on that server exists exactly once. This is the one open item whose cost is
      unbounded.
-  2. **Look at slices 23, 24 and 25 on a device** -- the only thing that can settle what Known gaps
-     lists against them. Needs `v1.1`, or the local container over the LAN.
-  3. Then slice 14 (AI contract) and the rest of `kis/intent/backlog.md`. Both halves of
-     backlog 13 are now accounted for: themes closed, presentation is slice 24.
+  2. **`v1.1`, and look at slices 23 to 26 on a device.** Now the next thing: slice 26 was the
+     work `v1.1` was waiting for. This is the only thing that can settle what Known gaps lists
+     against 23, 24 and 25.
+  3. Then slice 14 (AI contract), which is now prompt work only -- slice 26 took its retrieval
+     half out and closed two backlog entries doing it. Then the rest of `kis/intent/backlog.md`.
 
 ## The deployment
 
@@ -49,7 +52,10 @@
 
 - Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (two tests: 22 classify
   fixtures and 3 tell-it-why cases, ~30s, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
-  As of 2026-09-21 pytest is **193 passed, 2 deselected** (the two deselected are the evals).
+  As of 2026-09-21 pytest is **206 passed, 3 deselected** (the three deselected are the evals;
+  slice 26 added the third). `cd frontend && npm run ui` is the committed UI suite -- 8 checks
+  re-running slices 22 to 25 against the local container, needs `TARTIB_PASSWORD` in the
+  environment and real Chrome.
   Any red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
@@ -59,6 +65,11 @@
 
 Each slice keeps its proof in its plan file and its commits; `../intent/history.md` says what
 each one changed. Slices 24 and 25 are the fullest, if an example is wanted.
+
+Slice 26's headline proof, because it is the one number that could have gone the other way:
+showing the classifier what already exists took six deliberately ambiguous captures from
+**0/6 to 6/6** on space, with the existing 22 fixtures unchanged. Measured on this build against
+the real Codex CLI, not carried over from an earlier one.
 
 Proved on the deployed app rather than only in tests: a capture classifies and files itself, the
 session cookie carries `Secure` behind the proxy, a session ending pushes and the phone buzzes

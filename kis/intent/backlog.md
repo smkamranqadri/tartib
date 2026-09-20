@@ -3,9 +3,9 @@
 Approved work waiting for a plan, then defects, then candidates that are not required and may
 never happen. How Tartib is built lives in `../knowledge/technical.md`.
 
-Slices 18 to 25 (2026-09-19 to -21) took most of what used to be here -- the defects, the small
+Slices 18 to 26 (2026-09-19 to -21) took most of what used to be here -- the defects, the small
 items, the session card, the space page, the phone layout, the typography, markdown with its
-editor, and offline -- and each left its proof in its plan file. Eight entries that slice 20
+editor, offline, and retrieval -- and each left its proof in its plan file. Eight entries that slice 20
 shipped on 2026-09-19 sat here until 2026-09-21 before anyone noticed. What is below is what is
 actually left, and nothing in it is ordered yet.
 
@@ -38,26 +38,24 @@ file. Dropped the same day as already true: "a notification key that cannot fire
 all three pushers hold a once-only guard (`reminded_at`, `digest_date`, `notified_at`).
 
 Approved on 2026-09-19, not yet planned and none of it sized. "Link, don't duplicate" is scope for 14
-rather than work beside it:
+rather than work beside it.
 
-  Also, moved in 2026-09-19 from the approved list -- **one set of shared rules across both prompts.** Tartib has two prompts, classify and ask, and
-  each carries its own copy of the item header format and the datetime handling. Two copies of
-  one rule drift: on an earlier build the two prompts ended up disagreeing about the single rule
-  they shared, one saying never invent a domain and the other saying null beats a wrong one,
-  without anyone deciding it. Shared rules live once; each prompt adds only what genuinely
-  differs. Do this before or with 14 -- an editable override is far more dangerous laid over two
-  copies that have already diverged.
+"One set of shared rules across both prompts" **closed with slice 26** (2026-09-21). It was
+never as bad as this file claimed -- the two prompts shared three lines, and `format_item` only
+ever existed once, because classify saw no items to format. Slice 26 is what would have created
+the duplication, so it took `store.item_header` as the one owner of what an item looks like to
+the AI, and both prompts use it.
 
 Deferred from a slice rather than never planned:
 
 - **Link, don't duplicate.** The classifier prompt should attach a capture to an item that
-  already exists instead of filing a near-duplicate beside it. Needs retrieval at classify time,
-  which the prompt does not have today: the classifier sees the spaces and the datetime, not the
-  items. Belongs with 14, and changes what a proposal is -- it would have to name an item to
-  update, which the schema has no field for.
-  This is proven, not speculative. On an earlier build, giving the classifier real context from
-  the database -- the structure of the spaces and the items that already exist, instead of a flat
-  list of names -- took discriminating cases from 1/6 to 5/6. Duplicate detection that *parked* a
+  already exists instead of filing a near-duplicate beside it. **Its retrieval half shipped in
+  slice 26**: the classifier is now shown what already lives in each space, built server-side by
+  `store.classify_context`. What is left is the part that changes what a proposal is -- naming an
+  item to update, which the schema still has no field for -- so this stays with 14.
+  This is proven, not speculative, and now proven here: on an earlier build, real context from
+  the database took discriminating cases from 1/6 to 5/6; **slice 26 measured 0/6 to 6/6 on this
+  build** (`slice-26-retrieval.md`). Duplicate detection that *parked* a
   suspected duplicate in review naming the item it matched, rather than filing it or merging it
   silently, caught 3/3 real duplicates with 0/5 false positives and no invented references. Park
   and name the match; do not auto-merge. Build the context server-side, so there is one source of
@@ -102,4 +100,8 @@ Unscheduled candidates:
 
 - Image was 1.62GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras, plus cryptography and aiohttp via pywebpush since slice 11). Not a stated constraint (memory is, and runtime is 42MiB). Slice 18 dropped the Claude CLI (1.07GB built locally on arm64, 2026-09-19; not measured on the x86_64 deploy build). A slimmer route: download the Codex release binary instead of npm. Worth more after slice 17: every deploy cross-builds this image under QEMU, where size is time.
 - Codex takes about 10s per item on the host. Fine for personal volume; a burst of captures queues serially.
-- Ask retrieval is keyword-only FTS5. The cheap next step is letting Codex propose 3 to 5 search terms first, still no embeddings. Slice 14 needs this, not just wants it: a follow-up like "what about the second one?" has no content words, so the OR-query returns nothing.
+- ~~Ask retrieval is keyword-only FTS5.~~ **Done in slice 26** (2026-09-21): when the question's
+  own words find little or nothing, Codex proposes 3 to 5 terms and retrieval runs again. Still no
+  embeddings. Its worked example turned out to need the other half of that slice -- "what about the
+  second one?" refers to the previous answer, which no amount of term expansion can reach, so Ask
+  now carries one turn. Continuous Ask remains 14's.
