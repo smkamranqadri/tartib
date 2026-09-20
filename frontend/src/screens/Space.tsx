@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { deleteSpace, getSpaces, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
+import { deleteSpace, getSpaces, listItems, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
 import Confirm from "../components/Confirm";
@@ -11,6 +11,7 @@ import SearchAsk from "../components/SearchAsk";
 import { useLoad } from "../useLoad";
 import { useWide } from "../useWide";
 import ItemPage from "./ItemPage";
+import { LAYOUTS } from "./layouts/shared";
 import SpaceDetail, { type ShapeFilter } from "./SpaceDetail";
 
 const POLICY: Record<SpacePolicy, { menu: string; note: string }> = {
@@ -36,6 +37,14 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const wide = useWide();
   const [params, setParams] = useSearchParams();
   const openId = Number(params.get("item")) || null;
+  // Opening a space on a wide screen lands on its newest item, so the pane is never an empty
+  // panel waiting to be clicked. Replaces the history entry: Back still leaves the space.
+  const newest = useLoad(() => (wide ? listItems({ space, limit: 1 }) : Promise.resolve(null)), [wide, space, version]);
+  const firstId = newest.data?.items[0]?.id;
+  useEffect(() => {
+    if (wide && !openId && firstId) setParams({ item: String(firstId) }, { replace: true });
+  }, [wide, openId, firstId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const rowTo = wide
     ? (item: { id: number }) => `/spaces/${encodeURIComponent(space)}?item=${item.id}${debounced ? `&q=${encodeURIComponent(debounced)}` : ""}`
     : undefined;
@@ -118,6 +127,10 @@ export default function Space({ version, onChanged }: { version: number; onChang
                   label: `${policy === p ? "✓ " : ""}${POLICY[p].menu}`,
                   title: p === "auto" ? "Files a proposal when the classifier is confident enough" : undefined,
                   onSelect: () => void choosePolicy(p),
+                })),
+                ...LAYOUTS.filter((l) => l.slug).map((l) => ({
+                  label: `Try: ${l.label}`,
+                  to: `/spaces/${encodeURIComponent(space)}/${l.slug}`,
                 })),
                 { label: "Rename", onSelect: () => setRenaming(true) },
                 {
