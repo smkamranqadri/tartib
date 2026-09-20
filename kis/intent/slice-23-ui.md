@@ -238,7 +238,7 @@ theme's accent sits in its own background's hue family, which is the rule the sc
 finally produced. Bronze stays and stays the default. Seven in all, chosen from a list of rows in
 Settings: swatch, name in mono caps, and a line saying what it looks like.
 
-`frontend/tools/themes.py` generates every value and enforces the floors; `kis/intent/themes.md`
+`frontend/tools/themes.py` generates every value and enforces the floors; `kis/knowledge/themes.md`
 is the record. Nothing about the theme system is hand-written twice: the type, the picker rows
 and the bootstrap map all come from that generator's output.
 

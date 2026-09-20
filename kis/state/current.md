@@ -6,21 +6,8 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
 - Task: none in flight. **Slice 23 (the UI language) is committed on `main` and not deployed.**
-  Plan and full proof: `kis/intent/slice-23-ui.md`; the palette record is `kis/intent/themes.md`.
-  Four commits: `04b9be6` the language, `ab9433f` seven themes, `bc42170` a tidy-up, `c09c18f`
-  the themes removed again and the background added.
-  What it changed: the app is set in bundled JetBrains Mono; one bronze theme with no theme
-  system; one control shape and one height (`--control`, 32px pointer / 44px phone); chips and
-  status tones on a single rule; a `TARTIB // TODAY` breadcrumb on every page; stat tiles on
-  Home; space cards with bars; the space as a chip on every row; capture as a panel; readouts in
-  the nav's right side; both ⋯ menus replaced by visible controls, with a space's filing policy
-  as an AUTO / ASK / FILE segment; and a page background of two accent glows and a dot grid.
-  It also fixed three defects: the desktop header had been sticky since slice 18 so content hid
-  underneath it, the session card's button was white on red at 3.69:1, and `--danger` was 3.93:1
-  while `--accent-2` painted text having only been checked as a decorative star.
-  Six palette passes were built and thrown away first; what survived is
-  `frontend/tools/themes.py`, which enforces the floors, and one rule in Knowledge: prove a
-  colour by what the browser paints, not by the token.
+  What it is and why, step by step with its proof: `kis/intent/slice-23-ui.md`; what it changed
+  in one line each: `kis/intent/history.md`; the palette and the floors: `kis/knowledge/themes.md`.
   **Not yet seen on a device.** Unproved there: whether mono at 14px suits a long note on a
   phone, and whether `background-attachment: fixed` survives iOS.
 - Closed and accepted on the device: **slice 22** (the phone comes first --

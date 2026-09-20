@@ -33,25 +33,18 @@ Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
   not. Colour-only highlighting and a focus-swap are the zero-dependency alternatives, and
   neither makes a heading look like a heading while you type it.
 
-  **What the scrapped theme attempt established.** Recorded here rather than lost, since all of
-  it survives the revert:
+  **What the two theme attempts established**, beyond what `../knowledge/themes.md` now holds:
   - **The accent must not sit in the background's own hue family.** This decides whether a theme
-    has character at all. Measured across the palettes tried: a jade accent on a jade ground is
-    11° apart and reads as one wash; green on indigo is 102° apart and reads as a theme. Dark
-    teal with amber -- the pairing the owner already liked -- is the shape to aim for.
-  - **Two contrast floors, not one.** 4.5:1 for text you read (body, muted, overdue dates, the
-    attention chip, and any ink on a fill); 3:1 for what is not text (the star glyph, a
-    countdown ring, a card border). Holding a star to 4.5 turns a gold into brown mud.
-  - **Text must be measured against the surface it truly sits on**, not against `--bg`. The app
-    has three: the page, a card, and the card header strip.
-  - **Palettes drawn for terminals do not map cleanly.** A terminal theme defines one background;
-    this app needs four (page, card, card header, input), and every palette's own comment colour
-    fails AA on its own background because a comment is *meant* to recede. Two of the ones tried
-    had no red at all, so an overdue date had to be invented.
-  - **A translucent bar over a non-flat background never matches it.** If the page background
-    ever stops being one flat colour, the sticky header has to paint the same layers with the
-    same attachment, and then it needs its own border, because matching the page exactly leaves
-    nothing to say where the bar ends.
+    has character at all: a jade accent on a jade ground is 11 degrees apart and reads as one
+    wash, green on indigo is 102 and reads as a theme. Dark teal with amber -- the pairing the
+    owner already liked -- is the shape to aim for.
+  - **Palettes drawn for terminals do not map cleanly.** A terminal theme defines one background
+    and this app needs four, and every such palette's own comment colour fails AA on its own
+    background, because a comment is *meant* to recede.
+
+  The contrast floors, the surfaces they are measured against and the generator that enforces
+  them are Knowledge now: `../knowledge/themes.md`.
+
 - **14 AI contract** — the classifier prompt editable and stored as an override with the
   default shipped in code; Ask becomes continuous.
   Also: the classifier may ask *you* a question instead of only handing over a proposal it is
