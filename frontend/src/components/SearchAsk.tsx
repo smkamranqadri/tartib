@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ask } from "../api";
-import type { Answer } from "../types";
-import AnswerView from "./AnswerView";
+import { useEffect, useRef, type KeyboardEvent } from "react";
+import { askInBar } from "./AskBar";
 
-/** One field that searches as you type and asks on demand (button, trailing "?", Cmd/Ctrl+Enter). */
+/** One field that searches as you type and hands a question to the ask bar on demand (button,
+ *  trailing "?", Cmd/Ctrl+Enter). The answer belongs in one place, at the foot of the app, not
+ *  wherever the question happened to be typed. */
 export default function SearchAsk({
   value,
   onChange,
@@ -17,9 +17,6 @@ export default function SearchAsk({
   placeholder: string;
   large?: boolean;
 }) {
-  const [answer, setAnswer] = useState<Answer | null>(null);
-  const [asking, setAsking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -28,32 +25,17 @@ export default function SearchAsk({
     return () => window.removeEventListener("tartib:focus-search", focus);
   }, []);
 
-  async function runAsk() {
+  function handOff() {
     const question = value.trim();
-    if (!question || asking) return;
-    setAsking(true);
-    setError(null);
-    try {
-      setAnswer(await ask(question, space));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "ask failed");
-    } finally {
-      setAsking(false);
-    }
+    if (!question) return;
+    askInBar(question, space);
+    onChange(""); // the question is the bar's now; the list comes back
   }
 
   function onKey(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey || value.trim().endsWith("?"))) {
       e.preventDefault();
-      void runAsk();
-    }
-  }
-
-  function change(q: string) {
-    onChange(q);
-    if (answer || error) {
-      setAnswer(null);
-      setError(null);
+      handOff();
     }
   }
 
@@ -64,19 +46,17 @@ export default function SearchAsk({
           ref={ref}
           type="search"
           value={value}
-          onChange={(e) => change(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKey}
           placeholder={placeholder}
           aria-label="Search"
         />
         {value.trim() && (
-          <button type="button" className="primary" onClick={() => void runAsk()} disabled={asking} aria-label="Ask">
-            {asking ? "Thinking…" : "Ask"}
+          <button type="button" className="primary" onClick={handOff} aria-label="Ask">
+            Ask
           </button>
         )}
       </div>
-      {error && <p className="error">{error}</p>}
-      {answer && <AnswerView result={answer} onClose={() => setAnswer(null)} />}
     </>
   );
 }
