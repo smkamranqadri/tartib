@@ -46,6 +46,13 @@ the ~190px comes from.
 
 ## Step 3 — one line of heading
 
+**Done 2026-09-20.** On phones the eyebrow and the subtitle are hidden and the title drops to
+20px: the tab bar already says which section this is. A row whose actions are buttons keeps them
+beside the title (`:not(:has(.tabs))`); the Inbox's tab strip still gets its own full-width row,
+because three tabs do not fit beside a title at 390px. Proof: the heading block is 30px on Home,
+Inbox, a space and Settings (was 100-130); a space's title row is 41px holding "+ Add" and "…";
+no horizontal overflow.
+
 On a phone the eyebrow and subtitle go; a screen shows its title and its actions on one row, with
 Back where there is somewhere to go back to. The space page keeps its name, "+ Add" and "…" on
 that row. The desktop keeps its headings.

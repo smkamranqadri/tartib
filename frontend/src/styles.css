@@ -324,7 +324,14 @@ button:disabled { opacity: .5; cursor: default; }
   .capture-bar .primary { padding: 10px 14px; }
   .editor-row { flex-direction: column; }
   .kv { grid-template-columns: 70px 1fr; }
-  .page-head h1 { font-size: 22px; }
+  /* A phone reads one line of heading: the nav below already says which section this is, and
+     the subtitle repeated it. Back stays where there is somewhere to go back to. */
+  .page-head h1 { font-size: 20px; }
+  .page-head .eyebrow, .page-head .subtitle { display: none; }
+  /* A row whose actions are buttons keeps them beside the title; a row whose actions are a tab
+     strip (the Inbox) lets the strip have the width it needs, below. */
+  .title-row:not(:has(.tabs)) { flex-wrap: nowrap; align-items: center; gap: 10px; }
+  .title-row:not(:has(.tabs)) .title-actions { width: auto; margin: 0; flex: none; }
   .pref { flex-direction: column; align-items: flex-start; }
   .pref-ctl { text-align: left; }
   .ask input { flex-basis: 100%; }
