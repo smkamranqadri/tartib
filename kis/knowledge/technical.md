@@ -200,4 +200,6 @@ cd frontend && npm run typecheck && npm run build
 docker compose build && docker compose up -d && curl localhost:8000/api/health && docker stats --no-stream
 ```
 
+The phone layout (slice 22) is one breakpoint at 641px in `styles.css` plus `useWide(641)` in `App.tsx`: below it the header, capture bar and ask bar are not rendered and `TabBar` + `CaptureSheet` are; `AskForm` is shared by the bar and the sheet so only one is ever mounted. `--tabbar-h` stacks the ask bar, session card, toast and page padding above the bar.
+
 UI checks run headless Chrome through playwright-core from the scratchpad (the Claude in Chrome extension was not connected on 2026-09-17).

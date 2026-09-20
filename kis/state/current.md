@@ -5,9 +5,9 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 22, the phone comes first** -- approved 2026-09-20. Steps 1 to 5 done; step 6 next. Plan:
-  `kis/intent/slice-22-mobile.md`. Mode: Phase, six steps. Measured before starting: fixed
-  furniture is 290px of 844 on a phone, 439 with a session live, 527 on Home.
+- Task: **slice 22, the phone comes first** -- all six steps done 2026-09-20, waiting on the user to try it. Plan:
+  `kis/intent/slice-22-mobile.md`. Fixed furniture on a phone went from 290px of 844 to 65px
+  (the tab bar alone); no control is under 44px. Not deployed.
 - **Slice 21** closed 2026-09-20: four space layouts were tried and Panes
   is now the space page; Classic, Tree, Board and Timeline are deleted
   (`kis/intent/slice-21-space-layouts.md`).

@@ -556,3 +556,10 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   .session-bar.floating .session-ring { width: 34px; height: 34px; }
   .session-bar.floating .session-time { font-size: 17px; }
 }
+
+/* What the desktop takes from the phone's pass: room to click, without changing the layout. */
+@media (min-width: 641px) {
+  .icon-btn, .star, .section-toggle { min-height: 36px; min-width: 36px; display: inline-flex; align-items: center; justify-content: center; }
+  .row { min-height: 46px; }
+  .line { min-height: 40px; }
+}

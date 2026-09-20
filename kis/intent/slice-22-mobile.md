@@ -83,15 +83,24 @@ outcome buttons wrap to a second only when it is asking. Home's card is unchange
 
 ## Step 6 — what the desktop takes
 
+**Done 2026-09-20.** Above 641px: icon buttons, the star and the accordion toggles reach 36px,
+a card row 46px, a line 40px. Nothing else moves -- the header, the capture bar, the ask bar,
+the eyebrow and the subtitle are all still there, confirmed by measurement (header 67, capture
+46, ask 64, no tab bar, eyebrow and subtitle present).
+
 Whatever improved both: the 44px targets, and headings trimmed where they only repeated the nav.
 The desktop keeps its top nav, its capture bar and its ask bar.
 
-## Proof
+## Proof, 2026-09-20
 
-Measured again at 390x844: fixed furniture under 130px with nothing open, content at least
-doubled; every control 44px or more; capture, ask, the offline queue, sessions and navigation all
-still work from the new bar; screenshots in light and dark; the desktop unchanged where it was
-meant to be.
+Measured at 390x844 after all six steps. Fixed furniture: **65px**, the tab bar alone, against
+290px before (header 104 + capture 70 + ask 116) -- and the target was "under 130". Content
+grew: Home 1198 -> 1366, Inbox 786 -> 1200. With a session live the total chrome is 199 on the
+Inbox against 439. No control is under 44px on Home, Inbox, Recent, a space, an item or
+Settings, where the audit had found 16 to 30 a screen. Capture, ask, the hand-off from a space's
+search box, navigation and sessions all work from the new bar; offline, a capture made in the
+sheet toasted "Saved offline", showed as "waiting to send" on Home, and went up when the network
+came back. Screenshots in light and dark. The desktop is unchanged but for the larger targets.
 
 ## Out of scope
 
