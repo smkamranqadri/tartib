@@ -7,7 +7,6 @@ import Confirm from "../components/Confirm";
 import Highlight from "../components/Highlight";
 import Thoughts from "../components/Thoughts";
 import ItemEditor from "../components/ItemEditor";
-import Menu from "../components/Menu";
 import { ErrorLine, Loading } from "../components/Status";
 import { formatDue, formatRelative, formatRemind } from "../format";
 import { useSession } from "../session";
@@ -156,15 +155,21 @@ export default function ItemPage({
                 </>
               )}
             </span>
-            <Menu
-              items={[
-                ...(isTask && item.stage === "filed" && item.status === "open"
-                  ? [{ label: "Start a session", onSelect: () => void session.start(item.id) }]
-                  : []),
-                { label: "Edit text", onSelect: () => setEditingText(true) },
-                { label: "Delete", danger: true, onSelect: () => setConfirmDelete(true) },
-              ]}
-            />
+            {/* Three actions, three buttons. They were behind a "…" that hid what the page could
+                do; there was never enough in there to be worth a menu. */}
+            <span className="item-actions">
+              {isTask && item.stage === "filed" && item.status === "open" && (
+                <button type="button" className="ghost" onClick={() => void session.start(item.id)}>
+                  Start session
+                </button>
+              )}
+              <button type="button" className="ghost" onClick={() => setEditingText(true)}>
+                Edit
+              </button>
+              <button type="button" className="ghost danger" onClick={() => setConfirmDelete(true)}>
+                Delete
+              </button>
+            </span>
           </span>
         }
       >

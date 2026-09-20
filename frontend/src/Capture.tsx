@@ -125,6 +125,9 @@ export default function Capture({
 
   return (
     <form className="capture-bar" onSubmit={submit}>
+      {/* A panel, not a row: the field owns the top and the controls sit on a rule beneath it --
+          the mic and what happens to the first line on the left, the one filled button on the
+          right. A single row made the field fight the buttons for width. */}
       <textarea
         ref={ref}
         value={text}
@@ -134,14 +137,17 @@ export default function Capture({
         aria-label="Capture"
         rows={1}
       />
-      {supported && (
-        <button type="button" className={`icon-btn mic ${listening ? "on" : ""}`} onClick={toggleMic} aria-label={listening ? "Stop listening" : "Dictate"} title="Dictate">
-          <MicIcon />
+      <div className="capture-controls">
+        {supported && (
+          <button type="button" className={`icon-btn mic ${listening ? "on" : ""}`} onClick={toggleMic} aria-label={listening ? "Stop listening" : "Dictate"} title="Dictate">
+            <MicIcon />
+          </button>
+        )}
+        <span className="capture-hint muted">{listening ? "Listening…" : "The first line becomes the title"}</span>
+        <button type="submit" className="primary" disabled={busy || !text.trim()}>
+          Add
         </button>
-      )}
-      <button type="submit" className="primary" disabled={busy || !text.trim()}>
-        Add
-      </button>
+      </div>
       {error && <span className="error">{error}</span>}
     </form>
   );

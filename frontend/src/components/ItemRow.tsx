@@ -48,9 +48,18 @@ export default function ItemRow({
   const firstLine = item.raw_text.split("\n")[0];
   const headline = isTask ? item.title || firstLine : firstLine;
 
-  const meta: string[] = [waiting ? waitingReason(item, true) : (item.space ?? "no space"), formatRelative(item.updated_at ?? item.created_at)];
+  /* The space is a chip, not another word in a grey run-on line: it is the one piece of metadata
+     you scan a list by. Everything else stays plain text after it. */
+  const meta: string[] = [formatRelative(item.updated_at ?? item.created_at)];
   if (sessions) meta.push(sessions === 1 ? "1 session" : `${sessions} sessions`);
   if (item.thought_count) meta.push(item.thought_count === 1 ? "1 thought" : `${item.thought_count} thoughts`);
+  const lead = waiting ? (
+    <span className="chip warn">{waitingReason(item, true)}</span>
+  ) : item.space ? (
+    <span className="chip space">{item.space}</span>
+  ) : (
+    <span className="chip neutral">no space</span>
+  );
 
   return (
     <Row
@@ -90,12 +99,17 @@ export default function ItemRow({
           </Link>
         )
       }
-      meta={meta.map((m, i) => (
-        <span key={i}>
-          {i > 0 && <span className="sep"> · </span>}
-          {m}
-        </span>
-      ))}
+      meta={
+        <>
+          {lead}
+          {meta.map((m, i) => (
+            <span key={i}>
+              <span className="sep"> · </span>
+              {m}
+            </span>
+          ))}
+        </>
+      }
       right={
         isTask && item.due ? (
           <span className={`row-due ${overdue ? "overdue" : "muted"}`}>{formatDueLong(item.due)}</span>

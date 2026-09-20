@@ -15,15 +15,45 @@ Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
   Six themes in Settings -- slate, bronze and nous, each in light and dark, with slate dark the
   default, the current teal pair dropped, and no OS-following. The palettes, the token mapping and
   the measured contrast are recorded as data in `themes.md`.
+  **The themes half was attempted on 2026-09-20 and scrapped.** It was built five times -- the
+  six above, then eight named palettes (Tokyo Night, Catppuccin, Gruvbox, Nord, Rose Pine,
+  Dracula), then thirteen, then ten -- and the owner did not like any of them. Everything was
+  reverted; nothing shipped. Read the lessons below before starting it again, because the next
+  attempt will otherwise rediscover them one round at a time.
   The row keeps its pencil and the title stops being a link instead. This reverses the
   2026-09-17 decision to delete the pencil: it was redundant because the title went to the same
   place, but a title that is a link cannot be selected and copied, and copying the title is worth
   more than losing the duplicate control. The pencil is the `aria-label="Edit"` link in
   `frontend/src/components/ItemRow.tsx`, line 93 on 2026-09-19; line numbers drift.
-  A CodeMirror editor (`@uiw/react-codemirror`, with the theme and the lazy grammar in a shared
-  module) is a proven route for the live editor and should be costed at plan time against a
-  lighter overlay. It is a new frontend dependency in an app with a 512MB budget, so this entry
-  records it as the known option and does not choose it.
+  Decided 2026-09-20 while planning slice 23, so this does not get re-argued: the editor **is**
+  CodeMirror, lazy-loaded (`@uiw/react-codemirror` with `@codemirror/lang-markdown`); `marked`
+  parses the read-only places; and markdown reaches item text, the space brief, Ask answers and
+  the thought log. The lighter overlay the entry used to ask for was costed and fails on a hard
+  limit rather than a preference: a transparent textarea over a styled mirror can change a
+  token's colour but not its size or weight, because the caret comes from the textarea's own
+  uniform metrics -- so a heading drawn larger in the mirror puts the caret where the text is
+  not. Colour-only highlighting and a focus-swap are the zero-dependency alternatives, and
+  neither makes a heading look like a heading while you type it.
+
+  **What the scrapped theme attempt established.** Recorded here rather than lost, since all of
+  it survives the revert:
+  - **The accent must not sit in the background's own hue family.** This decides whether a theme
+    has character at all. Measured across the palettes tried: a jade accent on a jade ground is
+    11° apart and reads as one wash; green on indigo is 102° apart and reads as a theme. Dark
+    teal with amber -- the pairing the owner already liked -- is the shape to aim for.
+  - **Two contrast floors, not one.** 4.5:1 for text you read (body, muted, overdue dates, the
+    attention chip, and any ink on a fill); 3:1 for what is not text (the star glyph, a
+    countdown ring, a card border). Holding a star to 4.5 turns a gold into brown mud.
+  - **Text must be measured against the surface it truly sits on**, not against `--bg`. The app
+    has three: the page, a card, and the card header strip.
+  - **Palettes drawn for terminals do not map cleanly.** A terminal theme defines one background;
+    this app needs four (page, card, card header, input), and every palette's own comment colour
+    fails AA on its own background because a comment is *meant* to recede. Two of the ones tried
+    had no red at all, so an overdue date had to be invented.
+  - **A translucent bar over a non-flat background never matches it.** If the page background
+    ever stops being one flat colour, the sticky header has to paint the same layers with the
+    same attachment, and then it needs its own border, because matching the page exactly leaves
+    nothing to say where the bar ends.
 - **14 AI contract** — the classifier prompt editable and stored as an override with the
   default shipped in code; Ask becomes continuous.
   Also: the classifier may ask *you* a question instead of only handing over a proposal it is
@@ -59,6 +89,14 @@ rather than work beside it:
   without anyone deciding it. Shared rules live once; each prompt adds only what genuinely
   differs. Do this before or with 14 -- an editable override is far more dangerous laid over two
   copies that have already diverged.
+
+Defects, found on 2026-09-20 while attempting the themes and **still true of the shipped
+teal pair**, independent of any theme work:
+
+~~The session card's button fails AA~~, ~~the light theme's primary button is 3.5:1~~ and
+~~`--muted` is not measured against the card header~~ -- **all three fixed in slice 23**
+(`slice-23-ui.md`), which replaced both themes with one and measured every colour against the
+surface it sits on: the session button is 5.21:1 and muted on a card header is 5.41:1.
 
 Deferred from a slice rather than never planned:
 
@@ -146,10 +184,9 @@ Deferred from a slice rather than never planned:
 - **UI polish, phone first.** Two specifics, independent of each other (safe areas and the nav surface shipped in slice 18):
   *Skeleton rows* -- every card shows a bare `...` while it loads and then jumps when data lands;
   placeholder rows in the shape of the content hold the layout still.
-  *Typography and controls* -- one bundled sans and one bundled mono, self-hosted with no CDN so
-  the app looks the same on every device and still works offline; one button scale; the nav pill
-  bar reserving its own height so nothing hides behind it (the top nav is sticky since slice 18, the ask bar was already fixed); background colour coming from the theme
-  tokens rather than per-screen values.
+  *Typography and controls* -- **done in slice 23**: JetBrains Mono bundled and self-hosted with
+  no CDN, one button scale (a bordered pill, mono caps, one filled primary per screen), and every
+  colour from tokens. What is left of this entry is skeleton rows.
   Note what is already done: slice 10 was the consistency pass -- one header convention, extracted
   `Row`, `Menu`, `Confirm`, `NameForm`, `Status`, one primary button class. This entry is the
   visual layer on top of that, not a second pass at the same problem, and planning it should start

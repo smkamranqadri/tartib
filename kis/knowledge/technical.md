@@ -222,4 +222,41 @@ docker compose build && docker compose up -d && curl localhost:8000/api/health &
 
 The phone layout (slice 22) is one breakpoint at 641px in `styles.css` plus `useWide(641)` in `App.tsx`: below it the header, capture bar and ask bar are not rendered and `TabBar` + `CaptureSheet` are; `AskForm` is shared by the bar and the sheet so only one is ever mounted. `--tabbar-h` stacks the ask bar, session card, toast and page padding above the bar.
 
-UI checks run headless Chrome through playwright-core from the scratchpad (the Claude in Chrome extension was not connected on 2026-09-17).
+**The desktop header does not stick.** It did from slice 18 to 2026-09-20, and the cost was that
+content scrolled underneath it and hid behind a translucent band -- which is what three rounds of
+complaints about "the app bar" actually were. A bar that covers what you are reading is worse
+than a bar you scroll past. It is `position: relative` with a solid `--bg` and a 1px bottom
+border; phones have no header at all and navigate from the tab bar (slice 22).
+
+**The UI language (slice 23).** The app is set entirely in JetBrains Mono, bundled as self-hosted
+woff2 in `frontend/public/fonts`, preloaded from `index.html` and precached by the service worker
+-- an offline launch without it falls back to a device mono and every measurement shifts. Base is
+14px/1.6, down from 15px/1.5, because mono sets wider than the system sans and the old size
+overflowed rows.
+
+**One theme, bronze**, in `:root`: `#0d0f12` ground, `#b98a44` accent. There is no theme system --
+no `theme.tsx`, no context, no `data-theme`, no Appearance card, nothing reading
+`prefers-color-scheme`. Six palettes and a picker were built and thrown away on 2026-09-20; the
+problem was never which colours. Beside the accent there are four tones -- `--ok`, `--info`,
+`--warn`, `--danger` -- because chips say what state a thing is in and one accent cannot, and two
+ink tokens, `--accent-ink` and `--session-ink`, which are the colours that go **on** their colour.
+
+The component vocabulary: one shape for controls, a pill with a 1px border, mono uppercase and
+tracked, with `.primary` the only filled control on a screen. **Every control is `--control`
+tall** -- 32px on a pointer, 44px on a phone -- so a row of them lines up without anyone
+measuring; before that token the same page carried 32px, 37px, 39px and 44px controls.
+**There are no `⋯` menus.** Actions are visible pills, and a space's filing policy is an
+AUTO / ASK / FILE segment on the page. Capture is a panel: the field on top, and under a rule the
+mic, a hint and the filled button. The nav's right side carries readouts (waiting count, clock),
+never controls. `.chip` and `.tone` share a single
+rule -- the tone as text, at 45% as the border, at 12% as the fill -- so a new state is a class,
+not a component; `.tone` adds a leading dot. Section labels are mono caps at `.18em`, muted, and
+the accent stays in chips, bars and buttons. Every page opens with a breadcrumb (`TARTIB // TODAY`)
+through `PageHead`'s `crumb`. The active nav tab, top bar and phone tab bar alike, is a filled
+light pill with dark text.
+
+Two floors, not one: 4.5:1 for anything read, 3:1 for what is not text (the star glyph, the
+session ring). Text is measured against the surface it actually sits on -- the page, a card, a
+card header, a field -- not against `--bg`.
+
+UI checks run headless Chrome through playwright-core from the scratchpad (the Claude in Chrome extension was not connected on 2026-09-17). Contrast is read out of the running app rather than from the stylesheet, and tap targets are measured on the element that receives the tap -- a checkbox's target is the `.tap-box` label wrapping it, not the 18px box.

@@ -40,7 +40,7 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
   return (
     <div className="screen">
       <div className="title-row">
-        <PageHead title="Spaces" subtitle="Where things live. Search across all of them, or end with ? to ask." />
+        <PageHead crumb="Spaces" title="Spaces" subtitle="Where things live. Search across all of them, or end with ? to ask." />
         <div className="title-actions">
           {creating ? (
             <NameForm
@@ -83,10 +83,9 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
           {summary.loading && !summary.data && <Loading />}
           {summary.data && (
             <div className="space-grid">
-              {summary.data.spaces.map((s) => (
-                <SpaceCard key={s.name} s={s} />
+              {[...summary.data.spaces, summary.data.unfiled].map((s, _i, all) => (
+                <SpaceCard key={s.unfiled ? "__unfiled" : s.name} s={s} most={mostIn(all)} />
               ))}
-              <SpaceCard s={summary.data.unfiled} />
             </div>
           )}
         </>
@@ -95,15 +94,32 @@ export default function Spaces({ version, onChanged }: { version: number; onChan
   );
 }
 
-function SpaceCard({ s }: { s: SpaceSummary }) {
+/** The largest space in the list, so every bar is drawn against the same scale. A bar measured
+ *  against itself says nothing. */
+function mostIn(all: SpaceSummary[]): number {
+  return Math.max(1, ...all.map((s) => s.total));
+}
+
+function SpaceCard({ s, most }: { s: SpaceSummary; most: number }) {
+  /* A card, because a card is a target and a list row is a line. The bar is how full this space
+     is against the fullest one -- the present, sized, not a history (rule 4). */
+  const share = Math.round((s.total / most) * 100);
   return (
     <Link to={s.unfiled ? "/inbox" : `/spaces/${s.name}`} className={`space-card ${s.unfiled ? "unfiled" : ""}`}>
-      <span className="space-name">
-        {s.unfiled ? "Unfiled" : s.name}
-        {s.overdue > 0 && <span className="overdue-dot" title={`${s.overdue} overdue`} aria-label={`${s.overdue} overdue`} />}
+      <span className="space-top">
+        <span className="space-name">
+          {s.unfiled ? "Unfiled" : s.name}
+          {s.overdue > 0 && <span className="overdue-dot" title={`${s.overdue} overdue`} aria-label={`${s.overdue} overdue`} />}
+        </span>
+        <span className="space-total">{s.total}</span>
       </span>
-      <span className="space-counts muted">{s.unfiled ? `${s.total} waiting` : `${s.open} open · ${s.notes} ${s.notes === 1 ? "note" : "notes"}`}</span>
-      <span className="space-when muted">{s.last_activity ? formatRelative(s.last_activity) : "—"}</span>
+      <span className="space-bar" aria-hidden="true">
+        <span style={{ width: `${Math.max(share, s.total ? 4 : 0)}%` }} />
+      </span>
+      <span className="space-counts muted">
+        {s.unfiled ? `${s.total} waiting` : `${s.open} open · ${s.notes} ${s.notes === 1 ? "note" : "notes"}`}
+        <span className="space-when">{s.last_activity ? formatRelative(s.last_activity) : "—"}</span>
+      </span>
     </Link>
   );
 }

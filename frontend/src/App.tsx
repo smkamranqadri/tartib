@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { getCapture, setUnauthorizedHandler } from "./api";
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { getAttention, getCapture, setUnauthorizedHandler } from "./api";
 import { type Pending, onPending, watchForReconnect } from "./offline";
 import { takePendingNav } from "./push";
 import Capture from "./Capture";
@@ -21,19 +21,9 @@ import Spaces from "./screens/Spaces";
 import Settings from "./screens/Settings";
 import { SessionProvider } from "./session";
 import { useWide } from "./useWide";
-import { ThemeContext, type Theme } from "./theme";
 import type { Answer, Capture as CaptureRecord } from "./types";
+import { useLoad } from "./useLoad";
 import { useSpaces } from "./useSpaces";
-
-function readTheme(): Theme {
-  try {
-    const t = localStorage.getItem("tartib-theme");
-    if (t === "light" || t === "dark") return t;
-  } catch {
-    /* storage unavailable */
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
 
 /** "Filed as task in namazee", "Needs your look", "Filed 2 tasks · 1 needs your look", "Answered". */
 function outcome(cap: CaptureRecord): string {
@@ -57,7 +47,6 @@ export default function App() {
   // On a phone capture and ask live in the ⊕ sheet; null means it is closed.
   const [sheet, setSheet] = useState<SheetMode | null>(null);
   const [asked, setAsked] = useState<{ question: string; space: string } | undefined>();
-  const [theme, setTheme] = useState<Theme>(readTheme);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -159,27 +148,21 @@ export default function App() {
     [],
   );
   const spaces = useSpaces(`${authed}:${version}`);
+  /* The bar's right side carries what the app knows right now: how much is waiting for you, and
+     the time. Both are readouts, not controls -- the nav is for going places. */
+  const attention = useLoad(() => (authed ? getAttention() : Promise.resolve(null)), [authed, version]);
+  const waitingCount = attention.data ? attention.data.items.length + attention.data.stale.length : null;
+  const [clock, setClock] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setClock(new Date()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
   const onSearchPage = location.pathname.startsWith("/spaces") || location.pathname.startsWith("/search");
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuthed(false));
   }, []);
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    /* The status bar should agree with the theme you picked. index.html carries one of these
-       per colour scheme so the first paint is right; this corrects it when the chosen theme
-       is not the system's. Both are updated, or the media queries would fight this back. */
-    const bar = theme === "dark" ? "#0f1412" : "#f2f5f3";
-    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
-      meta.setAttribute("content", bar);
-    }
-    try {
-      localStorage.setItem("tartib-theme", theme);
-    } catch {
-      /* ignore */
-    }
-  }, [theme]);
 
   // keyboard: c -> capture bar, / -> search field on Search
   useEffect(() => {
@@ -237,7 +220,6 @@ export default function App() {
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
       <SessionProvider onFinish={bump}>
       <div className="app has-askbar">
         <header className="top">
@@ -260,7 +242,14 @@ export default function App() {
               <SettingsIcon /> Settings
             </NavLink>
           </nav>
-          <div className="top-actions" />
+          <div className="top-actions">
+            {!!waitingCount && (
+              <Link to="/inbox" className="tone warn" title={`${waitingCount} waiting for you`}>
+                {waitingCount} needs you
+              </Link>
+            )}
+            <span className="clock muted">{clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          </div>
         </header>
         <UpdateBar />
         {wideEnough && (
@@ -329,6 +318,5 @@ export default function App() {
         <Toast toast={toast} />
       </div>
       </SessionProvider>
-    </ThemeContext.Provider>
   );
 }

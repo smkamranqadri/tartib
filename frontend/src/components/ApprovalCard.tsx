@@ -109,6 +109,10 @@ export default function ApprovalCard({
 
   return (
     <div className={`one ${hotkey ? "hot" : ""}`}>
+      {/* The card is two halves on a wide screen: what you are deciding about on the left, the
+          decision itself on the right. Stacked, it left everything in the first third of a
+          1200px card and wasted the rest. */}
+      <div className="one-main">
       {wide ? (
         <Link className="raw big" to={`/items/${item.id}`}>
           {item.raw_text}
@@ -189,6 +193,7 @@ export default function ApprovalCard({
           </button>
         </form>
       )}
+      </div>
       {/* While a reason is being written, that is the decision on the table. */}
       <div className="decisions" hidden={why !== null}>
         <button type="button" className="primary" onClick={() => void approve()}>

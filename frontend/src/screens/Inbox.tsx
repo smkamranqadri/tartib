@@ -60,7 +60,7 @@ export default function Inbox({
   return (
     <div className="screen">
       <div className="title-row">
-        <PageHead title="Inbox" subtitle={SUBTITLE[tab]} />
+        <PageHead crumb="Inbox" title="Inbox" subtitle={SUBTITLE[tab]} />
         <div className="title-actions">
           <nav className="pills tabs" aria-label="Inbox">
             <NavLink to="/inbox" end>

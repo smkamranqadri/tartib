@@ -17,11 +17,9 @@ import {
   resyncSubscription,
   workerVersion,
 } from "../push";
-import { useTheme } from "../theme";
 import { useLoad } from "../useLoad";
 
 export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
-  const { theme, setTheme } = useTheme();
   const { data: config, error: configError, loading: configLoading, reload: reloadConfig } = useLoad(getConfig, []);
   // A config that failed to load must not read as one still loading: say why, and offer another go.
   const configFailed = !!configError && !config;
@@ -29,7 +27,7 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
 
   return (
     <div className="screen">
-      <PageHead title="Settings" subtitle="How this copy of Tartib is set up." />
+      <PageHead crumb="Settings" title="Settings" subtitle="How this copy of Tartib is set up." />
       {configFailed && (
         <div className="load-failed">
           <ErrorLine>{configError}</ErrorLine>
@@ -38,18 +36,6 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
           </button>
         </div>
       )}
-      <Card icon={<SettingsIcon />} label="Appearance" aside={<span className="muted">{theme}</span>}>
-        <Row title="Theme" desc="Light or dark. Follows your system until you choose.">
-          <div className="seg">
-            <button type="button" className={theme === "light" ? "on" : ""} onClick={() => setTheme("light")}>
-              Light
-            </button>
-            <button type="button" className={theme === "dark" ? "on" : ""} onClick={() => setTheme("dark")}>
-              Dark
-            </button>
-          </div>
-        </Row>
-      </Card>
       <Card icon={<AlertIcon />} label="Classifier" aside={<span className="muted">{config ? (config.ai ? "on" : "off") : "…"}</span>}>
         <Row title="Codex CLI" desc="Files every capture in the background.">
           <span className="muted">{config ? (config.ai ? "enabled" : "off") : "…"}</span>

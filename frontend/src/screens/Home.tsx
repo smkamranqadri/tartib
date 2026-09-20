@@ -5,6 +5,7 @@ import Card from "../components/Card";
 import { AlertIcon, ClockIcon, StarIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
 import SessionBar from "../components/SessionBar";
+import Tiles from "../components/Tiles";
 import PageHead from "../components/PageHead";
 import RecentList from "../components/RecentList";
 import type { Pending } from "../offline";
@@ -52,8 +53,16 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
 
   return (
     <div className="screen">
-      <PageHead eyebrow="Dashboard" title={formatLongDate()} subtitle="Today, what needs you, and what you captured." />
+      <PageHead crumb="Today" title={formatLongDate()} subtitle="Today, what needs you, and what you captured." />
       {answer && <AnswerView result={answer} onClose={onCloseAnswer} />}
+      <Tiles
+        tiles={[
+          { label: "Due today", value: data ? items.length : "…", to: "/" },
+          { label: "Needs you", value: waiting ?? "…", to: "/inbox", tone: waiting ? "warn" : "" },
+          { label: "Sessions", value: data ? sessions : "…" },
+          { label: "Captured", value: data ? (data.recent?.length ?? 0) : "…", to: "/inbox/recent" },
+        ]}
+      />
       <div className="dash">
         {/* Two columns that stack on their own, so a long one never leaves a gap in the
             other. On a phone the columns dissolve and the cards take their own order. */}

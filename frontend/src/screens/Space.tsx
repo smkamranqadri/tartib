@@ -4,7 +4,6 @@ import { deleteSpace, getSpaces, listItems, renameSpace, type SpacePolicy, setSp
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
 import Confirm from "../components/Confirm";
-import Menu from "../components/Menu";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import { useLoad } from "../useLoad";
@@ -68,7 +67,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
       <BackLink fallback="/spaces" />
       <div className="title-row">
         <PageHead
-          eyebrow="Spaces"
+          crumb={`Spaces // ${space}`}
           title={space}
           subtitle={`Tasks, notes and sessions in this space.${POLICY[policy].note ? ` ${POLICY[policy].note}` : ""}`}
         />
@@ -94,24 +93,36 @@ export default function Space({ version, onChanged }: { version: number; onChang
           ) : confirmDelete ? (
             <Confirm question={<>Delete <b>{space}</b>?</>} onConfirm={() => void doDelete()} onCancel={() => setConfirmDelete(false)} />
           ) : (
-            <Menu
-              label="Manage space"
-              items={[
-                ...(["auto", "ask", "file"] as SpacePolicy[]).map((p) => ({
-                  label: `${policy === p ? "✓ " : ""}${POLICY[p].menu}`,
-                  title: p === "auto" ? "Files a proposal when the classifier is confident enough" : undefined,
-                  onSelect: () => void choosePolicy(p),
-                })),
-                { label: "Rename", onSelect: () => setRenaming(true) },
-                {
-                  label: itemCount ? `Delete (${itemCount} items)` : "Delete",
-                  danger: true,
-                  disabled: (itemCount ?? 1) > 0,
-                  title: itemCount ? `${itemCount} items still here` : undefined,
-                  onSelect: () => setConfirmDelete(true),
-                },
-              ]}
-            />
+            <>
+              {/* The filing policy is the space's most consequential setting, so it is on the
+                  page rather than three taps into a menu. Rename and delete sit beside it. */}
+              <span className="seg policy" role="group" aria-label="Filing policy">
+                {(["auto", "ask", "file"] as SpacePolicy[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={policy === p ? "on" : ""}
+                    aria-pressed={policy === p}
+                    title={p === "auto" ? "Files a proposal when the classifier is confident enough" : undefined}
+                    onClick={() => void choosePolicy(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </span>
+              <button type="button" className="ghost" onClick={() => setRenaming(true)}>
+                Rename
+              </button>
+              <button
+                type="button"
+                className="ghost danger"
+                disabled={(itemCount ?? 1) > 0}
+                title={itemCount ? `${itemCount} items still here` : undefined}
+                onClick={() => setConfirmDelete(true)}
+              >
+                Delete
+              </button>
+            </>
           )}
           {manageError && <span className="error">{manageError}</span>}
         </div>

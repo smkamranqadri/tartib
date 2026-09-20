@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- Two, so the status bar is right before any JavaScript has run. App.tsx overrides the
-         active one when the user has chosen a theme that is not the system's. -->
-    <meta name="theme-color" content="#f2f5f3" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f1412" media="(prefers-color-scheme: dark)" />
+    <!-- One theme, so one bar colour and nothing to decide at runtime. -->
+    <meta name="theme-color" content="#0d0f12" />
+    <!-- The app is set entirely in this face; preloading it keeps the first paint from being a
+         fallback that reflows once the stylesheet resolves. -->
+    <link rel="preload" href="/fonts/jetbrains-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <title>Tartib</title>
     <meta name="description" content="Capture anything. It gets filed." />
     <link rel="manifest" href="/manifest.webmanifest" />

@@ -10,7 +10,7 @@ const PENDING_NAV = "/__pending-nav";
    old worker active: its precache still holds the previous build, and nothing offers the reload.
    The app shows this in Settings, so "is the phone actually running this worker?" is a question
    with an answer instead of a guess. */
-const SW_VERSION = "2026-09-18.7";
+const SW_VERSION = "2026-09-20.1";
 const VERSION_KEY = "/__sw-version";
 /* Where the page leaves the VAPID public key, so this worker can re-subscribe on its own when
    the push service rotates an endpoint. The page is not running when that happens. */
@@ -27,7 +27,13 @@ async function precache() {
   const html = await res.text();
   await cache.put("/index.html", new Response(html, { headers: res.headers }));
   const assets = new Set(html.match(/\/assets\/[A-Za-z0-9._-]+/g) || []);
-  const extras = ["/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-180.png"];
+  const extras = [
+    "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-180.png",
+    /* The app is set in this face. Without it in the shell, an offline launch falls back to
+       whatever mono the device has and every measurement in this layout shifts. */
+    "/fonts/jetbrains-mono-latin-400-normal.woff2",
+    "/fonts/jetbrains-mono-latin-600-normal.woff2",
+  ];
   /* One missing file must not fail the install and leave the old worker in place forever. */
   await Promise.allSettled(
     [...assets, ...extras].map(async (url) => {

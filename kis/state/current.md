@@ -5,7 +5,21 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. Closed and accepted on the device: **slice 22** (the phone comes first --
+- Task: none in flight. **Slice 23 (the UI language) is built and proved in the browser, and is
+  sitting uncommitted in the working tree.** Plan and full proof: `kis/intent/slice-23-ui.md`.
+  The themes half of backlog 13 was attempted first and scrapped -- five palette passes, none
+  liked -- and what it established is recorded under backlog item 13. Shown screenshots of an
+  earlier build, the owner named the real problem: the font, the borders, the chips, the button
+  style. So this slice bundles JetBrains Mono and sets the whole app in it, deletes the theme
+  system for a single bronze palette, reduces controls to one bordered-pill shape, gives chips
+  and status tones one rule, puts a `TARTIB // TODAY` breadcrumb on every page, adds a stat-tile
+  row to Home and turns the spaces grid into a list with bars. A later pass gave every control one height (32px pointer, 44px phone), made the decision card use
+  its width, deleted both ⋯ menus for visible controls, turned capture into a panel, put readouts
+  in the nav's right side and brought the space cards back. It also stopped the desktop header sticking -- three rounds of "fix the app bar" turned out to be
+  content hiding underneath it, not a colour. No backend change. Proved:
+  typecheck, build, 193 tests, every target at 44px on a phone, no horizontal scroll, and every
+  colour measured against the surface it sits on. **Not yet seen on a device.**
+- Closed and accepted on the device: **slice 22** (the phone comes first --
   a bottom bar in the nav's shape, capture and ask in a ⊕ sheet, an item read in a sheet,
   one-line headings, 44px targets, the top safe area; fixed furniture on a phone went from 290px
   of 844 to 65px), **slice 21** (four space layouts tried, Panes kept as the space page; Classic,
@@ -68,6 +82,9 @@ the phone buzzes with a desktop tab open on the same countdown (the migration 00
   scoped offline *read* out -- and an approved backlog item now, with offline editing.
 - The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
   Inbox also shows.
+- Slice 23's type was proved in headless Chrome only. Whether mono at 14px is comfortable for a
+  long note on a phone is the one decision in it taken knowingly against readability, and it
+  needs real glass to settle.
 
 Browser and device behaviour that will not change by deploying -- iOS `notificationclick`, the
 desktop Chrome FCM refusal, `pushsubscriptionchange`, the silent worker at session end, voice
