@@ -5,31 +5,32 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 23 (the UI language) is built and proved in the browser, and is
-  sitting uncommitted in the working tree.** Plan and full proof: `kis/intent/slice-23-ui.md`.
-  The themes half of backlog 13 was attempted first and scrapped -- five palette passes, none
-  liked -- and what it established is recorded under backlog item 13. Shown screenshots of an
-  earlier build, the owner named the real problem: the font, the borders, the chips, the button
-  style. So this slice bundles JetBrains Mono and sets the whole app in it, deletes the theme
-  system for a single bronze palette, reduces controls to one bordered-pill shape, gives chips
-  and status tones one rule, puts a `TARTIB // TODAY` breadcrumb on every page, adds a stat-tile
-  row to Home and turns the spaces grid into a list with bars. Themes came back briefly -- seven, generated -- and were removed the same day on the owner's
-  call; bronze keeps the generated values and `frontend/tools/themes.py` keeps the floors. The
-  page background is two accent glows and a dot grid, fixed, with the floor enforced where they
-  overlap. A later pass gave every control one height (32px pointer, 44px phone), made the decision card use
-  its width, deleted both ⋯ menus for visible controls, turned capture into a panel, put readouts
-  in the nav's right side and brought the space cards back. It also stopped the desktop header sticking -- three rounds of "fix the app bar" turned out to be
-  content hiding underneath it, not a colour. No backend change. Proved:
-  typecheck, build, 193 tests, every target at 44px on a phone, no horizontal scroll, and every
-  colour measured against the surface it sits on. **Not yet seen on a device.**
+- Task: none in flight. **Slice 23 (the UI language) is committed on `main` and not deployed.**
+  Plan and full proof: `kis/intent/slice-23-ui.md`; the palette record is `kis/intent/themes.md`.
+  Four commits: `04b9be6` the language, `ab9433f` seven themes, `bc42170` a tidy-up, `c09c18f`
+  the themes removed again and the background added.
+  What it changed: the app is set in bundled JetBrains Mono; one bronze theme with no theme
+  system; one control shape and one height (`--control`, 32px pointer / 44px phone); chips and
+  status tones on a single rule; a `TARTIB // TODAY` breadcrumb on every page; stat tiles on
+  Home; space cards with bars; the space as a chip on every row; capture as a panel; readouts in
+  the nav's right side; both ⋯ menus replaced by visible controls, with a space's filing policy
+  as an AUTO / ASK / FILE segment; and a page background of two accent glows and a dot grid.
+  It also fixed three defects: the desktop header had been sticky since slice 18 so content hid
+  underneath it, the session card's button was white on red at 3.69:1, and `--danger` was 3.93:1
+  while `--accent-2` painted text having only been checked as a decorative star.
+  Six palette passes were built and thrown away first; what survived is
+  `frontend/tools/themes.py`, which enforces the floors, and one rule in Knowledge: prove a
+  colour by what the browser paints, not by the token.
+  **Not yet seen on a device.** Unproved there: whether mono at 14px suits a long note on a
+  phone, and whether `background-attachment: fixed` survives iOS.
 - Closed and accepted on the device: **slice 22** (the phone comes first --
   a bottom bar in the nav's shape, capture and ask in a ⊕ sheet, an item read in a sheet,
   one-line headings, 44px targets, the top safe area; fixed furniture on a phone went from 290px
   of 844 to 65px), **slice 21** (four space layouts tried, Panes kept as the space page; Classic,
   Tree, Board and Timeline deleted), **slice 20** (eight items, round three), **slice 19** and
   **slice 18**. Plans: `kis/intent/slice-1{8,9}-*.md`, `kis/intent/slice-2{0,1,2}-*.md`.
-- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 22 are local commits on `main`
-  (60 ahead of `origin/main`). On the next deploy: migrations 0010-0014 run, and
+- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 23 are local commits on `main`
+  (66 ahead of `origin/main`). On the next deploy: migrations 0010-0014 run, and
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config.
 - Next, in no fixed order:
