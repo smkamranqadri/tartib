@@ -8,6 +8,22 @@ What survived is worth more than the palettes did: `frontend/tools/themes.py` st
 these values and enforces the floors, and generating them fixed two things hand-written CSS had
 missed.
 
+## What choosing palettes established
+
+Two attempts on 2026-09-20 -- six own palettes, then eight named ones, thirteen, ten, all
+scrapped; then seven generated ones, built and removed the same day. What they settled is worth
+keeping even though none of the palettes were:
+
+- **The accent must not sit in the background's own hue family.** This decides whether a theme
+  has character at all: a jade accent on a jade ground is 11 degrees apart and reads as one
+  wash, green on indigo is 102 and reads as a theme. Dark teal with amber -- the pairing the
+  owner already liked -- is the shape to aim for.
+- **Palettes drawn for terminals do not map cleanly.** A terminal theme defines one background
+  and this app needs four, and every such palette's own comment colour fails AA on its own
+  background, because a comment is *meant* to recede.
+
+Do not re-open the theme question without a reason that is not "more palettes".
+
 ## The floors, and the surfaces they are measured on
 
 - **4.5:1** for anything read: body, muted, the four tones, `--accent` and `--accent-2` as text,

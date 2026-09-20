@@ -43,6 +43,29 @@ A background call to `classify(text, context)` returns a list of proposals `{tex
 
 Item text, thought entries, Ask answers and a space brief render as markdown (since 2026-09-20): headings, lists, emphasis, code, quotes, links and tables. The stored bytes are never rewritten -- rendering is presentation only -- and a row's headline shows the first line with its syntax stripped, because a row is one dense line. Raw HTML in any of them renders as the characters it is, never as markup.
 
+## Offline
+
+Since 2026-09-21 the app works without the network. Every screen shows the last thing it was
+given and says how old that is -- *"Offline · showing what was here 2h ago."* -- rather than
+going blank; online it says nothing, because the network answered and the data is live.
+
+Four things work with no network: ticking a task done, starring it, editing its text, and adding
+a thought. Each is written down, shown as **waiting to send**, and sent when the network returns,
+in the order it was made. A change that was refused because the item moved on elsewhere keeps
+your words and asks Reload or Overwrite, the same question a live save asks.
+
+What deliberately does not work offline says so instead of failing quietly: starting a session
+(the server holds the clock), asking a question (it needs the classifier), approving or
+re-asking a proposal, filing an item directly, deleting, and creating, renaming or deleting a
+space. Nothing is ever classified on the device.
+
+Counts are the one place the app is knowingly behind: a queued change shows on the item wherever
+it appears, but tiles, counts and a space's brief are computed by the server and do not move
+until what is queued has been sent.
+
+Editing text offline needs one unhurried moment online first, because the editor arrives as its
+own chunk and the app only holds what it has already fetched.
+
 ## Editing
 
 Any filed item's `space`, `shape`, `title`, `due`, `remind_at`, `starred`, and `status` can be changed, and so can its `raw_text` (since 2026-09-17; rule 1 keeps the *capture's* text immutable, not the item's). Since 2026-09-20 the text is edited by tapping it: there is no mode to enter and no button to enter one, the editor arrives on that tap, and it saves itself as you pause. A save refused as stale offers Reload or Overwrite without taking your words away.
@@ -88,5 +111,8 @@ were made on: rule 4 exists so that Tartib does not nag, and a capture box that 
 what you typed underground is not nagging, it is lying. It is also the smallest of the three in
 what it adds to the product -- no new screen, no new decision to make, nothing that pushes. A
 capture is written down before it is sent, shown as waiting until it goes, and carries a
-`client_id` so a retry is recognised rather than duplicated. Offline *reading* stays out of
-scope: the app still needs the network to show you anything.
+`client_id` so a retry is recognised rather than duplicated.
+
+Offline reading and offline editing left the list on 2026-09-21, in slice 25, on the argument
+slice 15 deferred rather than refused: an app that shows you nothing the moment the network goes
+is not protecting you from stale data, it is withholding what it already has.
