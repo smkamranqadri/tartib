@@ -5,10 +5,16 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 27, the AI contract** -- planned 2026-09-21, not started.
-  Plan, the decisions, and what earlier work already settled about it:
-  `kis/intent/slice-27-ai-contract.md`. Phase mode; its part C is the agreed cut point.
-  The digest stale-count gap is **fixed and committed** (2026-09-21): `store.waiting_counts`
+- Task: **slice 27, the AI contract** -- built, **not closed**. A (house rules) and C
+  (corrections as examples) are done and proved. B (the classifier asking instead of guessing)
+  is built and seen on a device-sized screen, but its last prompt change is **unmeasured**.
+- **BLOCKER: one unmeasured prompt change, and it affects every capture.** The Codex
+  subscription hit its usage limit; it resets at **2:10 PM**. The prompt now tells the
+  classifier to ask which space rather than return a null one -- right in principle, unproven in
+  fact. The three runs that settle it, and the order to run them in, are at the end of
+  `kis/intent/slice-27-ai-contract.md`. **Nothing deploys and `v1.1` does not pick slice 27 up
+  until those are green.**
+- The digest stale-count gap is **fixed and committed** (2026-09-21): `store.waiting_counts`
   now owns what "waiting" means and the digest counts both halves.
 - Decided 2026-09-21: **nothing goes out yet.** `main` stays unpushed and no image is published
   until you are at the phone; `v1.1` is the next thing, and it now carries this fix too.

@@ -11,7 +11,13 @@ actually left, and nothing in it is ordered yet.
 
 Approved on 2026-09-17, not yet planned. Each gets a plan file when it comes up:
 
-- **14 AI contract** — the classifier prompt editable and stored as an override with the
+- ~~**14 AI contract**~~ — **built in slice 27** (2026-09-21), and not yet closed: one prompt
+  change in it is unmeasured. See `slice-27-ai-contract.md`, Still open. What shipped: house
+  rules appended to the prompt rather than replacing it, the classifier asking which space
+  instead of guessing, and corrections as few-shot examples. What did **not**: Ask becoming
+  continuous beyond slice 26's single turn, and multiple-choice answers, which have no field to
+  land in here. The original entry, for the record:
+  the classifier prompt editable and stored as an override with the
   default shipped in code; Ask becomes continuous.
   Also: the classifier may ask *you* a question instead of only handing over a proposal it is
   unsure about. A structured block -- the question, single or multiple choice, and two to six
