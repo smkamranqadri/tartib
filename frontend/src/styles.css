@@ -287,6 +287,17 @@ button:disabled { opacity: .5; cursor: default; }
 .word.select.missing b { color: var(--danger); }
 .word-input { font: inherit; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--fg); }
 .decisions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* The classifier asking (slice 27). It sits above the sentence, because it is the one thing
+   the item is waiting for; answering it fills the sentence in rather than replacing it. */
+.asked { margin: 10px 0 2px; }
+.asked-q { margin: 0 0 8px; font-weight: 600; }
+.asked-opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.asked-opt { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-height: 44px; min-width: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--fg); cursor: pointer; text-align: left; }
+.asked-opt:hover { border-color: var(--accent); }
+.asked-opt.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+.asked-label { font-weight: 600; }
+.asked-detail { font-size: 12px; }
 .more { position: relative; margin-left: auto; }
 
 /* search */
@@ -405,6 +416,13 @@ button:disabled { opacity: .5; cursor: default; }
 .pref-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pref-title { font-weight: 500; }
 .pref-desc { font-size: 13px; }
+
+/* The house-rules editor (slice 27): a field you type prose into, in a card of one-line prefs. */
+.house-rules textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; min-height: 92px; }
+.house-rules textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.house-rules textarea::placeholder { color: var(--muted); opacity: .8; }
+.house-rules-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.house-rules-foot .muted { margin-right: auto; }
 .pref-ctl { flex: none; font-size: 14px; text-align: right; }
 .seg { display: inline-flex; padding: 3px; background: var(--pill); border-radius: 8px; }
 .seg button { background: none; border: 0; padding: 5px 12px; border-radius: 6px; cursor: pointer; color: var(--muted); }

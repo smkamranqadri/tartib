@@ -2,6 +2,14 @@ export type Shape = "task" | "note";
 export type Stage = "attention" | "filed";
 export type Status = "open" | "done";
 
+/** The classifier asking instead of guessing (slice 27). One field, one question, 2-6 answers.
+ *  Rows written before slice 27 have no `clarify` key at all, so it is optional. */
+export interface Clarify {
+  field: "space" | "shape";
+  question: string;
+  options: { value: string; label: string; detail: string | null }[];
+}
+
 export interface Proposal {
   shape: Shape | "question";
   space: string | null;
@@ -9,6 +17,7 @@ export interface Proposal {
   due: string | null;
   remind_at: string | null;
   confidence: number;
+  clarify?: Clarify | null;
 }
 
 export interface Item {

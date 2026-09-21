@@ -224,6 +224,42 @@ async function main() {
         await page.waitForTimeout(1200); // let the queue drain before the next check
       }
     });
+    // --- slice 27: the house rules editor ---
+    await check("S27 house rules save, persist and clear", async () => {
+      const before = (await api(page, "GET", "/api/config")).house_rules;
+      try {
+        await page.goto(`${URL}/settings`);
+        await page.waitForSelector(".house-rules textarea", { timeout: 10000 });
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        if (overflow > 1) throw new Error(`settings overflows by ${overflow}px`);
+        const small = await page.evaluate(() =>
+          [...document.querySelectorAll(".house-rules-foot button")]
+            .map((b) => b.getBoundingClientRect())
+            .filter((r) => Math.min(r.width, r.height) < 44).length,
+        );
+        if (small) throw new Error(`${small} control(s) under 44px`);
+
+        await page.fill(".house-rules textarea", "UI check rule: the car goes in home.");
+        await page.locator(".house-rules-foot button.primary").dispatchEvent("click");
+        await page.waitForTimeout(700);
+        await page.reload();
+        await page.waitForSelector(".house-rules textarea", { timeout: 10000 });
+        const saved = await page.inputValue(".house-rules textarea");
+        if (!saved.includes("the car goes in home")) throw new Error("did not persist a reload");
+
+        await page.locator(".house-rules-foot button.ghost").dispatchEvent("click");
+        await page.waitForTimeout(700);
+        if ((await api(page, "GET", "/api/config")).house_rules !== "")
+          throw new Error("Clear did not clear");
+        return "saved, persisted, cleared";
+      } finally {
+        // Never leave someone's real filing rules changed by a check.
+        await api(page, "PUT", "/api/config/house-rules", { text: before });
+      }
+    });
+
   } finally {
     for (const id of made) await api(page, "DELETE", `/api/items/${id}`).catch(() => {});
     await browser.close();

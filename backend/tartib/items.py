@@ -18,9 +18,11 @@ from tartib.deps import get_db, get_settings
 from tartib.store import (
     SpaceError,
     capture_by_client_id,
+    classifier_examples,
     classify_context,
     create_capture,
     file_item,
+    house_rules,
     insert_item,
     list_spaces,
     serialize_item,
@@ -266,6 +268,8 @@ async def redo(
         spaces=list_spaces(conn),
         codex=settings.codex(),
         existing=classify_context(conn),
+        house_rules=house_rules(conn),
+        examples=classifier_examples(conn, threshold=settings.autofile_confidence)[0],
     )
     try:
         proposals = await classify(row["raw_text"], context, correction=(earlier, reason))
@@ -278,7 +282,7 @@ async def redo(
     fields = proposal.model_dump(include={"shape", "space", "title", "due", "remind_at"})
     proposal_json = proposal.model_dump_json(exclude={"text"})
     allowed = list_spaces(conn)
-    if should_file(
+    if proposal.clarify is None and should_file(
         proposal.space, proposal.confidence, settings.autofile_confidence, space_policies(conn)
     ):
         file_item(conn, item_id, fields, allowed, proposal_json=proposal_json)

@@ -87,6 +87,88 @@ def waiting_counts(conn: sqlite3.Connection) -> tuple[int, int]:
     return int(undecided or 0), int(stale or 0)
 
 
+EXAMPLE_FIELDS = ("shape", "space", "title", "due")
+EXAMPLES_MAX = 5  # in the prompt
+EXAMPLES_SCAN = 120  # most recent filed items to look through
+
+
+@dataclass(frozen=True)
+class Example:
+    """One filed item as something to learn from."""
+
+    text: str
+    was: dict  # what the classifier proposed, for the fields that differ
+    became: dict  # what it actually became
+    corrected: bool  # False means it was accepted untouched -- padding, the weaker signal
+
+
+def _correction(proposal: dict, row: sqlite3.Row) -> dict:
+    """The fields the person actually changed.
+
+    **Only a field the classifier itself proposed may count.** When it proposed no space, the
+    filing code supplies one -- `approve` falls back to the item's own space -- and reading that
+    as a correction teaches the classifier from our own fallback rather than from the person.
+    """
+    out = {}
+    for field in EXAMPLE_FIELDS:
+        proposed = proposal.get(field)
+        if proposed is None or proposed == "":
+            continue  # not proposed: whatever it became came from somewhere else
+        actual = row[field]
+        if actual is not None and str(actual) != str(proposed):
+            out[field] = (proposed, actual)
+    return out
+
+
+def classifier_examples(
+    conn: sqlite3.Connection, limit: int = EXAMPLES_MAX, threshold: float = 0.85
+) -> tuple[tuple[Example, ...], int]:
+    """Examples for the prompt, corrections first. Returns (examples, how many are real).
+
+    Padding with items accepted untouched is the fallback and never the default: those are the
+    classifier's own output, so leaning on them teaches it its own habits back. Only items it
+    was confident about are worth padding with.
+    """
+    rows = conn.execute(
+        "SELECT * FROM items WHERE stage = 'filed' AND proposal_json IS NOT NULL"
+        " ORDER BY id DESC LIMIT ?",
+        (EXAMPLES_SCAN,),
+    ).fetchall()
+    corrections: list[Example] = []
+    accepted: list[Example] = []
+    for row in rows:
+        try:
+            proposal = json.loads(row["proposal_json"]) or {}
+        except ValueError:
+            continue
+        text = " ".join((row["raw_text"] or "").split())[:120]
+        if not text:
+            continue
+        changed = _correction(proposal, row)
+        if changed:
+            corrections.append(
+                Example(
+                    text=text,
+                    was={f: v[0] for f, v in changed.items()},
+                    became={f: v[1] for f, v in changed.items()},
+                    corrected=True,
+                )
+            )
+        elif float(proposal.get("confidence") or 0) >= threshold:
+            accepted.append(
+                Example(
+                    text=text,
+                    was={},
+                    became={f: row[f] for f in EXAMPLE_FIELDS if row[f] is not None},
+                    corrected=False,
+                )
+            )
+    out = corrections[:limit]
+    if len(out) < limit:
+        out += accepted[: limit - len(out)]
+    return tuple(out), len(corrections)
+
+
 def list_spaces(conn: sqlite3.Connection) -> list[str]:
     return [r["name"] for r in conn.execute("SELECT name FROM spaces ORDER BY position, name")]
 
@@ -227,6 +309,27 @@ def reconcile_spaces(conn: sqlite3.Connection, allowed: Sequence[str]) -> int:
     )
     conn.commit()
     return cur.rowcount
+
+
+HOUSE_RULES_KEY = "classifier_house_rules"
+HOUSE_RULES_MAX = 2000  # characters; this rides on every capture, like the context block
+
+
+def house_rules(conn: sqlite3.Connection) -> str:
+    """The owner's own filing rules, appended to the shipped classifier prompt.
+
+    Appended, never a replacement: the JSON contract, the field definitions and the schema stay
+    in code where no saved edit can reach them. A bad house rule can give bad advice; it cannot
+    stop every capture from filing.
+    """
+    return (get_state(conn, HOUSE_RULES_KEY) or "").strip()
+
+
+def set_house_rules(conn: sqlite3.Connection, text: str) -> str:
+    """Store them, trimmed to HOUSE_RULES_MAX. Empty clears back to the shipped prompt."""
+    cleaned = (text or "").strip()[:HOUSE_RULES_MAX]
+    set_state(conn, HOUSE_RULES_KEY, cleaned)
+    return cleaned
 
 
 def get_state(conn: sqlite3.Connection, key: str) -> str | None:

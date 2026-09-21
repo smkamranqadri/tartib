@@ -13,9 +13,12 @@ from tartib.classify import ClassifyError, Context, Proposal, classify
 from tartib.clock import utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.store import (
+    Example,
     SpaceContext,
     SpaceError,
+    classifier_examples,
     classify_context,
+    house_rules,
     insert_item,
     list_spaces,
     should_file,
@@ -96,7 +99,7 @@ class Runner:
         loaded = await asyncio.to_thread(self._load, capture_id)
         if loaded is None:
             return
-        text, created_at, spaces, existing = loaded
+        text, created_at, spaces, existing, rules, examples = loaded
         s = self.settings
         if not s.ai_enabled:
             await asyncio.to_thread(self._fallback, capture_id, NOT_CONFIGURED)
@@ -107,6 +110,8 @@ class Runner:
             spaces=spaces,
             codex=s.codex(),
             existing=existing,
+            house_rules=rules,
+            examples=examples,
         )
         try:
             proposals = await classify(text, context)
@@ -203,7 +208,7 @@ class Runner:
 
     def _load(
         self, capture_id: int
-    ) -> tuple[str, str, list[str], tuple[SpaceContext, ...]] | None:
+    ) -> tuple[str, str, list[str], tuple[SpaceContext, ...], str, tuple[Example, ...]] | None:
         conn = self._connect()
         try:
             row = conn.execute(
@@ -211,7 +216,14 @@ class Runner:
             ).fetchone()
             if row is None or row["status"] != "pending":
                 return None
-            return row["raw_text"], row["created_at"], list_spaces(conn), classify_context(conn)
+            return (
+                row["raw_text"],
+                row["created_at"],
+                list_spaces(conn),
+                classify_context(conn),
+                house_rules(conn),
+                classifier_examples(conn, threshold=self.settings.autofile_confidence)[0],
+            )
         finally:
             conn.close()
 
@@ -263,7 +275,9 @@ class Runner:
             for p in proposals:
                 if p.shape == "question":
                     continue
-                filed = should_file(
+                # A proposal that asks you something is waiting on you by definition, whatever
+                # its confidence and whatever the space's policy says.
+                filed = p.clarify is None and should_file(
                     p.space, p.confidence, self.settings.autofile_confidence, policies
                 )
                 fields = p.model_dump(include={"shape", "space", "title", "due", "remind_at"})

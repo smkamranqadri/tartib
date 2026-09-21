@@ -6,6 +6,7 @@ import sqlite3
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, ConfigDict, Field
 
 from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
@@ -13,11 +14,15 @@ from tartib.config import Settings
 from tartib.deps import get_db, get_settings, push_ready
 from tartib.sessions import counts_today
 from tartib.store import (
+    HOUSE_RULES_MAX,
     STALE_DAYS,
+    classifier_examples,
+    house_rules,
     items_by_thoughts,
     list_spaces,
     serialize_capture,
     serialize_item,
+    set_house_rules,
     stale_cutoff,
 )
 
@@ -97,10 +102,34 @@ def config(
         "spaces": list_spaces(conn),
         "ai": settings.ai_enabled,
         "autofile_confidence": settings.autofile_confidence,
+        "house_rules": house_rules(conn),
+        "house_rules_max": HOUSE_RULES_MAX,
+        # How many of the examples sent to the classifier are real corrections rather than
+        # padding. Zero is a fact about the data, not a fault: it means nothing has been
+        # overridden yet, so there is nothing to learn from.
+        "corrections": classifier_examples(conn, threshold=settings.autofile_confidence)[1],
         # The public key only, and only when a push could actually be delivered. The private
         # one never leaves the process.
         "vapid_public": settings.vapid_public if can_push else None,
     }
+
+
+class HouseRulesBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(default="", max_length=HOUSE_RULES_MAX * 2)
+
+
+@router.put("/config/house-rules")
+def put_house_rules(
+    body: HouseRulesBody, conn: sqlite3.Connection = Depends(get_db)
+) -> dict:
+    """Replace the owner's filing rules. Empty clears them back to the shipped prompt.
+
+    Nothing here can break classification: the rules are appended to the prompt, never
+    substituted into the part that defines the reply format.
+    """
+    return {"house_rules": set_house_rules(conn, body.text)}
 
 
 @router.get("/recent")

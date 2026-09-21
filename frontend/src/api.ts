@@ -101,8 +101,16 @@ export const getConfig = () =>
     spaces: string[];
     ai: boolean;
     autofile_confidence: number;
+    house_rules: string;
+    house_rules_max: number;
+    corrections: number;
     vapid_public: string | null;
   }>("/api/config");
+
+/** Your own filing rules, appended to the shipped classifier prompt. Empty clears them.
+ *  They cannot reach the part of the prompt that defines the reply format (slice 27). */
+export const setHouseRules = (text: string) =>
+  send<{ house_rules: string }>("PUT", "/api/config/house-rules", { text });
 
 export const subscribePush = (endpoint: string, keys: { p256dh: string; auth: string }) =>
   send<{ id: number }>("POST", "/api/subscriptions", { endpoint, keys });

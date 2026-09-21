@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { getConfig, logout } from "../api";
+import { describe, getConfig, logout, setHouseRules } from "../api";
 import { speechSupported } from "../Capture";
 import { type ChimeSound, chimeSound, playChime, SOUNDS, setChimeSound } from "../chime";
 import Card from "../components/Card";
@@ -42,6 +42,21 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
         </Row>
         <Row title="Auto-file threshold" desc="Proposals at or above this confidence file without asking.">
           <span className="muted">{config ? `${Math.round(config.autofile_confidence * 100)}%` : "…"}</span>
+        </Row>
+        <Row
+          title="Learning from"
+          desc="Filings where you changed what the classifier proposed. It is shown these as examples; until there are some, it has nothing of yours to learn from."
+        >
+          <span className="muted">
+            {config ? (config.corrections === 1 ? "1 correction" : `${config.corrections} corrections`) : "…"}
+          </span>
+        </Row>
+        <Row
+          stack
+          title="House rules"
+          desc="Your own filing rules, in your words. They are added to what the classifier already knows and outrank its own reading. They cannot change how it replies, so nothing you write here can stop captures filing."
+        >
+          {config && <HouseRules initial={config.house_rules} max={config.house_rules_max} onSaved={reloadConfig} />}
         </Row>
       </Card>
       <Card icon={<HomeIcon />} label="Device">
@@ -204,6 +219,55 @@ function Reminders({ vapidPublic, failed }: { vapidPublic: string | null | undef
 
 /** `stack` puts the control under the text at full width, for anything wider than a value or a
  *  switch -- the theme list is the only one so far. */
+/** The house-rules editor. Saves on demand, not on every keystroke: this text is sent to the
+ *  classifier on every capture, and a half-typed rule is worse than none. */
+function HouseRules({ initial, max, onSaved }: { initial: string; max: number; onSaved: () => void }) {
+  const [text, setText] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const dirty = text.trim() !== initial.trim();
+
+  async function save(next: string) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { house_rules } = await setHouseRules(next);
+      setText(house_rules);
+      setMsg(house_rules ? "Saved." : "Cleared.");
+      onSaved();
+    } catch (e) {
+      setMsg(describe(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="house-rules">
+      <textarea
+        value={text}
+        maxLength={max}
+        rows={4}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Anything about the car goes in home, never finance."
+        aria-label="House rules"
+      />
+      <div className="house-rules-foot">
+        <span className="muted small">
+          {text.length}/{max}
+        </span>
+        <button type="button" className="ghost" disabled={busy || !text} onClick={() => void save("")}>
+          Clear
+        </button>
+        <button type="button" className="primary" disabled={busy || !dirty} onClick={() => void save(text)}>
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </div>
+      {msg && <p className="muted small">{msg}</p>}
+    </div>
+  );
+}
+
 function Row({ title, desc, stack, children }: { title: string; desc: string; stack?: boolean; children: React.ReactNode }) {
   return (
     <div className={`pref ${stack ? "stacked" : ""}`}>

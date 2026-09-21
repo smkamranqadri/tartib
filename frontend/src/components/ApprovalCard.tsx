@@ -52,6 +52,16 @@ export default function ApprovalCard({
     setMsg(null);
   }, [item.id, item.proposal, item.space]);
 
+  /* The classifier asked rather than guessed. One tap answers it and fills the sentence in;
+     approving is still a separate, deliberate act, so a mis-tap costs nothing. */
+  const ask = item.proposal && item.proposal.shape !== "question" ? (item.proposal.clarify ?? null) : null;
+  const chosen = (value: string) => (ask?.field === "space" ? draft.space === value : draft.shape === value);
+  function answer(value: string) {
+    if (!ask) return;
+    setMsg(null);
+    setDraft(ask.field === "space" ? { ...draft, space: value } : { ...draft, shape: value as Shape });
+  }
+
   async function approve() {
     if (!draft.space) {
       setMsg("Pick a space first.");
@@ -130,6 +140,24 @@ export default function ApprovalCard({
         >
           {item.raw_text}
         </button>
+      )}
+      {ask && (
+        <div className="asked">
+          <p className="asked-q">{ask.question}</p>
+          <div className="asked-opts">
+            {ask.options.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className={`asked-opt ${chosen(o.value) ? "on" : ""}`}
+                onClick={() => answer(o.value)}
+              >
+                <span className="asked-label">{o.label}</span>
+                {o.detail && <span className="asked-detail muted">{o.detail}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       <p className="sentence">
         <button type="button" className="word" onClick={() => setDraft({ ...draft, shape: draft.shape === "task" ? "note" : "task" })}>
