@@ -5,8 +5,12 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 26 (retrieval) is done and committed on `main`**, not deployed.
-  The plan, the three things it did not foresee, and the proof: `kis/intent/slice-26-retrieval.md`.
+- Task: none in flight. The digest stale-count gap is **fixed and committed** (2026-09-21):
+  `store.waiting_counts` now owns what "waiting" means and the digest counts both halves.
+- Decided 2026-09-21: **nothing goes out yet.** `main` stays unpushed and no image is published
+  until you are at the phone; `v1.1` is the next thing, and it now carries this fix too.
+- **Slice 26 (retrieval) is done and committed on `main`**, not deployed. The plan, the three
+  things it did not foresee, and the proof: `kis/intent/slice-26-retrieval.md`.
 - **Slices 23 (the UI language), 24 (presentation), 25 (offline) and 26 (retrieval) are
   committed on `main`, not deployed, and have never been seen on a device.** What each changed,
   in a line: `kis/intent/history.md`; the decisions and the proof: `kis/intent/slice-2{3,4,5,6}-*.md`.
@@ -71,6 +75,10 @@ showing the classifier what already exists took six deliberately ambiguous captu
 **0/6 to 6/6** on space, with the existing 22 fixtures unchanged. Measured on this build against
 the real Codex CLI, not carried over from an earlier one.
 
+The digest fix was proved the only way a fix can be: the new test was run against the old
+`digest_counts` and failed on it -- `"0 due today, 1 need attention"` where the Inbox and the
+nav badge both said 2 -- then passed on the new one.
+
 Proved on the deployed app rather than only in tests: a capture classifies and files itself, the
 session cookie carries `Secure` behind the proxy, a session ending pushes and the phone buzzes
 with a desktop tab open on the same countdown (the migration 0008 case), and `http://` redirects.
@@ -80,9 +88,11 @@ with a desktop tab open on the same countdown (the migration 0008 case), and `ht
 Offline behaviour that is designed rather than missing -- counts lagging, and text editing
 needing one moment online first -- is product truth: `../intent/SPEC.md`, Offline.
 
-- The digest counts `stage='attention'` only, so it does not include the 14-day stale tasks the
-  Inbox also shows.
-- **Slices 23, 24 and 25 were proved in headless Chrome only.** Four things wait on glass:
+- **Slices 23 to 26 were proved in headless Chrome only.** Since slice 26 that harness is
+  committed (`cd frontend && npm run ui`, 8 checks, currently 8/8), so what it covers will not
+  silently regress -- but it cannot judge how anything reads. Slice 26's own visible changes are
+  the Note/Task buttons, now 44px wide, and the ask bar's follow-up carry. Four things wait on
+  glass:
   whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
   against readability, and slice 24's markdown is the best answer to it that can be given
   without a device; whether `background-attachment: fixed` survives iOS; whether tapping a word
