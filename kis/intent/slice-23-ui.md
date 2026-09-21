@@ -24,7 +24,7 @@ Read off the screenshots, not invented:
   `DEVELOPMENT` amber, `LIBRARIAN PROPOSED → REVIEW` green -- and **status pills with a leading
   dot**, `● Needs you · failed`.
 - **Pill buttons with a border**, one filled accent button for the primary action.
-- **A breadcrumb eyebrow**: `HERMES-HQ // SECOND-BRAIN` above the page title.
+- **A breadcrumb eyebrow**: `SECTION // SUBSECTION`, uppercase and mono, above the page title.
 - **Bordered stat tiles**: a big number over a mono caps label.
 - **A list with thin bars**: each area with a bar sized by what is in it, and a count.
 

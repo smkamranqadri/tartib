@@ -5,8 +5,11 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. The digest stale-count gap is **fixed and committed** (2026-09-21):
-  `store.waiting_counts` now owns what "waiting" means and the digest counts both halves.
+- Task: **slice 27, the AI contract** -- planned 2026-09-21, not started.
+  Plan, the decisions, and what earlier work already settled about it:
+  `kis/intent/slice-27-ai-contract.md`. Phase mode; its part C is the agreed cut point.
+  The digest stale-count gap is **fixed and committed** (2026-09-21): `store.waiting_counts`
+  now owns what "waiting" means and the digest counts both halves.
 - Decided 2026-09-21: **nothing goes out yet.** `main` stays unpushed and no image is published
   until you are at the phone; `v1.1` is the next thing, and it now carries this fix too.
 - **Slice 26 (retrieval) is done and committed on `main`**, not deployed. The plan, the three
