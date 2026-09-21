@@ -12,7 +12,7 @@ from tartib import db, push
 from tartib.clock import as_utc_iso as iso
 from tartib.clock import today_in, utcnow
 from tartib.config import Settings
-from tartib.store import get_state, set_state
+from tartib.store import get_state, set_state, waiting_counts
 
 log = logging.getLogger("tartib.reminders")
 
@@ -61,16 +61,19 @@ def expire_stale(conn: sqlite3.Connection, now: datetime) -> int:
 
 
 def digest_counts(conn: sqlite3.Connection, settings: Settings, now: datetime) -> tuple[int, int]:
+    """(due today, waiting). `waiting` is both halves -- undecided captures and open tasks nobody
+    has touched for STALE_DAYS -- because that is what the nav badge and the Inbox have always
+    shown, and a digest that disagrees with the screen it sends you to is worse than no digest.
+    A task that is both overdue and stale is in both numbers, exactly as it is on both screens.
+    """
     day = today_in(settings.zone, now).isoformat()
     due = conn.execute(
         "SELECT COUNT(*) AS n FROM items WHERE stage = 'filed' AND shape = 'task'"
         " AND status = 'open' AND due IS NOT NULL AND due <= ?",
         (day,),
     ).fetchone()["n"]
-    waiting = conn.execute("SELECT COUNT(*) AS n FROM items WHERE stage = 'attention'").fetchone()[
-        "n"
-    ]
-    return due, waiting
+    undecided, stale = waiting_counts(conn)
+    return due, undecided + stale
 
 
 def digest_due(conn: sqlite3.Connection, settings: Settings, now: datetime) -> str | None:

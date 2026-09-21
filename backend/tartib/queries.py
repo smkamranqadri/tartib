@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -13,11 +12,17 @@ from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings, push_ready
 from tartib.sessions import counts_today
-from tartib.store import items_by_thoughts, list_spaces, serialize_capture, serialize_item
+from tartib.store import (
+    STALE_DAYS,
+    items_by_thoughts,
+    list_spaces,
+    serialize_capture,
+    serialize_item,
+    stale_cutoff,
+)
 
 RECENT = 3
 RECENT_PAGE = 50
-STALE_DAYS = 14
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -67,7 +72,7 @@ def attention(conn: sqlite3.Connection = Depends(get_db)) -> dict:
     rows = conn.execute(
         "SELECT * FROM items WHERE stage = 'attention' ORDER BY created_at, id"
     ).fetchall()
-    cutoff = (utcnow() - timedelta(days=STALE_DAYS)).isoformat().replace("+00:00", "Z")
+    cutoff = stale_cutoff()
     stale = conn.execute(
         "SELECT * FROM items WHERE stage = 'filed' AND shape = 'task' AND status = 'open'"
         " AND updated_at < ? ORDER BY updated_at, id",

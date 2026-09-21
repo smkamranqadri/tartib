@@ -13,6 +13,7 @@ import pytest
 from tartib import db, push
 from tartib.main import create_app
 from tartib.reminders import Reminders, mark_reminded
+from tartib.store import STALE_DAYS, waiting_counts
 from tartib.vapid import generate
 from tests.conftest import PASSWORD, capture, make_settings
 
@@ -580,3 +581,45 @@ def test_one_bad_minute_does_not_spend_every_strike(auth, tmp_path):
     assert reminders.tick(MORNING)["reminded"] == push.MAX_FAILURES
     assert auth.get("/api/subscriptions").json()["count"] == 1, "the phone was dropped in one tick"
     assert failures(tmp_path) == 1
+
+
+def test_the_digest_counts_stale_tasks_the_inbox_also_shows(auth, tmp_path):
+    """The digest counted only undecided captures, so it undercounted every morning.
+
+    The nav badge has always been `items.length + stale.length` (App.tsx) and the Inbox has
+    always listed both, so the notification disagreed with the screen it sends you to.
+    """
+    capture(auth, "something to decide")  # one undecided
+    filed = auth.post(
+        "/api/items", json={"shape": "task", "space": "work", "text": "an old open task"}
+    ).json()
+    # Untouched for longer than STALE_DAYS: filed, open, and nobody has been near it.
+    conn = db.connect(str(tmp_path / "t.db"))
+    old = (datetime.now(UTC) - timedelta(days=STALE_DAYS + 1)).isoformat().replace("+00:00", "Z")
+    conn.execute("UPDATE items SET updated_at = ? WHERE id = ?", (old, filed["id"]))
+    conn.commit()
+    conn.close()
+
+    assert waiting_counts(db.connect(str(tmp_path / "t.db"))) == (1, 1)
+
+    subscribe(auth)
+    reminders, sender = loop(tmp_path, TARTIB_SUMMARY_TIME="08:00")
+    assert reminders.tick(datetime(2026, 9, 17, 3, 1, tzinfo=UTC))["digest"] is True
+    assert sender.titles == ["0 due today, 2 need attention"]
+
+
+def test_one_definition_of_stale_for_the_digest_and_the_inbox(auth, tmp_path):
+    """Two copies of this predicate is how they came to disagree in the first place."""
+    filed = auth.post(
+        "/api/items", json={"shape": "task", "space": "work", "text": "an old open task"}
+    ).json()
+    conn = db.connect(str(tmp_path / "t.db"))
+    old = (datetime.now(UTC) - timedelta(days=STALE_DAYS + 1)).isoformat().replace("+00:00", "Z")
+    conn.execute("UPDATE items SET updated_at = ? WHERE id = ?", (old, filed["id"]))
+    conn.commit()
+    conn.close()
+
+    inbox = auth.get("/api/attention").json()
+    _, stale = waiting_counts(db.connect(str(tmp_path / "t.db")))
+    assert inbox["stale_days"] == STALE_DAYS
+    assert len(inbox["stale"]) == stale == 1

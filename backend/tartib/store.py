@@ -6,9 +6,9 @@ import json
 import sqlite3
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
-from tartib.clock import utcnow_iso, utcnow_ms_iso
+from tartib.clock import utcnow, utcnow_iso, utcnow_ms_iso
 
 FILING_FIELDS = ("shape", "space", "title", "due", "remind_at")
 EDITABLE_FIELDS = FILING_FIELDS + ("starred", "status", "text")
@@ -60,6 +60,31 @@ def check_space(space: object, allowed: Sequence[str]) -> str | None:
     if s not in allowed:
         raise SpaceError(f"unknown space {s!r}; configured: {', '.join(allowed)}")
     return s
+
+
+STALE_DAYS = 14  # an open task nobody has touched for this long is waiting, whatever its stage
+
+
+def stale_cutoff() -> str:
+    return (utcnow() - timedelta(days=STALE_DAYS)).isoformat().replace("+00:00", "Z")
+
+
+def waiting_counts(conn: sqlite3.Connection) -> tuple[int, int]:
+    """(undecided, stale) -- the two halves of what the app calls waiting.
+
+    The nav badge has always summed both (`App.tsx`), and the Inbox has always shown both. The
+    digest counted only the first half, so it undercounted every morning. One owner for the
+    definition, because two copies of "stale" is how they came to disagree.
+    """
+    undecided = conn.execute(
+        "SELECT COUNT(*) AS n FROM items WHERE stage = 'attention'"
+    ).fetchone()["n"]
+    stale = conn.execute(
+        "SELECT COUNT(*) AS n FROM items WHERE stage = 'filed' AND shape = 'task'"
+        " AND status = 'open' AND updated_at < ?",
+        (stale_cutoff(),),
+    ).fetchone()["n"]
+    return int(undecided or 0), int(stale or 0)
 
 
 def list_spaces(conn: sqlite3.Connection) -> list[str]:
