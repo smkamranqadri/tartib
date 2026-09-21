@@ -54,11 +54,14 @@ the AI, and both prompts use it.
 
 Deferred from a slice rather than never planned:
 
-- **Link, don't duplicate.** The classifier prompt should attach a capture to an item that
-  already exists instead of filing a near-duplicate beside it. **Its retrieval half shipped in
-  slice 26**: the classifier is now shown what already lives in each space, built server-side by
-  `store.classify_context`. What is left is the part that changes what a proposal is -- naming an
-  item to update, which the schema still has no field for -- so this stays with 14.
+- **Link, don't duplicate** — **planned as slice 28** (2026-09-21),
+  `slice-28-what-the-classifier-may-name.md`. The classifier should attach a capture to an item
+  that already exists instead of filing a near-duplicate beside it.
+  **Correction (2026-09-21):** this entry used to claim slice 26 shipped its retrieval half.
+  Half true, and the wrong half. `store.classify_context` is context about the *database* --
+  per-space counts and recent items -- and takes no capture text at all. Duplicate detection
+  needs the items that resemble *this capture*, which is a per-capture search, and that is part
+  of slice 28.
   This is proven, not speculative, and now proven here: on an earlier build, real context from
   the database took discriminating cases from 1/6 to 5/6; **slice 26 measured 0/6 to 6/6 on this
   build** (`slice-26-retrieval.md`). Duplicate detection that *parked* a
@@ -66,20 +69,24 @@ Deferred from a slice rather than never planned:
   silently, caught 3/3 real duplicates with 0/5 false positives and no invented references. Park
   and name the match; do not auto-merge. Build the context server-side, so there is one source of
   truth for what the classifier is shown.
-- **AI usage on record.** Count the calls and the tokens, per call and in total, and show them.
-  The CLIs are subprocesses, so whatever they report on stdout is the only source; whether the
-  Codex CLI reports token counts at all is unestablished and decides how much of this is
-  possible. Both CLIs run on a subscription and will report no cost, so any money figure is an
-  estimate: price the tokens from a model price catalogue fetched at most once a day and cached
-  on disk, keeping the last good copy when a fetch fails (models.dev publishes one as JSON, USD
-  per million tokens). Counts are the feature; the cost is a derived number and should read
-  as one.
+- **AI usage on record** — **promoted to slice 29** (2026-09-21); its plan gets written when
+  slice 28 closes. Count the calls and the tokens, per call and in total, and show them.
+  **No longer unestablished:** `codex exec --json` emits the turn as JSONL and `turn.completed`
+  carries a `usage` object with input, cached input, cache-write input, output, reasoning and
+  total tokens. The mechanism and its two traps are in `../knowledge/technical.md`.
+  Decided 2026-09-21: **counts plus a costed estimate**, not counts alone. Both CLIs run on a
+  subscription and will report no cost, so any money figure is an estimate: price the tokens
+  from a model price catalogue fetched at most once a day and cached on disk, keeping the last
+  good copy when a fetch fails (models.dev publishes one as JSON, USD per million tokens).
+  Counts are the feature; the cost is a derived number and must read as one.
 - **An item graph.** Notes and tasks as nodes, the links between them as edges, clustered by
   space and sized by how often an item is referenced. This is the whole point of linking, and it
-  is blocked on "Link, don't duplicate" above: with no links there are no edges and the graph is
+  is blocked on slice 28 above: with no links there are no edges and the graph is
   a scatter of unconnected dots. A deterministic force layout drawn as plain SVG is enough, so
   this needs no charting or graph dependency.
-- **The classifier may propose a space that does not exist yet.** A proposal only: naming it does
+- **The classifier may propose a space that does not exist yet** — **planned as slice 28**
+  (2026-09-21), beside park-and-name, because both are a proposal naming something outside its
+  own fields. A proposal only: naming it does
   nothing, and accepting it is what creates the space. An unaccepted proposal leaves the item
   where an unknown space leaves it today, at null with confidence capped. Decided 2026-09-19. Rule
   7 says the classifier never invents a space, and it says that because a classifier free to

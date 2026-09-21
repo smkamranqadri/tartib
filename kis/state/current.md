@@ -5,8 +5,12 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 27 (the AI contract) is done and committed on `main`**, not
-  deployed. House rules, the classifier asking which space instead of guessing, and corrections
+- Task: **slice 28, what the classifier may name** -- planned 2026-09-21, not started.
+  Park-and-name a duplicate, and proposing a space that does not exist yet. Phase mode.
+  `kis/intent/slice-28-what-the-classifier-may-name.md`. It starts from a correction: the
+  retrieval slice 26 shipped is about the database, not about the capture in hand, so
+  per-capture retrieval is part of this slice.
+- **Slice 27 (the AI contract) is done and committed on `main`**, not deployed. House rules, the classifier asking which space instead of guessing, and corrections
   as examples. The measurement that closed it caught a regression first -- asking had become a
   way to avoid deciding -- and the fix is recorded with it:
   `kis/intent/slice-27-ai-contract.md`. No blockers.
