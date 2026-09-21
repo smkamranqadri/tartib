@@ -408,23 +408,55 @@ def test_a_hostile_house_rule_does_not_break_the_contract():
 
 @pytest.mark.eval
 def test_the_classifier_asks_rather_than_guessing_when_it_cannot_tell():
-    """B: an ambiguous capture should come back with a question, a clear one should not."""
+    """B: it must ask about what it cannot place, and stay quiet about what it can.
+
+    This test used to pass while the model never asked at all, which made it decorative for the
+    one thing it exists to measure. Both halves are now required.
+    """
     if shutil.which("codex") is None:
         pytest.skip("codex CLI not installed")
 
+    # Nothing in these names a space. Left alone, they file as a null space and an empty form.
+    VAGUE = ["sort out the thing with Ahmed", "book it for next week", "follow up on that"]
+    # These the classifier can place. Asking about them is asking to avoid deciding.
+    PLACEABLE = [
+        "reply to Ahmed's email about the invoice",
+        "Gym on Tuesdays and Fridays, mornings.",
+        "call the dentist tomorrow",
+    ]
     context = Context(now=NOW, zone=ZONE, spaces=SPACES, codex=CodexConfig(command="codex"))
 
     async def run_all():
-        return await asyncio.gather(
-            classify("slides for the meetup talk", context),
-            classify("call the dentist tomorrow", context),
-        )
+        return await asyncio.gather(*(classify(t, context) for t in VAGUE + PLACEABLE))
 
-    ambiguous, clear = asyncio.run(run_all())
-    a = next((p for p in ambiguous if p.shape != "question"), None)
-    c = next((p for p in clear if p.shape != "question"), None)
-    print(f"\nambiguous -> clarify={a.clarify}\nclear     -> clarify={c.clarify}")
-    if a.clarify is not None:
-        assert 2 <= len(a.clarify.options) <= 6
-        assert all(o.value in SPACES for o in a.clarify.options) or a.clarify.field == "shape"
-    assert c.clarify is None, "a capture it should be sure about still asked"
+    results = asyncio.run(run_all())
+    asked, failures = {}, []
+    for text, proposals in zip(VAGUE + PLACEABLE, results, strict=True):
+        p = next((x for x in proposals if x.shape != "question"), None)
+        c = p.clarify if p else None
+        asked[text] = c
+        if c is not None:
+            if not 2 <= len(c.options) <= 6:
+                failures.append(f"{text!r}: {len(c.options)} options")
+            if c.field == "space" and not all(o.value in SPACES for o in c.options):
+                failures.append(f"{text!r}: offered a space that does not exist")
+
+    silent_on_vague = [t for t in VAGUE if asked[t] is None]
+    asked_on_placeable = [t for t in PLACEABLE if asked[t] is not None]
+    def line(t):
+        c = asked[t]
+        said = "ASK " + str([o.value for o in c.options]) if c else "no question"
+        return f"  {t[:44]!r:46} {said}"
+
+    report = "\n".join(line(t) for t in VAGUE + PLACEABLE)
+    print("\n" + report)
+
+    # A null space with no question is the empty form this part exists to replace.
+    assert not silent_on_vague, (
+        f"did not ask about what it could not place: {silent_on_vague}\n{report}"
+    )
+    # And asking is not a way to avoid deciding.
+    assert not asked_on_placeable, (
+        f"asked about captures it could place: {asked_on_placeable}\n{report}"
+    )
+    assert not failures, "\n".join(failures)

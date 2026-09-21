@@ -180,6 +180,10 @@ Each proposal has:
   an empty field and a form; naming the two or three spaces it might plausibly be turns the same
   uncertainty into one tap. If the text is too thin to name even two candidates, list the spaces
   it would most likely belong to anyway.
+  **Asking is not a way to avoid choosing.** If any space is a reasonable fit, name it, with an
+  honest confidence and no question: a proposal they can accept in one tap beats a question they
+  must answer. Ask only about a capture you would otherwise have had to leave with no space at
+  all.
 
 Never rewrite or summarize the text itself. Do not run commands or read files.
 
