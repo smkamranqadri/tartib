@@ -23,7 +23,7 @@
   `kis/intent/slice-28-what-the-classifier-may-name.md`. `TARTIB_DUPLICATE_PARK` is **off** by
   design: the verdict is recorded now so it can be judged on real captures before it is ever
   allowed to hold one back.
-- Small and worth doing before `v1.1`: one consolidated `uv run pytest -m eval`. Every check has
+- Small and worth doing before `v2.0`: one consolidated `uv run pytest -m eval`. Every check has
   passed. Originally measured across two runs on the CLI's default model; **re-measured on the
   pinned model in one run on 2026-09-22 and unchanged.**
   Park-and-name a duplicate, and proposing a space that does not exist yet. Phase mode.
@@ -37,7 +37,7 @@
 - The digest stale-count gap is **fixed and committed** (2026-09-21): `store.waiting_counts`
   now owns what "waiting" means and the digest counts both halves.
 - Decided 2026-09-21: **nothing goes out yet.** `main` stays unpushed and no image is published
-  until you are at the phone; `v1.1` is the next thing, and it now carries this fix too.
+  until you are at the phone; `v2.0` is the next thing, and it now carries this fix too.
 - **Slice 26 (retrieval) is done and committed on `main`**, not deployed. The plan, the three
   things it did not foresee, and the proof: `kis/intent/slice-26-retrieval.md`.
 - **Slices 23 to 29 are committed on `main`, not deployed, and have never been seen on a
@@ -55,15 +55,15 @@
   using whatever default the CLI picks, which can move on its own), and **`SW_VERSION` in `sw.js` is bumped by hand**. It is at
   `2026-09-22.1`, bumped for slices 28 and 29, which changed the bundle without touching
   `sw.js` -- exactly the case the rule exists for. Nothing outstanding unless another
-  bundle-only change lands before `v1.1`. The rule and its
+  bundle-only change lands before `v2.0`. The rule and its
   reason are in `../knowledge/technical.md`, Frontend shell.
 - Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
      2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
      everything on that server exists exactly once. This is the one open item whose cost is
      unbounded.
-  2. **`v1.1`, and look at slices 23 to 26 on a device.** Now the next thing: slice 26 was the
-     work `v1.1` was waiting for. This is the only thing that can settle what Known gaps lists
+  2. **`v2.0`, and look at slices 23 to 26 on a device.** Now the next thing: slice 26 was the
+     work `v2.0` was waiting for. This is the only thing that can settle what Known gaps lists
      against 23, 24 and 25.
   3. Then slice 14 (AI contract), which is now prompt work only -- slice 26 took its retrieval
      half out and closed two backlog entries doing it. Then the rest of `kis/intent/backlog.md`.
@@ -71,7 +71,7 @@
 ## The deployment
 
 - Running: `smkamranqadri/tartib:v1.0` on the CapRover VPS (`x86_64`), with the Codex login made
-  on the server and classifying from there. The next deploy is `v1.1`. How the deploy is
+  on the server and classifying from there. The next deploy is `v2.0`. How the deploy is
   configured and why is Knowledge: `kis/knowledge/technical.md`, Deploy.
 - Local development runs `docker compose up -d --build` against http://localhost:8000.
 
@@ -79,7 +79,7 @@
 
 - **The deployed `v1.0` still carries the Claude fallback**, which hangs for the full 120s
   timeout on that host, so a Codex failure there costs 120s per capture and fails anyway. Removed
-  from the code in slice 18 step 1; gone from the server at `v1.1`. Until then, unsetting
+  from the code in slice 18 step 1; gone from the server at `v2.0`. Until then, unsetting
   `TARTIB_AI_FALLBACK_COMMAND` in the dashboard makes those failures instant. Why it hung was
   never found and no longer matters.
 - No backups of the deployed database. See Next.
@@ -89,7 +89,7 @@
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
   Verification commands. As of 2026-09-22 the numbers to expect are **274 passed, 7 deselected**
   (the seven are the evals) and **10/10** from the UI suite. Any red is real.
-- Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
+- Deploy: `./deploy.sh v2.0`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
 

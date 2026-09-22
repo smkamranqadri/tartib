@@ -275,7 +275,8 @@ one-click this onto CapRover, but it is not the route used: the image is built o
 workstation by `deploy.sh` and pushed to Docker Hub, and CapRover deploys it by image name. The
 VPS has the disk but building a Node-plus-two-CLIs image there is what falls over. This machine
 is arm64 and the server is not, so `deploy.sh` runs `docker buildx build --platform linux/amd64`
-under QEMU; `TARTIB_IMAGE` and `TARTIB_PLATFORM` override the defaults. The script refuses to
+under QEMU; `TARTIB_IMAGE` and `TARTIB_PLATFORM` override the defaults.
+**The version number is a rollback label, so it has to be honest about discontinuity.** Decided 2026-09-22: the release after `v1.0` is **`v2.0`**, not `v1.1`. Eight migrations (0010-0017) separate them, and a number one point away invites a flip between them as though it were safe. All eight are additive -- `ADD COLUMN` with a default or nullable, `CREATE TABLE`, `CREATE INDEX`, and the single `DROP TRIGGER` in 0014 recreates it -- so **`v1.0` code would still physically run against schema 17**: inserts fall back on defaults and extra columns are ignored. It would not crash. It would silently orphan thoughts, filing policies, duplicate verdicts, usage rows and the whole AI contract, which is worse than crashing and is exactly what the major bump warns about. Nothing consumes this as an API, so a major bump breaks no contract and costs nothing. The script refuses to
 overwrite a tag that already exists, because the tags are immutable versions and there is no
 `latest` -- CapRover redeploying the same string could otherwise serve either image.
 
