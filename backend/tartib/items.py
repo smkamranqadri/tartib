@@ -18,6 +18,7 @@ from tartib.deps import get_db, get_settings
 from tartib.links import link_view
 from tartib.spaces import add_space
 from tartib.store import (
+    WAIT_RELINK,
     NotWhole,
     SpaceError,
     capture_by_client_id,
@@ -29,6 +30,7 @@ from tartib.store import (
     insert_item,
     keep_whole,
     list_spaces,
+    refile_relinked,
     related_line,
     same_title,
     serialize_item,
@@ -231,6 +233,22 @@ def approve(
     """File the item with its stored proposal, overridden by any fields in the body."""
     row = fetch_item(conn, item_id)
     _require_attention(row)
+    if row["wait_reason"] == WAIT_RELINK:
+        # Sent back by suggest_links (slice 34): file it back as it is, not as first proposed.
+        edits = body.provided() if body is not None else {}
+
+        def back() -> dict:
+            refile_relinked(
+                conn, item_id, edits, None if body is None else body.links, list_spaces(conn)
+            )
+            conn.commit()
+            return serialize_item(fetch_item(conn, item_id))
+
+        try:
+            return _write(back)
+        except HTTPException:
+            conn.rollback()
+            raise
     fields: dict = json.loads(row["proposal_json"]) if row["proposal_json"] else {}
     fields = {
         k: v
@@ -300,6 +318,10 @@ async def redo(
     files itself. The reason is kept on the item whatever happens next."""
     row = fetch_item(conn, item_id)
     _require_attention(row)
+    if row["wait_reason"] == WAIT_RELINK:
+        raise HTTPException(
+            status_code=409, detail="This item was already filed; only its links are in question."
+        )
     reason = " ".join(body.reason.split())
     if not reason:
         raise HTTPException(status_code=422, detail="say why")

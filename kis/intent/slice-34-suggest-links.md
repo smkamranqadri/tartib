@@ -4,6 +4,7 @@ Planned 2026-09-22 with the owner, after a dry run of slice 33 phase C on 15 `in
 live snapshot proposed about 11 good links (the CapRover -> Docker -> Server chain among them) and
 wrote nothing. Phase C only proposes links for new captures; this is the pass for what is already
 filed. Standard mode.
+**Built and verified 2026-09-23 (Proof, below); not deployed.**
 
 ## Decided with the owner, 2026-09-22
 
@@ -77,3 +78,32 @@ A button in the app; `--all`; reviewing without unfiling; adjusting tasks' due d
 
 `technical.md`: the table, the `relink` reason and its approve rule, the CLI beside reclassify.
 SPEC: the reason in Needs attention. history.md.
+
+## Proof (2026-09-23, local)
+
+- As built: migration 0022 (`link_suggestions`, and `link_asks` added after review);
+  `tartib/suggest_links.py`; `store.suggest`, `pending_suggestions`, `pair_known`,
+  `refile_relinked`, `WAIT_RELINK`; approve and redo branches in `items.py`; `reclassify
+  --attention` skips `relink`; the card and the item page's form start from the item for `relink`,
+  and neither offers "Tell it why".
+- `uv run pytest -q`: **351 passed, 9 deselected** (eleven in `test_suggest_links.py`: acceptance
+  1 to 4 -- dry run stores nothing, one per pair, filed back with its own space and due and
+  `classified_at`/`proposal_json` unchanged, a skipped pair never again, redo refused and
+  reclassify skipping -- plus an existing link counting as the pair, limit and unknown space, an
+  invented label, and three from review); schema asserts to 22; `ruff` clean.
+- `npm run ui`: **20/20**, one new: S34, the `relink` card stubbed with a proposal naming another
+  space -- it sends the item's own space, no "Tell it why". The item page's "File it" checked the
+  same way in a scratch script: it shows and sends `coding`, the item's, not `games`, the
+  proposal's. `tsc` clean.
+- **Live snapshot, `--dry-run --space infra --limit 5`** (2026-09-23): migrated the copy to 22
+  and indexed 196 items; 5 calls, 61s; 4 items would be sent back with 6 links (#212 Ubuntu,
+  #211 Server Setup and Docker -- the pair with #212 not offered twice --, #210 Server Setup,
+  #204 the AWS exam article and, weakly, Mongodb Cluster Operations); nothing stored, no
+  `ai_calls` rows. The snapshot was deleted after, here and on the host.
+- **Review** (a separate agent): three confirmed and fixed with tests -- the item page's "File it"
+  re-applied the first proposal (an item moved since would be moved back); a task's pending
+  reminder would be written off while it waited (such tasks are now skipped); an item or target
+  deleted mid-run crashed the command on a foreign key (`suggest` now re-checks). Also taken: an
+  item that got nothing was asked again on every run (`link_asks`). Accepted as known: the touch
+  trigger moves `updated_at` when an item is sent back and refiled, so it leaves the stale list;
+  a kept `Related:` line is in the text the examples quote.

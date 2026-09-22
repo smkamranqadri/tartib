@@ -53,7 +53,8 @@ def select_ids(conn, scope: str) -> list[int]:
     else:
         rows = conn.execute(
             "SELECT DISTINCT c.id FROM captures c LEFT JOIN items i ON i.capture_id = c.id"
-            f" WHERE c.direct = 0 AND (c.status = 'error' OR i.stage = 'attention'){KEEPS_WORK}"
+            f" WHERE c.direct = 0 AND (c.status = 'error' OR (i.stage = 'attention'"
+            f" AND i.wait_reason IS NOT 'relink')){KEEPS_WORK}"
             " ORDER BY c.id"
         ).fetchall()
     return [r["id"] for r in rows]

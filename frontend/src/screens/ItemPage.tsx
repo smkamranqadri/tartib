@@ -297,7 +297,8 @@ export default function ItemPage({
         <ItemEditor
           key={`${item.id}-${item.stage}-${item.classified_at}-${item.updated_at}`}
           item={item}
-          fromProposal={waiting}
+          // An item sent back for its links (slice 34) files back as it is, not as first proposed.
+          fromProposal={waiting && item.wait_reason !== "relink"}
           spaces={spaces}
           submitLabel={waiting ? "Approve" : "Save"}
           requireSpace

@@ -14,7 +14,10 @@ interface Draft {
 }
 
 function draftOf(item: Item): Draft {
-  const p = item.proposal && item.proposal.shape !== "question" ? item.proposal : null;
+  /* An item sent back for its links was already filed (slice 34): the sentence starts from what
+     it is now. Starting from the proposal would send its first reading back as edits and undo
+     whatever was changed since. */
+  const p = item.wait_reason !== "relink" && item.proposal && item.proposal.shape !== "question" ? item.proposal : null;
   const shape = (p?.shape ?? item.shape) as Shape;
   return { shape, space: p?.space ?? item.space, title: p?.title ?? item.title ?? "", due: p?.due ?? item.due ?? "" };
 }
@@ -319,9 +322,12 @@ export default function ApprovalCard({
             Not now
           </button>
         )}
-        <button type="button" className="ghost" onClick={() => setWhy("")}>
-          Tell it why…
-        </button>
+        {/* Not for an item that was already filed: a reason would reclassify it from scratch. */}
+        {item.wait_reason !== "relink" && (
+          <button type="button" className="ghost" onClick={() => setWhy("")}>
+            Tell it why…
+          </button>
+        )}
       </div>
     </div>
   );

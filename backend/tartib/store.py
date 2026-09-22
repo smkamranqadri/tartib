@@ -442,6 +442,9 @@ WAIT_SPLIT = "split"
 WAIT_WHOLE = "whole"
 # It would have filed, but the classifier proposed links to answer first (slice 33 phase C).
 WAIT_LINKED = "linked"
+# An item that was filed, sent back by `suggest_links` with links to answer (slice 34). Approving
+# files it back exactly as it was; it is never reclassified.
+WAIT_RELINK = "relink"
 
 
 def wait_reason_for(
@@ -980,10 +983,14 @@ def split_info(conn: sqlite3.Connection, items: Sequence[dict]) -> None:
 
 def related_info(conn: sqlite3.Connection, items: Sequence[dict]) -> None:
     """Add `related: [{id, title, space}]` to each waiting item whose proposal names links
-    (slice 33 phase C), the ones still there, so the card can offer each as a chip."""
+    (slice 33 phase C) -- or, for a `relink` item, whose suggestions are pending (slice 34) --
+    the ones still there, so the card can offer each as a chip."""
     for item in items:
-        proposed = (item.get("proposal") or {}).get("related") or []
-        ids = [int(i) for i in proposed if str(i).isdigit()]
+        if item.get("wait_reason") == WAIT_RELINK:
+            ids = pending_suggestions(conn, item["id"])
+        else:
+            proposed = (item.get("proposal") or {}).get("related") or []
+            ids = [int(i) for i in proposed if str(i).isdigit()]
         if not ids:
             continue
         marks = ", ".join("?" * len(ids))
@@ -1000,6 +1007,93 @@ def related_info(conn: sqlite3.Connection, items: Sequence[dict]) -> None:
             for i in ids
             if i in rows
         ]
+
+
+def pending_suggestions(conn: sqlite3.Connection, item_id: int) -> list[int]:
+    return [
+        r["target_id"]
+        for r in conn.execute(
+            "SELECT target_id FROM link_suggestions WHERE item_id = ? AND state = 'pending'"
+            " ORDER BY rowid",
+            (item_id,),
+        )
+    ]
+
+
+def pair_known(conn: sqlite3.Connection, a: int, b: int) -> bool:
+    """Whether a and b are already linked either way, or were suggested either way before --
+    kept, skipped or still pending. One link per pair shows both ways (Linked from), and a
+    skipped pair is never suggested again (slice 34)."""
+    if conn.execute(
+        "SELECT 1 FROM link_suggestions WHERE (item_id = ? AND target_id = ?)"
+        " OR (item_id = ? AND target_id = ?)",
+        (a, b, b, a),
+    ).fetchone():
+        return True
+    return bool(
+        conn.execute(
+            "SELECT 1 FROM item_links l JOIN item_keys k ON k.key = l.target"
+            " WHERE (l.source_id = ? AND k.item_id = ?) OR (l.source_id = ? AND k.item_id = ?)",
+            (a, b, b, a),
+        ).fetchone()
+    )
+
+
+def suggest(conn: sqlite3.Connection, item_id: int, targets: Sequence[int]) -> list[int]:
+    """Store pending suggestions and send the item back to waiting as `relink`. Only the stage
+    and the reason move: space, title, dates, `classified_at` and `proposal_json` stay as they
+    are, so approving can put it back exactly. Returns the targets stored.
+
+    Everything is checked again here, because the model was asked seconds ago: an item deleted
+    or no longer filed meanwhile is left alone, and so is a target that went. Caller commits."""
+    if not targets:
+        return []
+    marks = ", ".join("?" * len(targets))
+    alive = {
+        r["id"]
+        for r in conn.execute(
+            f"SELECT id FROM items WHERE id IN ({marks}) AND stage = 'filed'", list(targets)
+        )
+    }
+    keep = [t for t in targets if t in alive]
+    if not keep:
+        return []
+    moved = conn.execute(
+        "UPDATE items SET stage = 'attention', wait_reason = ? WHERE id = ? AND stage = 'filed'",
+        (WAIT_RELINK, item_id),
+    ).rowcount
+    if not moved:
+        return []
+    now = utcnow_iso()
+    conn.executemany(
+        "INSERT OR IGNORE INTO link_suggestions (item_id, target_id, created_at) VALUES (?, ?, ?)",
+        [(item_id, t, now) for t in keep],
+    )
+    return keep
+
+
+def refile_relinked(
+    conn: sqlite3.Connection, item_id: int, fields: dict, keep: Sequence[int] | None, allowed
+) -> None:
+    """Approve a `relink` item: its own fields plus any edits in `fields`, the kept links
+    appended, the rest marked skipped, back to filed. `classified_at` is left alone so a refiled
+    item is not a fresh example. `keep` None keeps every pending suggestion. Caller commits."""
+    pending = pending_suggestions(conn, item_id)
+    kept = pending if keep is None else [t for t in keep if t in pending]
+    row = conn.execute("SELECT raw_text, space FROM items WHERE id = ?", (item_id,)).fetchone()
+    if not (fields.get("space") or row["space"]):
+        raise SpaceError("a space is required to file an item")
+    line = related_line(conn, kept) if kept else None
+    if line:
+        text = str(fields.get("text") or row["raw_text"]).rstrip()
+        fields = {**fields, "text": f"{text}\n\n{line}"}
+    update_fields(conn, item_id, fields, allowed)
+    conn.execute("UPDATE items SET stage = 'filed', wait_reason = NULL WHERE id = ?", (item_id,))
+    for t in pending:
+        conn.execute(
+            "UPDATE link_suggestions SET state = ? WHERE item_id = ? AND target_id = ?",
+            ("kept" if t in kept else "skipped", item_id, t),
+        )
 
 
 def related_line(conn: sqlite3.Connection, ids: Sequence[int]) -> str | None:

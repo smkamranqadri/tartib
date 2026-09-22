@@ -1,6 +1,6 @@
 /**
  * Re-runs the UI checks slices 23, 24 and 25 proved once and then threw away, and since
- * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 to 33.
+ * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 to 34.
  *
  *     TARTIB_PASSWORD=... node frontend/tools/ui/check.mjs [--url http://localhost:8000] [--head]
  *
@@ -573,6 +573,50 @@ async function main() {
         for (let i = 0; i < 20 && !sent; i++) await page.waitForTimeout(100);
         if (JSON.stringify(sent?.links) !== "[11]") throw new Error(`sent ${JSON.stringify(sent)}`);
         return "two chips, one dropped, approve sent [11]";
+      } finally {
+        await ctx.close();
+      }
+    });
+
+    // --- slice 34: an item sent back for its links files back as it is ---
+    await check("S34 a relink card starts from the item, not its first proposal", async () => {
+      const other = spaces.find((s) => s !== space && s !== "Unfiled") || space;
+      const fake = {
+        id: 987655, capture_id: 987655, raw_text: "UI check old note", space, shape: "note",
+        stage: "attention", created_at: new Date().toISOString(), title: null, due: null,
+        remind_at: null, starred: false, status: "open", proposal_error: null, classified_at: null,
+        updated_at: new Date().toISOString(), thought_count: 0, wait_reason: "relink",
+        duplicate_of: null,
+        // The first reading put it elsewhere; it was moved since. The card must not undo that.
+        proposal: { shape: "note", space: other, title: null, due: null, remind_at: null,
+          confidence: 0.95, clarify: null, duplicate_of: null, new_space: null },
+        related: [{ id: 21, title: "Docker setup", space }],
+      };
+      let sent = null;
+      const ctx = await browser.newContext({ viewport: PHONE, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+      const page = await ctx.newPage();
+      await page.route("**/api/attention*", (route) =>
+        route.fulfill({ json: { items: [fake], stale: [], stale_days: 14 } }),
+      );
+      await page.route("**/api/items/987655/approve", async (route) => {
+        sent = JSON.parse(route.request().postData() || "{}");
+        await route.fulfill({ json: { ...fake, stage: "filed", wait_reason: null } });
+      });
+      try {
+        await page.goto(URL);
+        await page.fill('input[type="password"]', PASSWORD);
+        await page.click('button[type="submit"]');
+        await page.waitForSelector(".app", { timeout: 15000 });
+        await page.goto(`${URL}/inbox`);
+        await page.locator(".asked.related .asked-opt").first().waitFor({ timeout: 8000 });
+        const reason = await page.locator(".reason").first().innerText();
+        if (!/filed already/i.test(reason)) throw new Error(`reason: ${reason}`);
+        if (await page.locator(".decisions button", { hasText: "Tell it why" }).count()) throw new Error("Tell it why is offered");
+        await page.locator(".decisions button.primary").first().tap();
+        for (let i = 0; i < 20 && !sent; i++) await page.waitForTimeout(100);
+        if (sent?.space !== space) throw new Error(`sent space ${sent?.space}, the item's is ${space}`);
+        if (JSON.stringify(sent?.links) !== "[21]") throw new Error(`links ${JSON.stringify(sent?.links)}`);
+        return `its own space (${space}) sent, not the proposal's; no Tell it why`;
       } finally {
         await ctx.close();
       }
