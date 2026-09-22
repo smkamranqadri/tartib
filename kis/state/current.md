@@ -5,7 +5,11 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: none in flight. **Slice 28 (what the classifier may name) is done and committed on
+- Task: **slice 29, what the AI costs** -- planned 2026-09-22, not started. Phase mode.
+  `kis/intent/slice-29-ai-usage.md`. Two things in it will bite if missed: `--json` changes
+  where error messages come from, and the cost may double-count reasoning tokens -- **no cost
+  figure ships until one real call reconciles the arithmetic.**
+- **Slice 28 (what the classifier may name) is done and committed on
   `main`**, not deployed. Park-and-name a duplicate, and proposing a space that does not exist.
   `kis/intent/slice-28-what-the-classifier-may-name.md`. `TARTIB_DUPLICATE_PARK` is **off** by
   design: the verdict is recorded now so it can be judged on real captures before it is ever

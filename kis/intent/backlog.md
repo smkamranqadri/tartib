@@ -69,8 +69,8 @@ Deferred from a slice rather than never planned:
   silently, caught 3/3 real duplicates with 0/5 false positives and no invented references. Park
   and name the match; do not auto-merge. Build the context server-side, so there is one source of
   truth for what the classifier is shown.
-- **AI usage on record** — **promoted to slice 29** (2026-09-21); its plan gets written when
-  slice 28 closes. Count the calls and the tokens, per call and in total, and show them.
+- **AI usage on record** — **planned as slice 29** (2026-09-22),
+  `slice-29-ai-usage.md`. Count the calls and the tokens, per call and in total, and show them.
   **No longer unestablished:** `codex exec --json` emits the turn as JSONL and `turn.completed`
   carries a `usage` object with input, cached input, cache-write input, output, reasoning and
   total tokens. The mechanism and its two traps are in `../knowledge/technical.md`.
