@@ -10,10 +10,7 @@
   the pinned `gpt-5.6-luna` at medium reasoning (confirmed in the container over SSH,
   2026-09-22). What each slice changed: `kis/intent/history.md`; decisions and proof:
   `kis/intent/slice-*.md`.
-- Task: **slice 31** (`kis/intent/slice-31-titles-and-modals.md`), **phase B** next: every
-  question in a modal. Phase 0 (the switches are pills, `2e5f8bd`) and phase A (the first line
-  is the title, migration 0018) are done on `main`. **Before deploying 0018, dry-run it on a copy
-  of the live database**: locally it prepended 25 of 40 tasks and moved no `updated_at`.
+- Task: none in flight. Slice 31 is done on `main` and waits for the next deploy.
 
 ## Open
 
@@ -23,7 +20,9 @@
   note's icon the size of the checkbox beside it (`1d3383e`), and **checklist boxes tickable** in
   an item's text (`b420ed3`; the first-day checklist report was a missing `- `, not a bug), and
   **slice 30**: a capture that splits waits for you, with Keep as one
-  (`kis/intent/slice-30-split-asks.md`). Each
+  (`kis/intent/slice-30-split-asks.md`), and **slice 31**: the first line is the title (migration
+  0018 -- **dry-run it on a copy of the live database first**), the switches are pills, and every
+  question asks in a modal (`kis/intent/slice-31-titles-and-modals.md`). Each
   was proved in Chrome against local; none has been on a phone. Until the cache fix is out, a new
   version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
   and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
@@ -41,8 +40,8 @@
 
 ## Next
 
-1. **The next cycle's backlog** (`kis/intent/backlog.md`): first-day feedback on `v2.0` (the
-   title, delete in a modal), then links between items, approved 2026-09-22. The fixes above
+1. **Deploy what is on `main`** (Open, above), then the backlog (`kis/intent/backlog.md`): links
+   between items, approved 2026-09-22, lead it now that the first-day feedback is done. The fixes above
    ship with it.
 2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
@@ -52,7 +51,7 @@
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
   Verification commands. Expect **308 passed, 8 deselected** (the eight are the evals) and
-  **13/13** from `npm run ui`. Any red is real.
+  **14/14** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
   Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;

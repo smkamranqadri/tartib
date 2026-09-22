@@ -45,33 +45,6 @@ Approved, not yet planned. Each gets a plan file when it comes up:
 
 Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
 
-- **The title is confusing, and it cannot be edited where it is shown.** The owner's words: *"don't
-  know title where note or task render, it duplicate and i can't edit it."* What the code does:
-  a task's title is drawn as a heading **above** the text only when it differs from the whole
-  body (`ItemPage.tsx`, the `item-title` line), so it appears in up to three places -- that
-  heading, the list row, and the Title field in the Edit section -- and **only the last is
-  editable**. Tapping the heading does nothing; tap-to-edit covers the body, not the title. A
-  note has no title at all: its row shows its first line. And the capture box promises *"The
-  first line becomes the title"*, which is only true of a task. Worth settling what a title *is*
-  before changing where it shows: one editable thing in one place, shown the same way for a task
-  and a note. Screenshot on file: a task "Post on social media" whose title sits over a checklist.
-- **The Task / Note switch should look like the filter pills.** Reported with two screenshots: the
-  switch in a space's "+ Add" form beside the All / Tasks / Notes and Done / Sessions pills. The
-  switch is `.seg` (`AddItemForm.tsx`; 8px radius, 6px buttons, a raised `--panel` highlight),
-  the pills are `.pills.tabs` (fully rounded). `.seg` has two more users with the same mismatch:
-  the space page's AUTO / ASK / FILE policy (`Space.tsx`) and the chime sound picker
-  (`Settings.tsx`). One control shape was slice 23's rule ("controls reduced to one shape"), so
-  this is the rule not yet applied here, and the three likely go together.
-- **Deleting a note or task should ask in a modal, not inside the note's body.** The owner's
-  words: *"should ask to delete note or task in modal not in note's body."* What the code does:
-  Delete in the item page's header sets `confirmDelete`, and `Confirm` renders inline **below the
-  text editor** (`ItemPage.tsx`), far from the button that asked. `Confirm.tsx` is inline by
-  design ("with no dialog"), and so far the product has had no modal anywhere: the session outcome,
-  the update bar and the stale-save strip all say so in their comments, and `technical.md` records
-  "there is no modal, here or anywhere." This request reverses that for delete. Decide whether
-  deleting a space (`Space.tsx`, the same `Confirm`) follows it, and whether the other inline
-  questions stay as they are.
-
 - **Links between items: approved, the owner's words "we definitely need links."** Raised while
   moving existing notes into Tartib (copied by hand -- no import feature is wanted). Two kinds,
   both from real notes:
@@ -81,8 +54,8 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   (b) item to another space -- a task to build a console app belongs to its own work but also
   to `coding`. Today an item has exactly one space, so this is either a link to a space or an
   item living in more than one, and that is the larger decision.
-  Undecided: how a link is written (`[[Title]]` is the familiar form, and notes have no title
-  field -- the title entry above bears on it), what happens to a link when its target is renamed
+  Undecided: how a link is written (`[[Title]]` is the familiar form; since slice 31 every
+  item's title is its first line, so a `[[…]]` names that line), what happens to a link when its target is renamed
   or deleted, and whether the classifier may propose links. Unblocks the item graph.
 - **A space becomes one long flat list -- being tried with more spaces first.** Same report: the
   notes come from folders (`Documents`, `Feedback` with one note per person, and a `Resource`

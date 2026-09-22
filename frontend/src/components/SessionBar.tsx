@@ -1,10 +1,11 @@
-import { type ReactElement, useEffect, useRef } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { getRecentSessions } from "../api";
 import { flattenFirstLine } from "../markdown";
 import { formatRemaining, useSession } from "../session";
 import { useLoad } from "../useLoad";
 import Card from "./Card";
 import { ClockIcon } from "./Icons";
+import Modal from "./Modal";
 import { describe } from "./SessionPast";
 
 /** The session: running, waiting for its outcome, or none with the recent ones to run again.
@@ -13,12 +14,39 @@ import { describe } from "./SessionPast";
  *  pinned above the ask bar, and only while a session is live -- running, or ended and waiting
  *  for its outcome -- so a session is never something you have to go and look for.
  *
- *  The outcome is asked inline rather than in a modal: this product has no dialogs, and a
- *  sheet that blocks the app to ask about 25 minutes that already happened would be the
- *  nagging rule 4 exists to prevent. */
+ *  The outcome is asked in a modal (slice 31, the owner's call: every question in the app asks
+ *  in one). It opens once when a session ends, and "Later" closes it for good for that session
+ *  -- the bar keeps an Answer button -- because a question that reopens on every page would be
+ *  the nagging rule 4 exists to prevent. Only one SessionBar is ever mounted (the card on Home,
+ *  the float elsewhere), so there is only ever one modal. The sessions put off are kept for the
+ *  tab in sessionStorage, so reopening the app does not ask again either; a new session does. */
+const LATER_KEY = "tartib-session-later";
+function putOff(id: number) {
+  try {
+    sessionStorage.setItem(LATER_KEY, String(id));
+  } catch {
+    /* storage refused: the modal just asks again next time the bar mounts */
+  }
+}
+function isPutOff(id: number): boolean {
+  try {
+    return sessionStorage.getItem(LATER_KEY) === String(id);
+  } catch {
+    return false;
+  }
+}
 export default function SessionBar({ placement }: { placement: "card" | "float" }) {
   const { current, remaining, busy, stop, answer, start, error } = useSession();
   const state = current?.state ?? null;
+  const endedId = state === "awaiting" ? current?.session?.id ?? null : null;
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    setAsking(endedId !== null && !isPutOff(endedId));
+  }, [endedId]);
+  const later = () => {
+    if (endedId !== null) putOff(endedId);
+    setAsking(false);
+  };
   // The last few, on Home's card only: floating above the ask bar it would be a list in the
   // way of the page. Under the question once a session stops, on their own when none runs.
   const past = useLoad(
@@ -126,17 +154,32 @@ export default function SessionBar({ placement }: { placement: "card" | "float" 
         <span className="session-time">Session done</span>
         <span className="session-what muted">{what}</span>
       </div>
-      <div className="session-outcomes">
-        <button type="button" className="primary" disabled={busy} onClick={() => void answer("done")}>
-          Done
-        </button>
-        <button type="button" className="ghost" disabled={busy} onClick={() => void answer("unfinished")}>
-          Not finished
-        </button>
-        <button type="button" className="ghost" disabled={busy} onClick={() => void answer("abandoned")}>
-          Abandoned
-        </button>
-      </div>
+      <button type="button" className="primary" disabled={busy} onClick={() => setAsking(true)}>
+        Answer
+      </button>
+      <Modal
+        open={asking}
+        title="How did the session go?"
+        onClose={later}
+        actions={
+          <>
+            <button type="button" className="ghost" disabled={busy} onClick={later}>
+              Later
+            </button>
+            <button type="button" className="ghost" disabled={busy} onClick={() => void answer("abandoned")}>
+              Abandoned
+            </button>
+            <button type="button" className="ghost" disabled={busy} onClick={() => void answer("unfinished")}>
+              Not finished
+            </button>
+            <button type="button" className="primary" disabled={busy} onClick={() => void answer("done")}>
+              Done
+            </button>
+          </>
+        }
+      >
+        {what}
+      </Modal>
       {earlier.length > 0 && (
         <ul className="session-past" aria-label="Earlier sessions">
           {earlier.map((p) => {

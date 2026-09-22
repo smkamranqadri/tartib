@@ -37,14 +37,16 @@ with the pills' radius and active colours, phone and desktop, and the 44px floor
 ## Phase A: the first line is the title
 
 - `title` stays a column but becomes **derived**: the store sets it to the text's first line
-  (flattened) on every insert and text edit, for tasks and notes. Reminders, sessions, Ask's item
+  (flattened) on every insert and text edit. As built, only for tasks: a note keeps `title` null
+  and everything that names one already reads its first line. Reminders, sessions, Ask's item
   header and the classifier's context all read `title`, so they need no change.
 - On filing (runner, redo, reclassify): a task whose proposed title differs from the excerpt's
   first line is stored as `title + "\n\n" + excerpt`. **Redo** replaces line one only while it is
   still exactly the previous AI title; once you have edited it, it is yours.
 - **Migration 0018**: every task whose title differs from its first line gets the title prepended
   the same way. Idempotent, and it must not bump `updated_at` (the Stale list reads it). Local:
-  36 of 40 tasks differ; count the deployed database on a copy before deploying.
+  25 of 40 once case is ignored (36 by exact comparison); count the deployed database on a copy
+  before deploying.
 - Item page: the `item-title` heading goes, the Edit section's Title field goes, and the first
   line is drawn as a title in the rendered view **and** the editor, so tapping in does not jump.
   A first line that is a list item or a checklist box is not styled as a title.
@@ -77,3 +79,25 @@ the update bar (an offer), and "Not saved · Retry".
 - The conflict question can now open right after a pause in typing, because autosave raises it.
   More abrupt than the strip; accepted with decision 3.
 - `<dialog>` needs iOS 15.4 or later: check on the phone.
+
+## Done, 2026-09-22 (on `main`, not deployed)
+
+- **Phase 0** (`2e5f8bd`): the three switches match the filter pills' computed radius, colours and
+  height, desktop and phone.
+- **Phase A** (`b5ba4a5`): 308 backend tests, 9 new in `test_titles.py`. A sabotage that keeps the
+  touch trigger during 0018 turns its `updated_at` test red. Migration dry run on a copy of local:
+  25 of 40 tasks prepended, no `updated_at` moved, every stored title equal to `title_of`. The
+  rendered and editor title lines measured identical on a phone.
+- **Phase B**: the six questions checked in Chrome at phone size -- the stale save stays open
+  through Escape and Keep mine saves your words; the session modal opens once, and Later holds
+  across in-app navigation *and* a reload; space delete, Sign out and Clear confirm and cancel.
+  **Found on the way, older than this slice:** a space's header ran 428px on a 390px phone and
+  hid Delete off the screen (the page clips, so the overflow check never saw it); fixed, and S22
+  now checks every header control is on screen.
+- `npm run ui` **14/14**, with five new committed checks (F1, F2, S31 title, S31 delete modal,
+  and S27 now proving Clear asks first).
+- **Before deploying: dry-run 0018 on a copy of the live database** and look at what it will
+  prepend. Some additions are near-copies ("Call the dentist to book a cleaning" over "Call the
+  dentist and book a cleaning"); that is the owner's chosen rule working, not a bug.
+- Not settled here, for the phone: whether `<dialog>` behaves on the owner's iOS, and whether a
+  modal for every question feels right in use.

@@ -142,7 +142,17 @@ async function main() {
         );
         if (over > 1) throw new Error(`${path} overflows by ${over}px`);
       }
-      return "4 screens";
+      // The page clips horizontal overflow, so a control pushed off the side scrolls nothing and
+      // the check above cannot see it. A space's header held four and lost Delete that way.
+      await page.goto(`${URL}/spaces/${space}`);
+      await page.locator(".title-actions").waitFor({ timeout: 8000 });
+      const off = await page.evaluate(() =>
+        [...document.querySelectorAll(".title-actions button")]
+          .filter((b) => b.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+          .map((b) => b.textContent.trim()),
+      );
+      if (off.length) throw new Error(`off screen on a space: ${off.join(", ")}`);
+      return "4 screens, and a space's controls on screen";
     });
 
     await check("S22 tap targets reach 44px", async () => {
@@ -250,11 +260,16 @@ async function main() {
         const saved = await page.inputValue(".house-rules textarea");
         if (!saved.includes("the car goes in home")) throw new Error("did not persist a reload");
 
+        // Clear asks first, in the modal (slice 31): nothing is cleared until it is confirmed.
         await page.locator(".house-rules-foot button.ghost").dispatchEvent("click");
+        await page.locator("dialog.modal[open]").waitFor({ timeout: 5000 });
+        if (!(await api(page, "GET", "/api/config")).house_rules)
+          throw new Error("cleared before it was confirmed");
+        await page.locator("dialog.modal[open] button.danger").click();
         await page.waitForTimeout(700);
         if ((await api(page, "GET", "/api/config")).house_rules !== "")
           throw new Error("Clear did not clear");
-        return "saved, persisted, cleared";
+        return "saved, persisted, asked, cleared";
       } finally {
         // Never leave someone's real filing rules changed by a check.
         await api(page, "PUT", "/api/config/house-rules", { text: before });
@@ -356,6 +371,36 @@ async function main() {
       if (seen.styled !== "UI check title") throw new Error(`title line is ${seen.styled}`);
       if (seen.heading) throw new Error("the old heading is back");
       return "once, styled";
+    });
+
+    // --- slice 31: every question asks in a modal ---
+    await check("S31 delete asks in a modal; Escape keeps the item", async () => {
+      const doomed = await api(page, "POST", "/api/items", { shape: "note", space, text: "UI check delete" });
+      made.push(doomed.id);
+      await page.goto(`${URL}/items/${doomed.id}`);
+      const del = page.locator(".item-aside button.danger", { hasText: "Delete" });
+      await del.waitFor({ timeout: 8000 });
+      await del.tap();
+      const modal = page.locator("dialog.modal[open]");
+      await modal.waitFor({ timeout: 5000 });
+      const box = await modal.locator(".modal-panel").boundingBox();
+      const vw = page.viewportSize().width;
+      if (box.x < 15 || box.x + box.width > vw - 15) throw new Error(`panel at ${box.x}+${box.width} of ${vw}`);
+      const small = await modal.locator("button").evaluateAll((bs) =>
+        bs.filter((b) => Math.min(b.getBoundingClientRect().width, b.getBoundingClientRect().height) < 44).length,
+      );
+      if (small) throw new Error(`${small} modal button(s) under 44px`);
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(300);
+      if (await page.locator("dialog.modal[open]").count()) throw new Error("Escape did not close it");
+      const still = await page.evaluate((id) => fetch(`/api/items/${id}`).then((r) => r.status), doomed.id);
+      if (still !== 200) throw new Error("Escape deleted it");
+      await del.tap();
+      await page.locator("dialog.modal[open] button.danger").click();
+      await page.waitForTimeout(800);
+      const gone = await page.evaluate((id) => fetch(`/api/items/${id}`).then((r) => r.status), doomed.id);
+      if (gone !== 404) throw new Error(`after confirming: ${gone}`);
+      return "asked, Escape kept it, confirm deleted it";
     });
 
   } finally {

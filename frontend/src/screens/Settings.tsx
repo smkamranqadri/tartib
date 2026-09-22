@@ -1,4 +1,5 @@
 import type React from "react";
+import { ConfirmModal } from "../components/Modal";
 import { useEffect, useState } from "react";
 import { describe, getConfig, getUsage, logout, type QuotaWindow, setHouseRules } from "../api";
 import { speechSupported } from "../Capture";
@@ -93,12 +94,31 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
       </Card>
       <Card icon={<SettingsIcon />} label="Account">
         <Row title="Sign out" desc="Clears the session cookie on this device.">
-          <button type="button" className="ghost" onClick={() => logout().then(onSignedOut)}>
-            Sign out
-          </button>
+          <SignOut onSignedOut={onSignedOut} />
         </Row>
       </Card>
     </div>
+  );
+}
+
+/** Signing out is asked first (slice 31): on a phone it means typing the password again. */
+function SignOut({ onSignedOut }: { onSignedOut: () => void }) {
+  const [asking, setAsking] = useState(false);
+  return (
+    <>
+      <button type="button" className="ghost" onClick={() => setAsking(true)}>
+        Sign out
+      </button>
+      <ConfirmModal
+        open={asking}
+        question="Sign out of this device?"
+        detail="You will need the password to come back in."
+        confirmLabel="Sign out"
+        danger={false}
+        onConfirm={() => void logout().then(onSignedOut)}
+        onCancel={() => setAsking(false)}
+      />
+    </>
   );
 }
 
@@ -301,6 +321,7 @@ function HouseRules({ initial, max, onSaved }: { initial: string; max: number; o
   const [text, setText] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
   const dirty = text.trim() !== initial.trim();
 
   async function save(next: string) {
@@ -332,7 +353,7 @@ function HouseRules({ initial, max, onSaved }: { initial: string; max: number; o
         <span className="muted small">
           {text.length}/{max}
         </span>
-        <button type="button" className="ghost" disabled={busy || !text} onClick={() => void save("")}>
+        <button type="button" className="ghost" disabled={busy || !text} onClick={() => setClearing(true)}>
           Clear
         </button>
         <button type="button" className="primary" disabled={busy || !dirty} onClick={() => void save(text)}>
@@ -340,6 +361,18 @@ function HouseRules({ initial, max, onSaved }: { initial: string; max: number; o
         </button>
       </div>
       {msg && <p className="muted small">{msg}</p>}
+      <ConfirmModal
+        open={clearing}
+        question="Clear your house rules?"
+        detail="The classifier goes back to its own reading of where things belong. Nothing already filed moves."
+        confirmLabel="Clear"
+        busy={busy}
+        onConfirm={() => {
+          setClearing(false);
+          void save("");
+        }}
+        onCancel={() => setClearing(false)}
+      />
     </div>
   );
 }

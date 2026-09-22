@@ -160,8 +160,8 @@ export default function TextEditor({
       setStatus(draftRef.current === text ? settled : "pending");
     } else {
       setOffline(!navigator.onLine);
-      // A refusal leaves the text unsaved, and it keeps saying so. The strip above explains what
-      // happened; this says what is true of the words. `pending` is safe here because the
+      // A refusal leaves the text unsaved, and it keeps saying so. The stale-save modal explains
+      // what happened; this says what is true of the words. `pending` is safe here because the
       // debounce is paused while `blocked`, so it waits for the answer rather than retrying.
       setStatus(result === "conflict" ? "pending" : "failed");
     }
@@ -171,7 +171,7 @@ export default function TextEditor({
   flushRef.current = flush;
   // While a conflict is unresolved the parent owns the text: Reload and Overwrite both remount
   // this component, and a flush on the way out would send the held draft a second time -- which
-  // 409s again and puts the strip straight back up, undoing the choice that was just made.
+  // 409s again and puts the question straight back up, undoing the choice that was just made.
   const blockedRef = useRef(blocked);
   blockedRef.current = blocked;
 

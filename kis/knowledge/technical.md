@@ -144,7 +144,7 @@ POST   /api/sessions/{id}/outcome {outcome}
 
 ## Frontend shell
 
-`session.tsx` holds the running pomodoro: it renders a countdown against the server's `ends_at`, re-asks whenever the app comes back, and is what `SessionBar` and the start controls read. `SessionBar` sits under the capture bar on every screen and turns into the Done / Not finished / Abandoned question in place; there is no modal, here or anywhere.
+`session.tsx` holds the running pomodoro: it renders a countdown against the server's `ends_at`, re-asks whenever the app comes back, and is what `SessionBar` and the start controls read. `SessionBar` sits under the capture bar on every screen and, when a session ends, asks Done / Not finished / Abandoned in the modal (slice 31). It opens once per ended session; Later closes it and the bar keeps an Answer button, and the session put off is kept in `sessionStorage` so neither a page change nor a reload asks again.
 Routes: `/` Home (dashboard), `/inbox`, `/inbox/attention` (every waiting item), `/inbox/recent` (paged captures), `/spaces`, `/spaces/:name`, `/settings`, `/items/:id`. Redirects: `/attention`, `/attention/all`, `/recent`, `/today`, `/search`, `/all`. Pill nav Home · Inbox · Spaces · Settings; the Inbox pill stays active across all three inbox routes.
 `sw.js` precaches at install rather than waiting for a navigation to fill the cache: it fetches
 `index.html`, reads the hashed `/assets/` URLs out of it with a regex, and caches those with the
@@ -257,10 +257,20 @@ the way in and cleared once the server has it. That mirror is not belt and brace
 `fetch(..., {keepalive: true})` was measured failing to arrive at all (the server's log line
 count was identical either side of the teardown), so the guarantee rests on the draft, not on
 keepalive. It is crash safety only: no queue, no replay, none of the offline-edit item's logic.
-A stale save (slice 19's 409) shows a **non-modal strip** above the text rather than a dialog,
-keeps the local words, keeps saying Unsaved, and pauses the debounce until it is answered --
-otherwise it retries into the same refusal every two seconds. Resolving it remounts the editor,
-and the outgoing instance must not flush, or it sends the held draft again and the strip returns.
+A stale save (slice 19's 409) asks Reload theirs / Keep mine in a modal that **cannot be
+dismissed** (slice 31; a strip above the text until then). It keeps the local words, keeps saying
+Unsaved, and pauses the debounce until it is answered -- otherwise it retries into the same
+refusal every two seconds. Resolving it remounts the editor, and the outgoing instance must not
+flush, or it sends the held draft again and the question returns.
+**Every question asks in `Modal.tsx`** (slice 31, the owner's call; until then the app had no
+modal anywhere): deleting an item or a space, the session outcome, the stale save, Sign out and
+Clear house rules. A native `<dialog>` with `showModal()`, so the browser traps focus and makes
+the page inert; Escape and the backdrop call `onClose`, and a modal given none can only be
+answered. Focus goes to the panel, not the first button, and back to the opener on close. A
+destructive confirm is `ghost danger`, not a filled red button (one filled primary per screen,
+and red fill failed contrast before). Not modal, by decision: Inbox decision cards and the
+classifier's question buttons (they are the page), the update bar (an offer), "Not saved ·
+Retry". `Confirm.tsx` is gone.
 **A save must not unmount the editor.** In a space's split view every save bumps `version`, which
 refetches the open item, so `ItemPage` shows its skeleton only when it has no item *for this id*;
 a refetch of the item already on screen keeps it there. Until 2026-09-22 it showed the skeleton

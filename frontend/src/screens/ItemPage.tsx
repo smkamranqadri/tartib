@@ -6,7 +6,7 @@ import { applyTo, editFor } from "../pending";
 import { usePending } from "../usePending";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
-import Confirm from "../components/Confirm";
+import Modal, { ConfirmModal } from "../components/Modal";
 import TextEditor, { type SaveResult } from "../components/TextEditor";
 import Thoughts from "../components/Thoughts";
 import ItemEditor from "../components/ItemEditor";
@@ -192,19 +192,26 @@ export default function ItemPage({
           </span>
         }
       >
-        {stale && (
-          <div className="conflict-strip">
-            <span className="tone warn">Changed elsewhere since you opened it. Your text is kept.</span>
-            <span className="toggles">
+        {/* Whose words win is asked in a modal that cannot be dismissed, only answered: the
+            autosave is paused until it is, and a question you could close would leave your
+            text unsaved with nothing on screen saying so. */}
+        <Modal
+          open={!!stale}
+          title="Changed elsewhere since you opened it"
+          actions={
+            <>
               <button type="button" className="ghost" onClick={() => void reloadItem()}>
-                Reload
+                Reload theirs
               </button>
-              <button type="button" className="ghost" onClick={() => void overwrite()}>
-                Overwrite
+              <button type="button" className="primary" onClick={() => void overwrite()}>
+                Keep mine
               </button>
-            </span>
-          </div>
-        )}
+            </>
+          }
+        >
+          Your text is kept until you choose. Reload theirs shows the version saved elsewhere
+          and drops your edit; Keep mine saves yours over it.
+        </Modal>
         <TextEditor
           key={editorKey}
           draftId={String(itemId)}
@@ -214,9 +221,14 @@ export default function ItemPage({
           blocked={!!stale}
           queued={!!queued && !queued.conflict}
         />
-        {confirmDelete && (
-          <Confirm question={<>Delete this {item.shape}? The original capture stays.</>} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />
-        )}
+        <ConfirmModal
+          open={confirmDelete}
+          question={`Delete this ${item.shape}?`}
+          detail="The original capture stays, so what you typed is never lost."
+          confirmLabel="Delete"
+          onConfirm={() => void remove()}
+          onCancel={() => setConfirmDelete(false)}
+        />
         {msg && <ErrorLine>{msg}</ErrorLine>}
         {isTask && (
           <div className="item-meta">

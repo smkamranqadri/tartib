@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { deleteSpace, getSpaces, listItems, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
-import Confirm from "../components/Confirm";
+import { ConfirmModal } from "../components/Modal";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import { Stale } from "../components/Status";
@@ -92,8 +92,6 @@ export default function Space({ version, onChanged }: { version: number; onChang
               }}
               onCancel={() => setRenaming(false)}
             />
-          ) : confirmDelete ? (
-            <Confirm question={<>Delete <b>{space}</b>?</>} onConfirm={() => void doDelete()} onCancel={() => setConfirmDelete(false)} />
           ) : (
             <>
               {/* The filing policy is the space's most consequential setting, so it is on the
@@ -127,6 +125,14 @@ export default function Space({ version, onChanged }: { version: number; onChang
             </>
           )}
           {manageError && <span className="error">{manageError}</span>}
+          <ConfirmModal
+            open={confirmDelete}
+            question={<>Delete the space <b>{space}</b>?</>}
+            detail="It is empty, so nothing else goes with it."
+            confirmLabel="Delete space"
+            onConfirm={() => void doDelete()}
+            onCancel={() => setConfirmDelete(false)}
+          />
         </div>
       </div>
       <Stale at={cachedAt} />
