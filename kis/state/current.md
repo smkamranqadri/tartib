@@ -4,7 +4,7 @@
   in `kis/state/private.md`, gitignored and never published. This file carries the substance and
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  **Ahead of `origin/main` and not pushed** since 2026-09-22 (`git log origin/main..` lists it).
+  In step with `origin/main` since 2026-09-22 (pushed after `v2.1` went live).
 - **Live: `v2.1`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
   `smkamranqadri/tartib:v2.1`: `v2.0` plus slices 30 and 31 and the fixes after it (history.md),
   classifying on the pinned `gpt-5.6-luna` at medium reasoning. Checked from outside and in the
