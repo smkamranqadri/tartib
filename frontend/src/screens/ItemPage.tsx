@@ -62,7 +62,9 @@ export default function ItemPage({
   }, [item?.id, query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return <ErrorLine>{error}</ErrorLine>;
-  if (loading || !item)
+  /* A refetch of the item already on screen keeps it there. Every save bumps `version`, which
+     refetches; showing the skeleton for that unmounted the editor mid-sentence. */
+  if (!item || (loading && item.id !== itemId))
     return (
       <div className="screen item-page">
         <div className="card">

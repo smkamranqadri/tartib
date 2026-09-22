@@ -353,6 +353,7 @@ button:disabled { opacity: .5; cursor: default; }
 .md > *:first-child { margin-top: 0; }
 .md > *:last-child { margin-bottom: 0; }
 .md p { margin: 0 0 .7em; white-space: normal; }
+.md-indent { white-space: pre; tab-size: 4; }
 .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
   margin: 1.4em 0 .5em; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; text-wrap: balance;
 }

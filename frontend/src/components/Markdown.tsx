@@ -180,8 +180,17 @@ function inline(token: Loose, query: string | null): ReactNode {
       return <del>{inlines(token.tokens, query)}</del>;
     case "codespan":
       return <code>{plain(token.text ?? "", query)}</code>;
-    case "br":
-      return <br />;
+    case "br": {
+      // A line typed indented keeps its indent. marked puts the whitespace after the newline
+      // into this token's raw, and HTML would collapse it, so it is drawn as-is (`.md-indent`).
+      const indent = (token.raw ?? "").split("\n").pop() ?? "";
+      return (
+        <>
+          <br />
+          {indent && <span className="md-indent">{indent}</span>}
+        </>
+      );
+    }
     case "link": {
       const href = safeHref(token.href ?? "");
       if (!href) return inlines(token.tokens, query);
