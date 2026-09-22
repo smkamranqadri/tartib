@@ -8,6 +8,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
+from tartib import db
 from tartib import runner as runner_module
 from tartib.main import create_app
 from tartib.runner import MAX_RETRIES, Runner
@@ -120,3 +121,74 @@ def test_ai_off_is_not_a_failure_to_retry(auth, settings):
     cap = capture(auth, "no classifier here")
     assert cap["status"] == "error"
     assert Runner(settings)._reset_failed() == []
+
+
+# --- the retry probe must not throw away work the owner did on a failed item ---
+
+
+def _failed_capture_with(conn, *, thought: str | None = None, feedback: str | None = None):
+    """A capture that failed to classify, its fallback note, and optionally the owner's work."""
+    at = "2026-09-22T09:00:00Z"
+    text = "buy milk and call the plumber"
+    cur = conn.execute(
+        "INSERT INTO captures (raw_text, status, error, created_at, attempts)"
+        " VALUES (?, 'error', 'exit 1: boom', ?, 0)",
+        (text, at),
+    )
+    capture_id = cur.lastrowid
+    conn.execute(
+        "INSERT INTO items (capture_id, raw_text, shape, space, title, due, remind_at, starred,"
+        " status, stage, created_at, updated_at, proposal_json, proposal_error, feedback)"
+        " VALUES (?, ?, 'note', NULL, NULL, NULL, NULL, 0, 'open', 'attention', ?, ?, NULL,"
+        " 'exit 1: boom', ?)",
+        (capture_id, text, at, at, feedback),
+    )
+    item_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    if thought:
+        conn.execute(
+            "INSERT INTO item_thoughts (item_id, body, created_at) VALUES (?, ?, ?)",
+            (item_id, thought, at),
+        )
+    conn.commit()
+    return capture_id, item_id
+
+
+def test_a_failed_item_carrying_a_thought_is_never_retried(tmp_path):
+    """The retry deletes the item, and item_thoughts cascades. Adding a thought changes none of
+    the eleven fields the guard checked, so the owner's note was destroyed silently."""
+    settings = make_settings(tmp_path)
+    conn = db.connect(settings.db_path)
+    db.migrate(conn)
+    _failed_capture_with(conn, thought="actually about the leak in the roof, not groceries")
+
+    assert Runner(settings)._reset_failed() == []
+
+    assert conn.execute("SELECT COUNT(*) FROM item_thoughts").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM items").fetchone()[0] == 1
+    assert conn.execute("SELECT status FROM captures").fetchone()[0] == "error"
+    conn.close()
+
+
+def test_a_failed_item_carrying_a_redo_reason_is_never_retried(tmp_path):
+    """`feedback` is the only record of why a proposal was wrong (rule 8). Same reasoning."""
+    settings = make_settings(tmp_path)
+    conn = db.connect(settings.db_path)
+    db.migrate(conn)
+    _failed_capture_with(conn, feedback="2026-09-22: this is not a grocery thing")
+
+    assert Runner(settings)._reset_failed() == []
+    assert conn.execute("SELECT COUNT(*) FROM items").fetchone()[0] == 1
+    conn.close()
+
+
+def test_an_untouched_failed_item_is_still_retried(tmp_path):
+    """The guard must not become so strict that the retry never fires."""
+    settings = make_settings(tmp_path)
+    conn = db.connect(settings.db_path)
+    db.migrate(conn)
+    capture_id, _ = _failed_capture_with(conn)
+
+    assert Runner(settings)._reset_failed() == [capture_id]
+    assert conn.execute("SELECT COUNT(*) FROM items").fetchone()[0] == 0
+    assert conn.execute("SELECT status FROM captures").fetchone()[0] == "pending"
+    conn.close()

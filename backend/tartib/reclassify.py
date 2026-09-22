@@ -25,6 +25,7 @@ from tartib.runner import Runner
 @dataclass
 class Report:
     selected: int = 0
+    skipped: int = 0  # held back: someone wrote a thought or a reason on them
     reset: int = 0
     carried: int = 0
     done: int = 0
@@ -34,16 +35,38 @@ class Report:
     answered: int = 0
 
 
+# Reclassifying deletes the capture's items, and `item_thoughts` cascades. A thought and a redo
+# reason are the only things here the classifier did not write, so they are the only things it
+# must never take back. Captures carrying either are left alone and reported as skipped.
+KEEPS_WORK = (
+    " AND NOT EXISTS (SELECT 1 FROM items k WHERE k.capture_id = c.id"
+    " AND (k.thought_count > 0 OR k.feedback IS NOT NULL))"
+)
+
+
 def select_ids(conn, scope: str) -> list[int]:
     # A capture filed by hand never goes to the classifier: it would overwrite what was chosen.
     if scope == "all":
-        rows = conn.execute("SELECT id FROM captures WHERE direct = 0 ORDER BY id").fetchall()
+        rows = conn.execute(
+            f"SELECT id FROM captures c WHERE direct = 0{KEEPS_WORK} ORDER BY id"
+        ).fetchall()
     else:
         rows = conn.execute(
             "SELECT DISTINCT c.id FROM captures c LEFT JOIN items i ON i.capture_id = c.id"
-            " WHERE c.direct = 0 AND (c.status = 'error' OR i.stage = 'attention') ORDER BY c.id"
+            f" WHERE c.direct = 0 AND (c.status = 'error' OR i.stage = 'attention'){KEEPS_WORK}"
+            " ORDER BY c.id"
         ).fetchall()
     return [r["id"] for r in rows]
+
+
+def count_skipped(conn) -> int:
+    """Captures held back because someone wrote a thought or a reason on them."""
+    return int(
+        conn.execute(
+            "SELECT COUNT(DISTINCT c.id) FROM captures c JOIN items k ON k.capture_id = c.id"
+            " WHERE c.direct = 0 AND (k.thought_count > 0 OR k.feedback IS NOT NULL)"
+        ).fetchone()[0]
+    )
 
 
 def snapshot_flags(conn, ids: list[int]) -> dict[int, tuple[int, str]]:
@@ -93,6 +116,7 @@ async def reclassify(settings: Settings, scope: str, dry_run: bool = False) -> R
         db.migrate(conn)
         ids = select_ids(conn, scope)
         report.selected = len(ids)
+        report.skipped = count_skipped(conn)
         flags = snapshot_flags(conn, ids)
         if dry_run or not ids:
             return report
@@ -141,12 +165,18 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     report = asyncio.run(reclassify(settings, "all" if args.all else "attention", args.dry_run))
     if args.dry_run:
-        print(f"would reset {report.selected} captures")
+        skipped = (
+            f", leaving {report.skipped} that carry a thought or a reason"
+            if report.skipped
+            else ""
+        )
+        print(f"would reset {report.selected} captures{skipped}")
         return 0
     print(
         f"reclassified {report.reset} captures: {report.done} done, {report.errored} errored,"
         f" {report.answered} answered; items: {report.items_filed} filed,"
-        f" {report.items_attention} need attention; flags carried over on {report.carried}"
+        f" {report.items_attention} need attention; flags carried over on {report.carried};"
+        f" {report.skipped} left alone (a thought or a reason on them)"
     )
     return 0 if report.errored == 0 else 1
 

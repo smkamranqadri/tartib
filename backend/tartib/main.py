@@ -80,6 +80,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(push.router)
     app.include_router(sessions.router)
 
+    # Everything this app loads, it ships. Fonts are bundled, there is no CDN and no analytics,
+    # so the policy can be tight. `img-src 'self' data:` is the line that matters: item text,
+    # Ask answers and space briefs are written by the model from text that may not be the
+    # owner's, and a remote image is the simplest way for what the model saw to leave the
+    # device. Markdown stopped rendering remote images on 2026-09-22; this makes it structural
+    # rather than a property of one renderer.
+    @app.middleware("http")
+    async def security_headers(request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; img-src 'self' data:; font-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; "
+            "base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+        )
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        return response
+
     @app.get("/api/health")
     def health() -> dict:
         return {"ok": True, "ai": settings.ai_enabled}

@@ -425,6 +425,8 @@ button:disabled { opacity: .5; cursor: default; }
 .pref-desc { font-size: 13px; }
 
 /* The house-rules editor (slice 27): a field you type prose into, in a card of one-line prefs. */
+.image-ref { font-style: italic; }
+
 /* Slice 29: what the AI has done. */
 .usage .quota { font-size: 13px; color: var(--muted); }
 .usage .quota.tight { color: var(--danger); }

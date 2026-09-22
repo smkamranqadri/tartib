@@ -194,7 +194,13 @@ class Runner:
         Only while the one item is still exactly what the fallback wrote -- a note, no space, no
         title, date or reminder, unstarred, open, text as captured. Anything else means a person
         has started on it, and a retry would throw their work away. "AI not configured" is not a
-        failure a retry can fix."""
+        failure a retry can fix.
+
+        **The retry deletes the item, and `item_thoughts` cascades.** So the guard also requires
+        `thought_count = 0` and `feedback IS NULL`: writing a thought on a failed item, or telling
+        the classifier why it was wrong, changes none of the fields above, and until 2026-09-22
+        the probe destroyed both fifteen minutes later without a word. Thoughts are append-only
+        by trigger; they should not be deletable by a background loop either."""
         conn = self._connect()
         try:
             rows = conn.execute(
@@ -207,7 +213,8 @@ class Runner:
                       AND i.stage = 'attention' AND i.shape = 'note' AND i.space IS NULL
                       AND i.title IS NULL AND i.due IS NULL AND i.remind_at IS NULL
                       AND i.starred = 0 AND i.status = 'open' AND i.raw_text = c.raw_text
-                      AND i.proposal_json IS NULL AND i.proposal_error IS NOT NULL)
+                      AND i.proposal_json IS NULL AND i.proposal_error IS NOT NULL
+                      AND i.thought_count = 0 AND i.feedback IS NULL)
                 ORDER BY c.id
                 """,
                 (MAX_RETRIES, NOT_CONFIGURED),

@@ -95,3 +95,39 @@ def test_reclassify_attention_scope_and_dry_run(tmp_path, monkeypatch):
         client.headers["Authorization"] = f"Bearer {PASSWORD}"
         assert client.get(f"/api/items/{task['id']}").json()["status"] == "done"  # untouched
         assert client.get(f"/api/captures/{waiting['id']}").json()["items"][0]["space"] == "ideas"
+
+
+def test_reclassify_leaves_alone_a_capture_someone_wrote_a_thought_on(settings):
+    """Reclassifying deletes items and item_thoughts cascades. A thought is one of the two
+    things here the classifier did not write, so it is one it must never take back."""
+    from tartib import db
+    from tartib.reclassify import count_skipped, select_ids
+
+    conn = db.connect(settings.db_path)
+    db.migrate(conn)
+    at = "2026-09-22T09:00:00Z"
+    ids = []
+    for body in (None, "this is about the roof, not groceries"):
+        cur = conn.execute(
+            "INSERT INTO captures (raw_text, status, created_at) VALUES ('x', 'done', ?)", (at,)
+        )
+        cid = cur.lastrowid
+        conn.execute(
+            "INSERT INTO items (capture_id, raw_text, shape, stage, status, created_at,"
+            " updated_at) VALUES (?, 'x', 'note', 'attention', 'open', ?, ?)",
+            (cid, at, at),
+        )
+        item_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        if body:
+            conn.execute(
+                "INSERT INTO item_thoughts (item_id, body, created_at) VALUES (?, ?, ?)",
+                (item_id, body, at),
+            )
+        conn.commit()
+        ids.append(cid)
+
+    selected = select_ids(conn, "attention")
+    assert ids[0] in selected  # untouched: still fair game
+    assert ids[1] not in selected  # carries a thought: left alone
+    assert count_skipped(conn) == 1
+    conn.close()
