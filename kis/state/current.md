@@ -5,7 +5,9 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 28, what the classifier may name** -- planned 2026-09-21, not started.
+- Task: **slice 28, what the classifier may name** -- Phase mode, in flight 2026-09-21.
+  A (park and name a duplicate), then B (propose a space that does not exist).
+  Verification: pytest + ruff, the evals, four sabotages, typecheck/build, `npm run ui`.
   Park-and-name a duplicate, and proposing a space that does not exist yet. Phase mode.
   `kis/intent/slice-28-what-the-classifier-may-name.md`. It starts from a correction: the
   retrieval slice 26 shipped is about the database, not about the capture in hand, so
@@ -30,7 +32,9 @@
 - **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 27 are local commits on `main`
   (unpushed). On the next deploy: migrations 0010-0014 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
-  out of the CapRover app config, and **`SW_VERSION` in `sw.js` is bumped by hand**. It is at
+  out of the CapRover app config, **`TARTIB_AI_MODEL=gpt-5.6-luna` and
+  `TARTIB_AI_REASONING=medium` go in** (pinned 2026-09-21; without them the server keeps
+  using whatever default the CLI picks, which can move on its own), and **`SW_VERSION` in `sw.js` is bumped by hand**. It is at
   `2026-09-21.2`: slice 26 changed the bundle without touching `sw.js`, which is exactly the
   case the rule exists for, so it was bumped with the slice rather than left for the deploy.
   Nothing outstanding unless another bundle-only change lands before `v1.1`. The rule and its

@@ -20,8 +20,10 @@ class Settings:
     spaces: tuple[str, ...]
     ai_command: str  # "codex", a path, or "off"
     ai_model: str | None
+    ai_reasoning: str | None
     ai_timeout: float
     autofile_confidence: float
+    duplicate_park: bool  # off until the verdict has been judged against real captures
     vapid_public: str | None
     vapid_private: str | None
     vapid_email: str
@@ -47,6 +49,7 @@ class Settings:
         return CodexConfig(
             command=self.ai_command,
             model=self.ai_model,
+            reasoning=self.ai_reasoning,
             timeout=self.ai_timeout,
         )
 
@@ -90,8 +93,11 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         spaces=spaces,
         ai_command=env.get("TARTIB_AI_COMMAND", "codex"),
         ai_model=env.get("TARTIB_AI_MODEL") or None,
+        ai_reasoning=env.get("TARTIB_AI_REASONING") or None,
         ai_timeout=float(env.get("TARTIB_AI_TIMEOUT") or "120"),
         autofile_confidence=float(env.get("TARTIB_AUTOFILE_CONFIDENCE") or "0.85"),
+        duplicate_park=(env.get("TARTIB_DUPLICATE_PARK") or "").strip().lower()
+        in ("1", "true", "yes", "on"),
         vapid_public=env.get("TARTIB_VAPID_PUBLIC") or None,
         vapid_private=env.get("TARTIB_VAPID_PRIVATE") or None,
         vapid_email=env.get("TARTIB_VAPID_EMAIL") or "mailto:tartib@localhost",

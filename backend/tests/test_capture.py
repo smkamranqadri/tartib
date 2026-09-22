@@ -158,3 +158,37 @@ def test_two_sends_at_once_still_make_one_capture(auth, settings):
 
     assert r.status_code == 200, "the loser of the race returns the winner's capture"
     assert r.json()["id"] == state["planted"]
+
+
+def test_the_model_and_reasoning_effort_reach_the_argv():
+    """Pinned so the CLI's own default cannot move underneath a deployed app.
+
+    `--ignore-user-config` means ~/.codex/config.toml is deliberately not read, so reasoning
+    effort has to be an explicit `-c` override rather than a config setting.
+    """
+    from pathlib import Path
+
+    from tartib.codex import CodexConfig, build_args
+
+    cfg = CodexConfig(command="codex", model="gpt-5.6-luna", reasoning="medium")
+    argv = build_args(cfg, Path("/tmp/w"), Path("/tmp/s"), Path("/tmp/o"), "hello")
+    assert "--ignore-user-config" in argv
+    assert argv[argv.index("--model") + 1] == "gpt-5.6-luna"
+    assert argv[argv.index("-c") + 1] == "model_reasoning_effort=medium"
+    assert argv[-1] == "hello"  # the prompt stays last
+
+    bare = build_args(
+        CodexConfig(command="codex"), Path("/tmp/w"), Path("/tmp/s"), Path("/tmp/o"), "x"
+    )
+    assert "--model" not in bare and "-c" not in bare  # unset means unset
+
+
+def test_the_pinned_model_reaches_the_subprocess(tmp_path, monkeypatch):
+    """End to end through load_settings, because that is where a typo would actually live."""
+    from tests.conftest import AI_ENV, make_settings
+
+    settings = make_settings(
+        tmp_path, **AI_ENV, TARTIB_AI_MODEL="gpt-5.6-luna", TARTIB_AI_REASONING="medium"
+    )
+    cfg = settings.codex()
+    assert cfg.model == "gpt-5.6-luna" and cfg.reasoning == "medium"

@@ -23,6 +23,10 @@ class CodexError(Exception):
 class CodexConfig:
     command: str  # e.g. "codex"; split with shlex
     model: str | None = None
+    # Reasoning effort. Passed as a `-c` override because `--ignore-user-config` means the
+    # user's own config.toml is deliberately not read -- a stray setting on a workstation must
+    # not change how captures are filed.
+    reasoning: str | None = None
     timeout: float = 120.0
 
 
@@ -30,11 +34,17 @@ def build_args(
     cfg: CodexConfig, workdir: Path, schema: Path, output: Path, prompt: str
 ) -> list[str]:
     """Codex argv. Kept as a public helper because tests assert on it."""
-    return _codex_args(cfg.command, cfg.model, workdir, schema, output, prompt)
+    return _codex_args(cfg.command, cfg.model, cfg.reasoning, workdir, schema, output, prompt)
 
 
 def _codex_args(
-    command: str, model: str | None, workdir: Path, schema: Path, output: Path, prompt: str
+    command: str,
+    model: str | None,
+    reasoning: str | None,
+    workdir: Path,
+    schema: Path,
+    output: Path,
+    prompt: str,
 ) -> list[str]:
     args = shlex.split(command) + [
         "exec",
@@ -54,6 +64,8 @@ def _codex_args(
     ]
     if model:
         args += ["--model", model]
+    if reasoning:
+        args += ["-c", f"model_reasoning_effort={reasoning}"]
     args.append(prompt)
     return args
 
@@ -92,14 +104,19 @@ def _parse_object(raw: str) -> dict:
 
 
 async def _run_codex(
-    command: str, model: str | None, prompt: str, schema: dict, timeout: float
+    command: str,
+    model: str | None,
+    reasoning: str | None,
+    prompt: str,
+    schema: dict,
+    timeout: float,
 ) -> dict:
     with tempfile.TemporaryDirectory(prefix="tartib-codex-") as tmp:
         workdir = Path(tmp)
         schema_path = workdir / "schema.json"
         output = workdir / "reply.json"
         schema_path.write_text(json.dumps(schema))
-        args = _codex_args(command, model, workdir, schema_path, output, prompt)
+        args = _codex_args(command, model, reasoning, workdir, schema_path, output, prompt)
         await _run(args, workdir, timeout)
         try:
             raw = output.read_text()
@@ -110,4 +127,6 @@ async def _run_codex(
 
 async def run_json(prompt: str, schema: dict, cfg: CodexConfig) -> dict:
     """Run the CLI with `prompt`, constrained to `schema`."""
-    return await _run_codex(cfg.command, cfg.model, prompt, schema, cfg.timeout)
+    return await _run_codex(
+        cfg.command, cfg.model, cfg.reasoning, prompt, schema, cfg.timeout
+    )
