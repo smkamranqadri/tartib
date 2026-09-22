@@ -23,6 +23,7 @@ from tartib.store import (
     insert_item,
     list_spaces,
     record_call,
+    save_quota,
     should_file,
     similar_items,
     space_policies,
@@ -120,16 +121,21 @@ class Runner:
         )
         seen: list = []
         started = time.monotonic()
+
+        def note(usage, quota) -> None:
+            seen.append((usage, quota))
+
         try:
-            proposals = await classify(text, context, on_usage=seen.append)
+            proposals = await classify(text, context, on_usage=note)
         except ClassifyError as e:
             await asyncio.to_thread(
-                self._record, "classify", capture_id, started, None, str(e)
+                self._record, "classify", capture_id, started, None, str(e), e.quota
             )
             await asyncio.to_thread(self._fallback, capture_id, str(e))
             return
+        usage, quota = seen[0] if seen else (None, None)
         await asyncio.to_thread(
-            self._record, "classify", capture_id, started, seen[0] if seen else None, None
+            self._record, "classify", capture_id, started, usage, None, quota
         )
         await asyncio.to_thread(self._apply, capture_id, text, created_at, proposals)
         questions = [p for p in proposals if p.shape == "question"]
@@ -251,10 +257,12 @@ class Runner:
         started: float,
         usage,
         failure: str | None,
+        quota=None,
     ) -> None:
-        """One row per call, on its own connection. record_call never raises."""
+        """One row per call, on its own connection. Neither write raises."""
         conn = self._connect()
         try:
+            save_quota(conn, quota)
             record_call(
                 conn,
                 kind=kind,

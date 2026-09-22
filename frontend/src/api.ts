@@ -124,6 +124,18 @@ export interface AiUsage {
   model: string | null;
   rates: { input: number; output: number; cache_read: number; cache_write: number; source: string };
   usage_limit: { count: number; last: string | null; resets_at: string | null };
+  /** The last rate-limit reading the CLI gave. Null until one has been seen. */
+  quota: {
+    primary: QuotaWindow;
+    secondary: QuotaWindow;
+    at: string;
+  } | null;
+}
+
+export interface QuotaWindow {
+  used_percent: number | null;
+  window_minutes: number | null;
+  resets_at: string | null;
 }
 
 /** What the AI has done and what it cost (slice 29). */

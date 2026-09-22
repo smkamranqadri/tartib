@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { describe, getConfig, getUsage, logout, setHouseRules } from "../api";
+import { describe, getConfig, getUsage, logout, type QuotaWindow, setHouseRules } from "../api";
 import { speechSupported } from "../Capture";
 import { type ChimeSound, chimeSound, playChime, SOUNDS, setChimeSound } from "../chime";
 import Card from "../components/Card";
@@ -226,6 +226,13 @@ function Reminders({ vapidPublic, failed }: { vapidPublic: string | null | undef
 
 /** `stack` puts the control under the text at full width, for anything wider than a value or a
  *  switch -- the theme list is the only one so far. */
+/** "300 minutes" means nothing at a glance; "5 hour" does. */
+function describeWindow(minutes: number): string {
+  if (minutes >= 1440) return `${Math.round(minutes / 1440)} day`;
+  if (minutes >= 60) return `${Math.round(minutes / 60)} hour`;
+  return `${minutes} minute`;
+}
+
 /** What the AI has done. No money figure yet: the cost arithmetic turns on whether reasoning
  *  tokens are already inside the output count, and that has not been reconciled against a real
  *  call, so showing a number would be showing a guess. */
@@ -235,11 +242,18 @@ function AiUsageBlock() {
   if (error || !data) return <ErrorLine>{error ?? "No usage recorded."}</ErrorLine>;
   if (!data.calls) return <span className="muted">Nothing recorded yet.</span>;
   const seconds = Math.round(data.duration_ms / 1000);
+  /* Whichever window is fullest is the one about to stop you, so that is the one to show. */
+  const windows = [data.quota?.primary, data.quota?.secondary].filter(
+    (w): w is QuotaWindow => !!w && w.used_percent !== null,
+  );
+  const fullest = windows.sort((a, b) => (b.used_percent ?? 0) - (a.used_percent ?? 0))[0];
+  const quota = fullest ? { ...fullest, used_percent: fullest.used_percent ?? 0 } : null;
   const perCapture = data.captures ? Math.round(data.total_tokens / data.captures) : 0;
   return (
     <div className="usage">
       <p>
-        <b>{data.calls}</b> calls · <b>{data.total_tokens.toLocaleString()}</b> tokens ·{" "}
+        <b>{data.calls}</b> {data.calls === 1 ? "call" : "calls"} ·{" "}
+        <b>{data.total_tokens.toLocaleString()}</b> tokens ·{" "}
         <b>{seconds}s</b> of waiting
       </p>
       {!!data.captures && (
@@ -257,6 +271,13 @@ function AiUsageBlock() {
               {data.usage_limit.resets_at ? `, last reporting a reset at ${data.usage_limit.resets_at}` : ""}.
             </>
           )}
+        </p>
+      )}
+      {quota && (
+        <p className={quota.used_percent >= 80 ? "quota tight" : "quota"}>
+          Quota <b>{Math.round(quota.used_percent)}% used</b> of the{" "}
+          {quota.window_minutes ? describeWindow(quota.window_minutes) : "current"} window
+          {quota.resets_at ? `, resets ${quota.resets_at}` : ""}.
         </p>
       )}
       <p className="muted small">

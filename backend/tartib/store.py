@@ -460,6 +460,44 @@ def failure_reason(message: str) -> tuple[str, str | None]:
     return "other", None
 
 
+QUOTA_KEY = "ai_quota"
+
+
+def save_quota(conn: sqlite3.Connection, quota) -> None:
+    """Remember the most recent rate-limit reading. A point in time, not a history: what matters
+    is how full the window is *now*, so this overwrites rather than accumulating. Never raises,
+    for the same reason record_call does not."""
+    try:
+        if not quota:
+            return
+        primary, secondary = quota
+        if not primary.known and not secondary.known:
+            return  # the CLI said nothing; keep the last thing it did say
+        set_state(
+            conn,
+            QUOTA_KEY,
+            json.dumps(
+                {
+                    "primary": primary.as_dict(),
+                    "secondary": secondary.as_dict(),
+                    "at": utcnow_iso(),
+                }
+            ),
+        )
+    except (sqlite3.Error, TypeError, ValueError):
+        pass
+
+
+def read_quota(conn: sqlite3.Connection) -> dict | None:
+    raw = get_state(conn, QUOTA_KEY)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return None
+
+
 def record_call(
     conn: sqlite3.Connection,
     *,

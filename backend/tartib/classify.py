@@ -19,7 +19,15 @@ CONTEXT_BUDGET = 4000  # characters; this block rides on every capture
 
 
 class ClassifyError(Exception):
-    """Classification failed; the message is stored on the fallback item as proposal_error."""
+    """Classification failed; the message is stored on the fallback item as proposal_error.
+
+    Carries whatever the stream said about the rate-limit windows: a call that failed *because*
+    the window is exhausted is exactly when knowing how full it is matters most (slice 29).
+    """
+
+    def __init__(self, *args, quota=None):
+        super().__init__(*args)
+        self.quota = quota
 
 
 CLARIFY_FIELDS = ("space", "shape")
@@ -419,19 +427,20 @@ async def classify(
     text: str,
     context: Context,
     correction: tuple[str, str] | None = None,
-    on_usage: Callable[[Usage], None] | None = None,
+    on_usage: Callable[[Usage, tuple], None] | None = None,
 ) -> list[Proposal]:
-    """`on_usage` is handed what the call consumed, when a caller wants it recorded (slice 29).
-    A parameter rather than a return value, so the callers that do not care -- the evals, chiefly
-    -- are untouched, and so nothing has to reach for global state to find it."""
+    """`on_usage` is handed what the call consumed and what the CLI said about the rate-limit
+    windows, when a caller wants them recorded (slice 29). A parameter rather than a return
+    value, so the callers that do not care -- the evals, chiefly -- are untouched, and so
+    nothing has to reach for global state to find it."""
     try:
         reply = await run_json(
             build_prompt(text, context, correction), OUTPUT_SCHEMA, context.codex
         )
     except CodexError as e:
-        raise ClassifyError(str(e)) from e
+        raise ClassifyError(str(e), quota=getattr(e, "quota", None)) from e
     if on_usage is not None:
-        on_usage(reply.usage)
+        on_usage(reply.usage, reply.quota)
     try:
         parsed = Proposals.model_validate(reply.data)
     except ValidationError as e:

@@ -35,7 +35,7 @@ def test_usage_is_read_off_turn_completed():
             ).encode(),
         ]
     )
-    usage, message = parse_events(stream)
+    usage, message, _ = parse_events(stream)
     assert usage.input_tokens == 1200 and usage.total_tokens == 1390
     assert usage.reasoning_output_tokens == 30
     assert message is None
@@ -52,18 +52,18 @@ def test_the_error_message_survives_the_json_stream():
             json.dumps({"type": "turn.failed", "error": {"message": text}}).encode(),
         ]
     )
-    usage, message = parse_events(stream)
+    usage, message, _ = parse_events(stream)
     assert message == text
     assert usage.empty
 
 
 def test_a_turn_with_no_usage_reports_empty_rather_than_guessing():
-    usage, _ = parse_events(json.dumps({"type": "turn.completed"}).encode())
+    usage, _, _ = parse_events(json.dumps({"type": "turn.completed"}).encode())
     assert usage.empty and usage.total_tokens == 0
 
 
 def test_garbage_on_stdout_is_ignored():
-    usage, message = parse_events(b"not json\n\n{broken\n")
+    usage, message, _ = parse_events(b"not json\n\n{broken\n")
     assert usage.empty and message is None
 
 
@@ -234,3 +234,90 @@ def test_a_turn_without_usage_records_a_row_with_no_tokens(ai_client, monkeypatc
 
     body = ai_client.get("/api/usage").json()
     assert body["calls"] >= 1 and body["total_tokens"] == 0
+
+
+# --- the quota, which is the resource that actually runs out ---
+
+
+def test_the_rate_limit_windows_are_read_off_token_count():
+    stream = b"\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "token_count",
+                    "rate_limits": {
+                        "primary": {
+                            "used_percent": 87.5,
+                            "window_minutes": 300,
+                            "resets_at": "2026-09-22T11:46:00Z",
+                        },
+                        "secondary": {"used_percent": 41.0, "window_minutes": 10080},
+                    },
+                }
+            ).encode(),
+            json.dumps({"type": "turn.completed", "usage": {"total_tokens": 10}}).encode(),
+        ]
+    )
+    _, _, (primary, secondary) = parse_events(stream)
+    assert primary.used_percent == 87.5 and primary.window_minutes == 300
+    assert primary.resets_at == "2026-09-22T11:46:00Z"
+    assert secondary.used_percent == 41.0 and secondary.resets_at is None
+    assert primary.known and secondary.known
+
+
+def test_a_missing_or_odd_window_stays_unknown_rather_than_zero():
+    """The shape was read off the binary, not a live event, so it is taken defensively."""
+    stream = json.dumps(
+        {"type": "token_count", "rate_limits": {"primary": {"used_percent": "nonsense"}}}
+    ).encode()
+    _, _, (primary, secondary) = parse_events(stream)
+    assert not primary.known and not secondary.known
+    assert primary.used_percent is None  # not 0.0, which would read as "plenty left"
+
+
+def test_the_quota_is_remembered_and_survives_a_call_that_says_nothing(settings):
+    from tartib.codex import Quota
+    from tartib.store import read_quota, save_quota
+
+    conn = _conn(settings)
+    save_quota(conn, (Quota(used_percent=87.5, window_minutes=300), Quota(used_percent=41.0)))
+    assert read_quota(conn)["primary"]["used_percent"] == 87.5
+
+    save_quota(conn, (Quota(), Quota()))  # a call that reported nothing
+    assert read_quota(conn)["primary"]["used_percent"] == 87.5  # the last reading stands
+    conn.close()
+
+
+def test_a_capture_records_the_quota_the_cli_reported(ai_client, monkeypatch):
+    monkeypatch.setenv(
+        "FAKE_CODEX_QUOTA",
+        json.dumps(
+            {
+                "primary": {"used_percent": 92.0, "window_minutes": 300, "resets_at": "11:46"},
+                "secondary": {"used_percent": 55.0, "window_minutes": 10080},
+            }
+        ),
+    )
+    set_classify_reply(monkeypatch, proposal(shape="note", text="x", space="work"))
+    capture(ai_client, "something to file")
+
+    quota = ai_client.get("/api/usage").json()["quota"]
+    assert quota["primary"]["used_percent"] == 92.0
+    assert quota["primary"]["resets_at"] == "11:46"
+    assert quota["secondary"]["used_percent"] == 55.0
+
+
+def test_a_failed_call_still_reports_the_quota(ai_client, monkeypatch):
+    """A call that failed because the window is exhausted is when this matters most."""
+    monkeypatch.setenv(
+        "FAKE_CODEX_QUOTA", json.dumps({"primary": {"used_percent": 100.0, "resets_at": "11:46"}})
+    )
+    monkeypatch.setenv("FAKE_CODEX_EXIT", "1")
+    monkeypatch.setenv(
+        "FAKE_CODEX_ERROR", "You've hit your usage limit. ... try again at 11:46 AM."
+    )
+    capture(ai_client, "this one fails")
+
+    body = ai_client.get("/api/usage").json()
+    assert body["quota"]["primary"]["used_percent"] == 100.0
+    assert body["usage_limit"]["count"] >= 1

@@ -8,6 +8,7 @@ FAKE_CODEX_EXIT            exit code (default 0)
 FAKE_CODEX_ERROR           the failure message, delivered as an error event under --json
 FAKE_CODEX_USAGE           JSON usage object for turn.completed
 FAKE_CODEX_NO_USAGE        emit turn.completed with no usage at all
+FAKE_CODEX_QUOTA           JSON rate_limits object for a token_count event
 FAKE_CODEX_SLEEP           seconds to sleep before replying
 FAKE_CODEX_RECORD          path; one JSON line per invocation with argv and stdin tty state
 FAKE_CODEX_REPLY_FILE      path to a JSON file {"classify": ..., "ask": ...}; wins over the env
@@ -42,6 +43,17 @@ code = int(os.environ.get("FAKE_CODEX_EXIT", "0"))
 if code:
     message = os.environ.get("FAKE_CODEX_ERROR") or "fake codex: simulated failure"
     if "--json" in argv:
+        # The real CLI reports the windows and *then* fails, which is the case that matters:
+        # a call refused because the quota is gone is when its level is most worth knowing.
+        if os.environ.get("FAKE_CODEX_QUOTA"):
+            print(
+                json.dumps(
+                    {
+                        "type": "token_count",
+                        "rate_limits": json.loads(os.environ["FAKE_CODEX_QUOTA"]),
+                    }
+                )
+            )
         # The real CLI puts the useful text here, not on stderr. Losing it is the regression
         # this slice has to avoid.
         print(json.dumps({"type": "error", "message": message}))
@@ -73,6 +85,12 @@ if "--output-last-message" in argv:
 if "--json" in argv:
     print(json.dumps({"type": "thread.started", "thread_id": "fake"}))
     print(json.dumps({"type": "turn.started"}))
+    if os.environ.get("FAKE_CODEX_QUOTA"):
+        print(
+            json.dumps(
+                {"type": "token_count", "rate_limits": json.loads(os.environ["FAKE_CODEX_QUOTA"])}
+            )
+        )
     if os.environ.get("FAKE_CODEX_NO_USAGE"):
         print(json.dumps({"type": "turn.completed"}))
     else:

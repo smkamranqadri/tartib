@@ -25,6 +25,7 @@ from tartib.store import (
     item_header,
     record_call,
     retrieval_query,
+    save_quota,
     search,
     serialize_item,
     thoughts_for,
@@ -34,7 +35,11 @@ router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
 
 class AskError(Exception):
-    pass
+    """Ask failed. Carries the rate-limit reading when the stream gave one (slice 29)."""
+
+    def __init__(self, *args, quota=None):
+        super().__init__(*args)
+        self.quota = quota
 
 
 def terms_query(terms: Sequence[str]) -> str:
@@ -217,7 +222,7 @@ def build_prompt(
 
 
 async def expand_terms(
-    question: str, settings: Settings, on_usage: Callable[[Usage], None] | None = None
+    question: str, settings: Settings, on_usage: Callable[[Usage, tuple], None] | None = None
 ) -> list[str]:
     """Words to search for when the question's own words found nothing.
 
@@ -233,7 +238,7 @@ async def expand_terms(
     except CodexError:
         return []
     if on_usage is not None:
-        on_usage(reply.usage)
+        on_usage(reply.usage, reply.quota)
     terms = reply.data.get("terms") or []
     return [str(t).strip() for t in terms if str(t).strip()][:MAX_TERMS]
 
@@ -253,7 +258,7 @@ async def answer_from_rows(
     settings: Settings,
     thoughts: dict | None = None,
     prior: Prior | None = None,
-    on_usage: Callable[[Usage], None] | None = None,
+    on_usage: Callable[[Usage, tuple], None] | None = None,
 ) -> dict:
     """Ask Codex about exactly these rows (and their thoughts) and shape the reply. Raises
     AskError on failure."""
@@ -264,9 +269,9 @@ async def answer_from_rows(
             settings.codex(),
         )
     except CodexError as e:
-        raise AskError(str(e)) from e
+        raise AskError(str(e), quota=getattr(e, "quota", None)) from e
     if on_usage is not None:
-        on_usage(reply.usage)
+        on_usage(reply.usage, reply.quota)
     data = reply.data
     by_id = {r["id"]: r for r in rows}
     raw_ids = data.get("item_ids") or []
@@ -296,7 +301,8 @@ async def answer_question(
     thin = not matched or len(rows) < MIN_ROWS
     matched_rows = len(rows) if matched else 0
 
-    def record(kind: str, started: float, usage, failure: str | None = None) -> None:
+    def record(kind: str, started: float, usage, failure: str | None = None, quota=None) -> None:
+        save_quota(conn, quota)
         record_call(
             conn,
             kind=kind,
@@ -309,8 +315,11 @@ async def answer_question(
     if thin and await asyncio.to_thread(more_to_find, conn, space, matched_rows):
         started = time.monotonic()
         seen: list = []
-        terms = await expand_terms(question, settings, on_usage=seen.append)
-        record("terms", started, seen[0] if seen else None)
+        terms = await expand_terms(
+            question, settings, on_usage=lambda u, q: seen.append((u, q))
+        )
+        terms_usage, terms_quota = seen[0] if seen else (None, None)
+        record("terms", started, terms_usage, None, terms_quota)
         match = terms_query(terms) if terms else ""
         found = await asyncio.to_thread(search, conn, match, space) if match else []
         if found:
@@ -326,12 +335,18 @@ async def answer_question(
     seen_answer: list = []
     try:
         result = await answer_from_rows(
-            question, rows, settings, thoughts, prior, on_usage=seen_answer.append
+            question,
+            rows,
+            settings,
+            thoughts,
+            prior,
+            on_usage=lambda u, q: seen_answer.append((u, q)),
         )
     except AskError as e:
-        record("ask", started, None, str(e))
+        record("ask", started, None, str(e), e.quota)
         raise
-    record("ask", started, seen_answer[0] if seen_answer else None)
+    answer_usage, answer_quota = seen_answer[0] if seen_answer else (None, None)
+    record("ask", started, answer_usage, None, answer_quota)
     return {**result, "matched": matched, "expanded": expanded}
 
 

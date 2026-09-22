@@ -21,6 +21,7 @@ from tartib.store import (
     house_rules,
     items_by_thoughts,
     list_spaces,
+    read_quota,
     serialize_capture,
     serialize_item,
     set_house_rules,
@@ -160,6 +161,9 @@ def ai_usage(
         # inside output_tokens -- has not yet been reconciled against a real call, so the UI
         # does not show it. Slice 29, Still open.
         "cost_verified": False,
+        # The last rate-limit reading the CLI gave us. This is the scarce resource, and until
+        # now nothing in the app knew it existed.
+        "quota": read_quota(conn),
         "model": settings.ai_model,
         "rates": {
             "input": rates.input,

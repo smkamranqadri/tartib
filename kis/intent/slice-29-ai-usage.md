@@ -174,6 +174,38 @@ Model gpt-5.6-luna. A cost estimate is not shown yet — the arithmetic has not 
 checked against a real call.
 ```
 
+### Added mid-slice: the quota readout (2026-09-22)
+
+Asked why the subscription limit kept landing, since the pinned model normally lasts. Measured
+rather than guessed, and the answer was arithmetic:
+
+- **One `pytest -m eval` run is 64 model calls**, fired concurrently -- 22 classify fixtures,
+  12 for context (6 blind + 6 seeing), 12 for the house rule, 8 duplicates, 6 asking, 3
+  tell-it-why, 1 hostile rule.
+- **Each call got 2.5x bigger.** Slices 26 to 28 took the classify prompt from 3,915 to 9,741
+  characters against a full database -- roughly 978 to 2,435 tokens. So one eval run is about
+  155k input tokens before output and reasoning, and the suite ran six times in a day.
+- The quota is per-account, so this competes with the owner's own Codex work, and there are
+  **two rolling windows**, which is why reset times jumped around the clock.
+
+Then the useful part: the CLI already reports this. A **`token_count`** event carries
+`rate_limits` with `primary` and `secondary` windows, each with `used_percent`, `window_minutes`
+and `resets_at` -- and slice 29 was already parsing that stream and throwing the event away.
+
+So it is parsed now. The latest reading goes to `app_state` (a point in time, not a history --
+what matters is how full the window is *now*), rides on `CodexError`, `ClassifyError` and
+`AskError` so a call that failed *because* the window is gone still reports its level, and shows
+in Settings as the **fullest of the two windows**, since that is the one about to stop you. It
+turns red at 80%.
+
+The shape was read off the binary, not a live event, so it is parsed defensively: anything
+missing or odd stays `None` rather than becoming a confident `0`, which would read as "plenty
+left". A test pins that.
+
+```
+Quota 92% used of the 5 hour window, resets 11:46 AM.
+```
+
 ## Still open -- and one of these is deploy-blocking
 
 Both need the same quota window (**11:46**), and they should be done in this order:
@@ -187,5 +219,7 @@ Both need the same quota window (**11:46**), and they should be done in this ord
 2. **Reconcile the token arithmetic.** Compare `total_tokens` against the sum of the parts on a
    real call and confirm reasoning tokens sit inside `output_tokens`. Then flip
    `cost_verified` and show the figure.
+3. **Confirm the `token_count` shape** against a real event. The field names came from the
+   binary; the parser tolerates them being wrong, but nobody has seen one.
 
 Until (1) passes, this slice is a liability rather than a feature, and `v1.1` must not carry it.

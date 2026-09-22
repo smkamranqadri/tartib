@@ -16,7 +16,15 @@ from pathlib import Path
 
 
 class CodexError(Exception):
-    """The CLI failed or returned something unusable."""
+    """The CLI failed or returned something unusable.
+
+    It carries whatever quota the stream reported: a call that failed *because* the window is
+    exhausted is exactly when knowing how full it is matters most.
+    """
+
+    def __init__(self, *args, quota=None):
+        super().__init__(*args)
+        self.quota = quota
 
 
 @dataclass(frozen=True)
@@ -48,11 +56,53 @@ class Usage:
 
 
 @dataclass(frozen=True)
+class Quota:
+    """How much of a rate-limit window is gone, as the CLI reports it on `token_count`.
+
+    There are two windows -- a short one and a long one -- and the long one is what bites after
+    a burst, which is why both are kept. The exact field shape is taken defensively: this was
+    read off the binary, not off a live event, so anything missing stays None rather than
+    becoming a confident zero.
+    """
+
+    used_percent: float | None = None
+    window_minutes: int | None = None
+    resets_at: str | None = None
+
+    @property
+    def known(self) -> bool:
+        return self.used_percent is not None
+
+    def as_dict(self) -> dict:
+        return {
+            "used_percent": self.used_percent,
+            "window_minutes": self.window_minutes,
+            "resets_at": self.resets_at,
+        }
+
+
+def _quota(raw: object) -> Quota:
+    if not isinstance(raw, dict):
+        return Quota()
+    try:
+        used = raw.get("used_percent")
+        minutes = raw.get("window_minutes")
+        return Quota(
+            used_percent=float(used) if used is not None else None,
+            window_minutes=int(minutes) if minutes is not None else None,
+            resets_at=str(raw["resets_at"]) if raw.get("resets_at") is not None else None,
+        )
+    except (TypeError, ValueError):
+        return Quota()
+
+
+@dataclass(frozen=True)
 class Reply:
     """A parsed reply and what it cost. `usage` is empty when the CLI reported none."""
 
     data: dict
     usage: Usage
+    quota: tuple[Quota, Quota] = (Quota(), Quota())  # (primary, secondary)
 
 
 @dataclass(frozen=True)
@@ -110,7 +160,7 @@ def _codex_args(
     return args
 
 
-def parse_events(stdout: bytes) -> tuple[Usage, str | None]:
+def parse_events(stdout: bytes) -> tuple[Usage, str | None, tuple[Quota, Quota]]:
     """Pull the usage and the failure message out of the JSONL stream.
 
     The message matters as much as the counts: before `--json`, CodexError took the last line
@@ -119,6 +169,7 @@ def parse_events(stdout: bytes) -> tuple[Usage, str | None]:
     arrives here as an `error` event.
     """
     usage, message = Usage(), None
+    quota = (Quota(), Quota())
     for line in stdout.decode(errors="replace").splitlines():
         line = line.strip()
         if not line or not line.startswith("{"):
@@ -147,10 +198,13 @@ def parse_events(stdout: bytes) -> tuple[Usage, str | None]:
             message = str(event["message"])
         elif kind == "turn.failed" and not message:
             message = str((event.get("error") or {}).get("message") or "") or None
-    return usage, message
+        elif kind == "token_count" and isinstance(event.get("rate_limits"), dict):
+            limits = event["rate_limits"]
+            quota = (_quota(limits.get("primary")), _quota(limits.get("secondary")))
+    return usage, message, quota
 
 
-async def _run(args: list[str], workdir: Path, timeout: float) -> Usage:
+async def _run(args: list[str], workdir: Path, timeout: float) -> tuple[Usage, tuple[Quota, Quota]]:
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -167,15 +221,15 @@ async def _run(args: list[str], workdir: Path, timeout: float) -> Usage:
         proc.kill()
         await proc.wait()
         raise CodexError(f"timed out after {timeout:.0f}s") from e
-    usage, message = parse_events(stdout)
+    usage, message, quota = parse_events(stdout)
     if proc.returncode != 0:
         if not message:
             # Nothing usable in the stream: fall back to what the process said, as before.
             text = (stderr or stdout).decode(errors="replace").strip()
             lines = [ln for ln in text.splitlines() if not ln.strip().startswith("{")]
             message = lines[-1] if lines else "no output"
-        raise CodexError(f"exit {proc.returncode}: {message[:300]}")
-    return usage
+        raise CodexError(f"exit {proc.returncode}: {message[:300]}", quota=quota)
+    return usage, quota
 
 
 def _parse_object(raw: str) -> dict:
@@ -202,12 +256,12 @@ async def _run_codex(
         output = workdir / "reply.json"
         schema_path.write_text(json.dumps(schema))
         args = _codex_args(command, model, reasoning, workdir, schema_path, output, prompt)
-        usage = await _run(args, workdir, timeout)
+        usage, quota = await _run(args, workdir, timeout)
         try:
             raw = output.read_text()
         except FileNotFoundError as e:
             raise CodexError("no reply written") from e
-    return Reply(data=_parse_object(raw), usage=usage)
+    return Reply(data=_parse_object(raw), usage=usage, quota=quota)
 
 
 async def run_json(prompt: str, schema: dict, cfg: CodexConfig) -> Reply:
