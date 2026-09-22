@@ -1,7 +1,7 @@
 # Slice 35: Tartib over MCP
 
 Planned 2026-09-23 with the owner. Standard mode.
-**Built and verified 2026-09-23 (Proof, below); not deployed.**
+**Built and verified 2026-09-23 (Proof, below); deployed as `v2.2` the same day, `/mcp` on.**
 
 ## What was asked
 

@@ -1,7 +1,7 @@
 # Slice 32: Pick for me
 
 Planned 2026-09-22 with the owner. Standard mode: one migration, one endpoint, one modal.
-**Built and verified 2026-09-22 (below, Proof); not deployed.**
+**Built and verified 2026-09-22 (below, Proof); deployed as `v2.2` on 2026-09-23.**
 
 ## What was reported
 

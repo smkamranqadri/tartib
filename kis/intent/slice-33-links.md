@@ -3,7 +3,7 @@
 Planned 2026-09-22 with the owner, from the backlog entry approved that day ("we definitely need
 links"). Phase mode: A and B each committed and proved on their own; C is direction only and gets
 its own plan later.
-**Phases A, B and C built and verified 2026-09-22 (Proof, below); C ships switched off. Nothing of 33 is deployed.**
+**Phases A, B and C built and verified 2026-09-22 (Proof, below); C ships switched off. Deployed as `v2.2` on 2026-09-23, the switch off.**
 
 ## What was reported
 

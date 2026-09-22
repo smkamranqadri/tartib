@@ -5,19 +5,11 @@
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   In step with `origin/main` since 2026-09-22 (pushed after `v2.1` went live).
-- **Live: `v2.1`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
-  `smkamranqadri/tartib:v2.1`: `v2.0` plus slices 30 and 31 and the fixes after it (history.md),
-  classifying on the pinned `gpt-5.6-luna` at medium reasoning (checks under Proof). The
-  database as it was just before is backed up (`private.md`, Backups); that file and `v2.0` are
-  the rollback.
-- Task: none in flight. **Slice 35 (Tartib over MCP) is built and verified on `main`**, not
-  deployed (`../intent/slice-35-mcp.md`, Proof).
-  **Slice 34 (suggest links for filed items) is built and verified on
-  `main`**, not deployed (`../intent/slice-34-suggest-links.md`, Proof).
-  **Slice 33 (links, A to C) is built and verified on `main`**, not deployed;
-  phase C ships with `TARTIB_LINK_PROPOSALS` off (`../intent/slice-33-links.md`, Proof).
-  **Slice 32 (Pick for me) is built and verified on `main`, not deployed**
-  (`../intent/slice-32-pick-for-me.md`, Proof); the owner chose to start 33 before deploying.
+- **Live: `v2.2`**, deployed 2026-09-23 on the CapRover VPS as `smkamranqadri/tartib:v2.2`:
+  slices 32 to 35 and the pre-deploy review fixes (history.md), with `TARTIB_LINK_PROPOSALS` off
+  and `/mcp` on. The database as it was just before is backed up (`private.md`, Backups); that
+  file and `v2.1` are the rollback.
+- Task: none in flight.
 
 ## Open
 
@@ -36,17 +28,13 @@
 
 ## Next
 
-1. **Deploy slices 32 to 35 as `v2.2`** -- rehearsed on a live snapshot 2026-09-22 (Proof), and
-   migrations 0021 and 0022 applied to another on 2026-09-23 (slice 34's Proof): bump
-   `SW_VERSION`, back up the database first
-   (`private.md`), `./deploy.sh v2.2`, then check migrations 0019 to 0023 applied, one Pick and
-   one link from the phone; then `suggest_links --space infra --dry-run --limit 5` in the container;
-   then set `TARTIB_MCP_TOKEN` and connect Claude Code (`private.md`, MCP).
+1. **Try `v2.2` on the phone**: one Pick, one `[[link]]`, and connect Claude Code to `/mcp`
+   (`private.md`, MCP). Then, when ready, a real `suggest_links --space infra` run.
 2. **Switch `TARTIB_LINK_PROPOSALS` on** once item 4 is done, and watch the inbox it fills.
-3. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`).
+3. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
 4. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-5. **Answer the four questions** under Known gaps, on `v2.1`.
+5. **Answer the four questions** under Known gaps, on `v2.2`.
 
 ## Commands
 
@@ -64,6 +52,16 @@
 ## Proof
 
 Each slice keeps its proof in its plan file and its commits.
+
+**`v2.2`, checked 2026-09-23 from outside and in the container:** `/api/health` answers
+`{"ok":true,"ai":true}`, `sw.js` is `2026-09-23.1` (Cloudflare purged by the owner; it still sends
+`max-age=14400`), `http://` answers 302, the login cookie is `HttpOnly; Secure; SameSite=lax`, the
+container runs `v2.2`. Migrations 0019 to 0023 applied: schema 23, integrity ok, no foreign-key
+faults, and all 196 items hash identical to the pre-deploy backup (text, `updated_at`, star,
+status, space, stage); 196 link keys, 0 links. `/mcp`: 401 with no token, a wrong one, or the
+login password; with the token, `initialize` as `tartib`, 11 tools, `list_spaces` 26. In the
+container, `suggest_links --space infra --limit 5 --dry-run`: 5 calls, 3 items with 3 links,
+nothing stored. `TARTIB_LINK_PROPOSALS` off.
 
 **`v2.2` reviewed before deploy, 2026-09-23 (`ae74c43..HEAD`, three separate agents, read-only):**
 code review, security review, and SPEC against the build. No crash, data loss or exploitable hole.

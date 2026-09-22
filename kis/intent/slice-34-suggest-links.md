@@ -4,7 +4,7 @@ Planned 2026-09-22 with the owner, after a dry run of slice 33 phase C on 15 `in
 live snapshot proposed about 11 good links (the CapRover -> Docker -> Server chain among them) and
 wrote nothing. Phase C only proposes links for new captures; this is the pass for what is already
 filed. Standard mode.
-**Built and verified 2026-09-23 (Proof, below); not deployed.**
+**Built and verified 2026-09-23 (Proof, below); deployed as `v2.2` the same day.**
 
 ## Decided with the owner, 2026-09-22
 
