@@ -55,14 +55,6 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   first line becomes the title"*, which is only true of a task. Worth settling what a title *is*
   before changing where it shows: one editable thing in one place, shown the same way for a task
   and a note. Screenshot on file: a task "Post on social media" whose title sits over a checklist.
-- **A checklist typed naturally does not become a checklist.** The owner typed `[x] post on
-  linkedin` and `[] post on facebook`. The renderer *does* support task lists -- it draws a box
-  from marked's `task` and `checked` fields -- but marked only recognises the GFM form, `- [x]` and
-  `- [ ]`: without the leading `- `, and with `[]` instead of `[ ]`, those lines are a plain
-  paragraph and render as literal brackets. Checked by feeding both forms to marked's lexer. Two
-  things to decide: whether to accept the looser form people actually type, and whether the boxes
-  should be **tickable** -- today they are drawn `readOnly disabled`, so even a correct checklist
-  cannot be ticked, which is half a feature for a to-do list.
 - **Deleting a note or task should ask in a modal, not inside the note's body.** The owner's
   words: *"should ask to delete note or task in modal not in note's body."* What the code does:
   Delete in the item page's header sets `confirmDelete`, and `Confirm` renders inline **below the
@@ -101,9 +93,9 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   nothing in SPEC; the only mention is that habits "stay undated" (checked 2026-09-22). The
   smallest shape that fits: a task carries a repeat rule (daily, weekly, the nth weekday of the
   month), and ticking it done moves `due` to the next occurrence instead of closing it, so it
-  reaches Today on its day and reminders work unchanged. Two things it depends on: each group is
-  a checklist, so **tickable checklists** (entry above) come first or with it, and ticking the
-  routine done must reset its boxes. Undecided: whether a missed day piles up or skips, and
+  reaches Today on its day and reminders work unchanged. Each group is a checklist, and boxes
+  are tickable since 2026-09-22 (`b420ed3`, `toggleTask` in `markdown.ts`); what is still missing
+  is that ticking the routine done must reset its boxes. Undecided: whether a missed day piles up or skips, and
   whether the classifier may propose a repeat rule from text like "every 1st Monday".
   The owner will bring more detail when this is planned; what is here is only what the one note
   shows.
