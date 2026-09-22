@@ -1,13 +1,17 @@
 # Slice history
 
-What each slice changed, newest first. All are done, and all but slice 30 are deployed (30 is merged to `main`): slices 1 to 17 went out
-as `v1.0`, and **slices 18 to 29 as `v2.0`** on 2026-09-22 (State has the deploy truth).
+What each slice changed, newest first. All are done, and all but slice 30 are deployed (30 is merged to `main`, not deployed): slices 1 to 17 went out
+as `v1.0`, and **slices 18 to 29 as `v2.0`** on 2026-09-22 (State has the deploy truth). Before
+`v2.0`, three reviews -- code, security, and SPEC against the build -- found two things that must
+not ship (the retry probe deleted thought logs; model-written markdown could make the browser
+fetch a remote URL) and five real bugs. All seven were fixed, each with a test or a browser
+reproduction, and the whole eval suite passed in one run on the pinned model.
 
 Deployed is not the same as accepted. **Slices 18 to 22 were seen and accepted on a device**
 before `v2.0`. **Slices 23 to 29 first reached a device with `v2.0` and are not accepted yet**:
 four questions only a phone can settle are still open, and the first day's use turned up
-problems: the title is still in the backlog, and the rest are fixed on `main` (State, Open). Until they are answered, 23 to 29 are
-built, tested and live, and no more than that. Current truth lives in
+problems: the title is still in the backlog, and the rest are fixed on `main` (State, Open).
+Until they are answered, 23 to 29 are built, tested and live, and no more than that. Current truth lives in
 `SPEC.md` (product), `../knowledge/technical.md` (how it is built), and `../knowledge/rules.md`
 (hard rules). Where a slice below disagrees with those, they win; the full plans are in git.
 
