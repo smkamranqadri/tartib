@@ -39,7 +39,7 @@ live captures is a separate job and is not part of this slice.
 Rule 1 is the safety net and rule 3 makes it rarely needed. Rule 1 catches every split, including
 the ones the prompt gets wrong later.
 
-## Decided in this plan (for the owner to confirm)
+## Decided in this plan (confirmed by the owner, 2026-09-22)
 
 - **What counts as a split:** more than one item that is *not a question*. A capture holding one
   task and one question makes one item plus an answer. That is not a split, and it behaves as it
@@ -59,7 +59,7 @@ the ones the prompt gets wrong later.
     `updated_at` separately, a moment later.
   - **Deleting a piece does not block the merge.** Deleting it is not starting on what remains,
     and Keep as one promises the whole original text. So the deleted words come back inside the
-    merged note, and the card's wording says so ("the original text, whole"). The alternative
+    merged note. The button's tooltip says so ("one note holding the original text, whole"). The alternative
     would be recording N on each piece, which needs a column, for an edge case that is itself a
     choice to discard.
 - **The merged note's space:** if every piece proposed the same space, the merged note proposes it.
@@ -151,3 +151,44 @@ the ones the prompt gets wrong later.
 - Intent: this file; SPEC (Classify: the split rule and the two new reasons; Needs Attention
   decisions: Keep as one; Screens, the Inbox card: the split line); history.md on close.
 - State: the task in flight while it runs. On close, "on this branch, not merged, not deployed".
+
+## What was built (2026-09-22) -- done and proved, on the branch, not merged
+
+Built as planned; commit `1f24ea0`. One thing the plan got wrong, caught by an existing test:
+
+- **`updated_at = classified_at` had to be in milliseconds.** The plan wrote both at second
+  precision. `test_today_reports_active_space` failed, because `updated_at` is compared as a
+  string and `…:00Z` sorts *after* `…:00.100Z` from the same second, so a piece written this
+  second looked newer than an edit made a moment later. Both are now one `utcnow_ms_iso()`.
+  The plan's Risk line claimed the change was harmless; it was not, and the test said so.
+- A **session** on a piece also counts as starting on it. Not in the plan: `sessions.item_id` is
+  `ON DELETE SET NULL`, so deleting that piece would have cut the session off from its task.
+- Two existing tests assumed a split files its confident pieces: `test_multi_item_capture_
+  splits_into_items` now expects every piece waiting, and `test_recent_page_leaves_out_what_is_
+  waiting` reaches its "one filed, one waiting" state by approving one piece.
+
+## Verification -- what actually ran
+
+- `uv run pytest -q`: **299 passed, 8 deselected** (286 before, plus 13 in `test_split.py`;
+  the eighth deselected is the new eval). `ruff check` clean. `npm run typecheck` and
+  `npm run build` clean.
+- **The one targeted eval**, `pytest -m eval -k heading`, pinned `gpt-5.6-luna` at medium,
+  passed first time: 4 calls, 27s. The preferences note came back as 1 note in `personal`, #91
+  as 1 item in `coding` (a task, not a note -- shape is not asserted, and one tap changes it),
+  "call Ali, buy milk" as 2, the bullets as 3. No baseline was measured for the old prompt: the
+  live app is the evidence that it split both.
+- `npm run ui`: **10/10**, against this branch's own server on port 8010 (a scratch database, the
+  fake classifier). Port 8000 was left to the main checkout.
+- **Browser at 390px** (playwright-core, channel chrome), 12 checks, all ok: a 3-way split shows
+  3 cards, each "Split from one capture into 3" with Keep as one (44px, no horizontal scroll);
+  Keep as one leaves one card with #91's text byte for byte, "Kept as one: choose where it goes",
+  proposing `coding`; Approve files it there whole. Pieces in `personal` and `work` merge into a
+  note asking between exactly those two. Approving one piece of a two-way split removes Keep as
+  one from the other.
+
+## Still open
+
+- **The two live captures are not repaired.** Blocked twice by the permission check on bulk
+  deletes on the live server; the owner's call. Keep as one cannot repair them after deploy:
+  their pieces already filed themselves, and it only acts on waiting ones.
+- Merge and deploy are the owner's decision.

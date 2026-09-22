@@ -9,7 +9,9 @@
   before release, classifying on the pinned `gpt-5.6-luna` at medium reasoning (confirmed in
   the container over SSH, 2026-09-22). What each slice changed, in a line: `kis/intent/history.md`; the decisions and
   proof: `kis/intent/slice-*.md`.
-- Task: none in flight.
+- **Slice 30 (a split waits for you, Keep as one) is done on branch `sc-superfluid-magnon-e253`**,
+  not merged and not deployed; the owner decides when it merges. Plan and proof:
+  `kis/intent/slice-30-split-asks.md`. On `main` a different agent's work goes on meanwhile.
 
 ## Open
 
@@ -20,6 +22,9 @@
   version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
   and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
   `sw.js` from Cloudflare once**, or the copy cached under the old headers lingers.
+- **The two captures that were split on the live app (#91, #92) are not repaired**: their 12
+  pieces are filed. The repair was blocked twice by the permission check on bulk deletes; the
+  owner's call. Keep as one cannot reach them after deploy, since it acts only on waiting pieces.
 - **Real data is now accumulating on the deployed database**, and two things are set up to read
   it later. `ai_calls` records what was in each prompt (migration 0017), which cannot be
   backfilled; and `TARTIB_DUPLICATE_PARK` is **off**, so duplicate verdicts are recorded while
@@ -43,7 +48,8 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **286 passed, 7 deselected** (the seven are the evals) and
+  Verification commands. Expect **286 passed, 7 deselected** on `main`, and **299 passed, 8 deselected** on the slice 30
+  branch and after it merges (the deselected are the evals) and
   **10/10** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
