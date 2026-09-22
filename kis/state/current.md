@@ -83,15 +83,9 @@
 
 ## Commands
 
-- Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (two tests: 22 classify
-  fixtures and 3 tell-it-why cases, ~30s, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
-  As of 2026-09-22 pytest is **264 passed, 7 deselected** (the seven deselected are the evals;
-  slices 26 to 28 added five of them, and a full eval run is about 2m45s). **An eval run that
-  fails fast is rate-limiting, not a result** -- 45s for five failures against 131s for a clean
-  run. Re-run before believing it. `cd frontend && npm run ui` is the committed UI suite -- 10 checks
-  re-running slices 22 to 29 against the local container, needs `TARTIB_PASSWORD` in the
-  environment and real Chrome.
-  Any red is real.
+- Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
+  Verification commands. As of 2026-09-22 the numbers to expect are **264 passed, 7 deselected**
+  (the seven are the evals) and **10/10** from the UI suite. Any red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
@@ -99,48 +93,30 @@
 ## Proof
 
 Each slice keeps its proof in its plan file and its commits; `../intent/history.md` says what
-each one changed. Slices 24 and 25 are the fullest, if an example is wanted.
-
-Slice 26's headline proof, because it is the one number that could have gone the other way:
-showing the classifier what already exists took six deliberately ambiguous captures from
-**0/6 to 6/6** on space, with the existing 22 fixtures unchanged. Measured on this build against
-the real Codex CLI, not carried over from an earlier one.
-
-Slice 28's headline proof: the classifier names a duplicate **3/3** and refuses a near miss
-**0/5 false positives**, with every reference resolving to a real item and none resolving to
-nothing. Measured on the pinned model. The near misses are the test -- "schedule the car service"
-against "Renew the car insurance" is the same subject and a different action, and it came back
-null.
-
-Slice 27's headline proof, for the same reason: a house rule moved three car captures from
-**0/3 to 3/3** into `home`, none of which the classifier would have filed there unaided, with
-three unrelated controls filing identically with and without it. The measurement also caught a
-regression on the way -- see the slice.
-
-The digest fix was proved the only way a fix can be: the new test was run against the old
-`digest_counts` and failed on it -- `"0 due today, 1 need attention"` where the Inbox and the
-nav badge both said 2 -- then passed on the new one.
+each one changed in a line. Slices 24, 25 and 28 are the fullest, if an example is wanted.
 
 Proved on the deployed app rather than only in tests: a capture classifies and files itself, the
 session cookie carries `Secure` behind the proxy, a session ending pushes and the phone buzzes
 with a desktop tab open on the same countdown (the migration 0008 case), and `http://` redirects.
+**Everything since is proved locally only.**
 
 ## Known gaps
 
 Offline behaviour that is designed rather than missing -- counts lagging, and text editing
 needing one moment online first -- is product truth: `../intent/SPEC.md`, Offline.
 
-- **Slices 23 to 29 were proved in headless Chrome only.** Since slice 26 that harness is
-  committed (`cd frontend && npm run ui`, 10 checks, currently 10/10), so what it covers will not
-  silently regress -- but it cannot judge how anything reads. Slice 26's own visible changes are
-  the Note/Task buttons, now 44px wide, and the ask bar's follow-up carry; slice 27's are the
-  house-rules editor in Settings and the classifier's question as option buttons. Four things
-  wait on glass:
-  whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
-  against readability, and slice 24's markdown is the best answer to it that can be given
-  without a device; whether `background-attachment: fixed` survives iOS; whether tapping a word
-  is a discoverable way into editing when no button says so; and whether a debounced autosave
-  feels safe without a Save button to press.
+- **Slices 23 to 29 were proved in headless Chrome only.** Since slice 26 the harness is
+  committed (`npm run ui`, 10 checks, 10/10), so what it covers will not silently regress -- but
+  it cannot judge how anything *reads*. Unseen on a device, by slice: 26 the Note/Task buttons at
+  44px and the ask bar's follow-up carry; 27 the house-rules editor and the classifier's question
+  as option buttons; 28 the "Looks like #N" line and the dashed `+ space` button; 29 the usage
+  readout in Settings. Four things only glass can answer:
+  1. whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
+     against readability, and slice 24's markdown is the best answer to it available without a
+     device;
+  2. whether `background-attachment: fixed` survives iOS;
+  3. whether tapping a word is a discoverable way into editing when no button says so;
+  4. whether a debounced autosave feels safe without a Save button to press.
 
 Browser and device behaviour that will not change by deploying -- iOS `notificationclick`, the
 desktop Chrome FCM refusal, `pushsubscriptionchange`, the silent worker at session end, voice
