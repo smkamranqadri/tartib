@@ -4,13 +4,13 @@
   in `kis/state/private.md`, gitignored and never published. This file carries the substance and
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
+  **Ahead of `origin/main` and not pushed** since 2026-09-22 (`git log origin/main..` lists it).
 - **Live: `v2.0`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
   `smkamranqadri/tartib:v2.0`: slices 18 to 29 and the pre-release review fixes, classifying on
   the pinned `gpt-5.6-luna` at medium reasoning (confirmed in the container over SSH,
   2026-09-22). What each slice changed: `kis/intent/history.md`; decisions and proof:
   `kis/intent/slice-*.md`.
-- Task: none in flight. Slice 30 (a split waits for you, Keep as one) is **merged to `main`
-  and not deployed**; plan and proof: `kis/intent/slice-30-split-asks.md`.
+- Task: none in flight.
 
 ## Open
 
@@ -18,14 +18,13 @@
   a duplicate of an item deleted mid-classification no longer crashing the capture (`d19dd9d`),
   saving no longer reloading the note, with indented lines keeping their indent (`c91fbf9`), a
   note's icon the size of the checkbox beside it (`1d3383e`), and **checklist boxes tickable** in
-  an item's text (`b420ed3`; the first-day checklist report was a missing `- `, not a bug). Each
+  an item's text (`b420ed3`; the first-day checklist report was a missing `- `, not a bug), and
+  **slice 30**: a capture that splits waits for you, with Keep as one
+  (`kis/intent/slice-30-split-asks.md`). Each
   was proved in Chrome against local; none has been on a phone. Until the cache fix is out, a new
   version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
   and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
   `sw.js` from Cloudflare once**, or the copy cached under the old headers lingers.
-- **The two captures split on the live app (#91, #92) were repaired by hand on 2026-09-22**,
-  with the owner's approval: both appended to the Prompts note (#107, `coding`) as "Personal
-  Preferences For AI Agent" and "Page Polish", and their 12 pieces (items 115-126) deleted.
 - **Real data is now accumulating on the deployed database**, and two things are set up to read
   it later. `ai_calls` records what was in each prompt (migration 0017), which cannot be
   backfilled; and `TARTIB_DUPLICATE_PARK` is **off**, so duplicate verdicts are recorded while
@@ -87,7 +86,7 @@ needing one moment online first -- is product truth: `../intent/SPEC.md`, Offlin
      view, and "Saved" never showed.
 - The committed UI suite (`npm run ui`, 10 checks) guards slices 22 to 25, 27 and 29. It cannot
   judge how anything reads, and slices 26 and 28 are outside it for a stated reason. The reload
-  fix (`c91fbf9`) and tickable boxes (`b420ed3`) were proved by scratch scripts and are not in
+  fix (`c91fbf9`), tickable boxes (`b420ed3`) and slice 30's split card were proved by scratch scripts and are not in
   it, so nothing guards them against regression.
 
 Browser and device behaviour that will not change by deploying -- iOS `notificationclick`,
