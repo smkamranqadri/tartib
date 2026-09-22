@@ -3,7 +3,7 @@
 Planned 2026-09-22 with the owner, from the backlog entry approved that day ("we definitely need
 links"). Phase mode: A and B each committed and proved on their own; C is direction only and gets
 its own plan later.
-**Phases A and B built and verified 2026-09-22 (Proof, below); C waits for the duplicate judgment. Nothing of 33 is deployed.**
+**Phases A and B built and verified 2026-09-22 (Proof, below); C in progress. Nothing of 33 is deployed.**
 
 ## What was reported
 
@@ -64,10 +64,34 @@ links to it. And a task to build a console app belongs to its own work but also 
 - "Linked here" on `Space.tsx`: items elsewhere that link to the space.
 - Space rename (`spaces.py`) rewrites `[[space:old]]`; space delete leaves them dimmed.
 
-## Phase C: the classifier proposes (direction only)
+## Phase C: the classifier proposes links (planned 2026-09-22, Standard)
 
-Planned after the duplicate verdicts are judged (State, Next). What is decided: accept appends
-`Related: [[X]]`, and the item waits in Needs attention.
+The owner chose to build it now rather than after the duplicate judgment, **behind a switch** so
+the data being gathered stays clean. Decided:
+
+- `TARTIB_LINK_PROPOSALS`, off by default. Off, the classify prompt is byte-for-byte today's;
+  `ai_calls` records per call whether it was on (migration 0021).
+- Candidates are only the similar items already shown for duplicates (`i1`..`i8`); a new
+  `related` field names at most 2, resolved like `duplicate_of`, invented labels dropped, and an
+  item named as the duplicate is not also related.
+- The item **waits unfiled** in Needs attention (reason `linked`) -- except in a FILE space,
+  which files as always; the proposal is kept in `proposal_json` either way and is not shown on
+  filed items, like the duplicate verdict.
+- The waiting card shows each proposed link as a chip, on by default; filing appends
+  `Related: [[A]], [[B]]` for the chips kept, none when all are off.
+- Two eval cases (one should link, one should not), run once each on the live model with the
+  switch on: 2 calls.
+
+Accepted consequences: a task waiting for a link is off Today until answered (the switch backs
+out); "related" and "duplicate" must be kept apart by the prompt, which the eval pair tests.
+
+Acceptance (C):
+8. Switch off: the prompt is unchanged (asserted) and nothing waits for a link.
+9. Switch on, reply `related: ["i2"]`: the item waits with reason `linked` and the chip.
+10. Chip kept: the filed text ends `Related: [[Title]]` and the target lists it under Linked from;
+    chip dropped: no link.
+11. FILE space: files, proposal kept. Invented label: ignored.
+12. `ai_calls` records the switch per call.
 
 ## Out of scope
 
