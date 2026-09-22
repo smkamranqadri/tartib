@@ -62,9 +62,9 @@
   out of the CapRover app config, **`TARTIB_AI_MODEL=gpt-5.6-luna` and
   `TARTIB_AI_REASONING=medium` go in** (pinned 2026-09-21; without them the server keeps
   using whatever default the CLI picks, which can move on its own), and **`SW_VERSION` in `sw.js` is bumped by hand**. It is at
-  `2026-09-21.2`: slice 26 changed the bundle without touching `sw.js`, which is exactly the
-  case the rule exists for, so it was bumped with the slice rather than left for the deploy.
-  Nothing outstanding unless another bundle-only change lands before `v1.1`. The rule and its
+  `2026-09-22.1`, bumped for slices 28 and 29, which changed the bundle without touching
+  `sw.js` -- exactly the case the rule exists for. Nothing outstanding unless another
+  bundle-only change lands before `v1.1`. The rule and its
   reason are in `../knowledge/technical.md`, Frontend shell.
 - Next, in no fixed order:
   1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
