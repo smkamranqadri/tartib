@@ -211,8 +211,15 @@ reported `ok` when it could not find the control it was looking for, and one mat
 
 ## Still open
 
-- The multi-item live follow-up, above. Worth one minute after the usage limit resets.
+- ~~The multi-item live follow-up.~~ **Run 2026-09-22 and it works.** *"what do I review
+  daily?"* cited items 42 and 43; *"what about the second one?"*, carrying that pair,
+  answered about **43** -- the second of them -- and cited only it. The single-item case was
+  proved the day this slice closed; this was the case only a unit test had covered.
 - The suite runs against whatever database it is pointed at. It cleans up after itself, but it
   is a check, not a fixture: point it at local.
+- **This slice's ask-bar carry is not in the committed UI suite**, and nor is slice 28's
+  duplicate line: both need a database row the API cannot create. Recorded in
+  `../knowledge/technical.md` beside what the suite does cover, because "slices 22 to 29" read
+  as a range and implied otherwise.
 - `expanded` is not surfaced anywhere in the UI. `matched` was not either, so this changes
   nothing, but both are now in the payload if a later slice wants them.
