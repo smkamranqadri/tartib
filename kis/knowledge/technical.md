@@ -319,6 +319,14 @@ host port mapping: mapping one would bypass nginx, and with it TLS and the `X-Fo
 header the `Secure` session cookie depends on. Force HTTPS is on, so `http://` answers 302. The
 persistent directories are `/data` (the database) and `/root/.codex` (the Codex login). The
 deployed database is separate from the local one and always has been.
+**Cloudflare rewrites the browser cache header on static files** (measured 2026-09-22, on
+`v2.1`). The app sends `Cache-Control: no-cache` on `/`, `/index.html`, `/sw.js` and the
+manifest (`main.py`), and `/` arrives with it -- but `sw.js` arrives as `max-age=14400`,
+because the zone's **Browser Cache TTL** overrides the origin on the extensions Cloudflare
+treats as cacheable. So a browser can hold an old worker for four hours whatever the app says,
+and a purge does not change it; the fix is Browser Cache TTL set to **Respect Existing
+Headers** in the dashboard. There is no Cloudflare CLI or API token on this machine: a purge is
+done by hand (Caching -> Purge Cache -> Custom Purge, the `sw.js` URL).
 
 The Codex CLI authenticates with a device code, so `codex login` works over SSH on a headless
 server with no browser callback and no credential files to carry. On CapRover it is run inside

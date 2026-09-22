@@ -5,28 +5,22 @@
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   **Ahead of `origin/main` and not pushed** since 2026-09-22 (`git log origin/main..` lists it).
-- **Live: `v2.0`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
-  `smkamranqadri/tartib:v2.0`: slices 18 to 29 and the pre-release review fixes, classifying on
-  the pinned `gpt-5.6-luna` at medium reasoning (confirmed in the container over SSH,
-  2026-09-22). What each slice changed: `kis/intent/history.md`; decisions and proof:
-  `kis/intent/slice-*.md`.
-- Task: none in flight. Slice 31 is done on `main` and waits for the next deploy.
+- **Live: `v2.1`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
+  `smkamranqadri/tartib:v2.1`: `v2.0` plus slices 30 and 31 and the fixes after it (history.md),
+  classifying on the pinned `gpt-5.6-luna` at medium reasoning. Checked from outside and in the
+  container: health `{"ok":true,"ai":true}`, `sw.js` at `2026-09-22.3`, `http://` 302, cookie
+  `HttpOnly; Secure; SameSite=lax`, schema 18, 43 tasks opening with their title line. `sw.js`
+  was purged from Cloudflare by hand. The database as it was just before is backed up
+  (`private.md`, Backups); that file and `v2.0` are the rollback.
+- Task: none in flight.
 
 ## Open
 
-- **On `main` and not deployed, shipping with the next version:** the service-worker cache fix,
-  a duplicate of an item deleted mid-classification no longer crashing the capture (`d19dd9d`),
-  saving no longer reloading the note, with indented lines keeping their indent (`c91fbf9`), a
-  note's icon the size of the checkbox beside it (`1d3383e`), and **checklist boxes tickable** in
-  an item's text (`b420ed3`; the first-day checklist report was a missing `- `, not a bug), and
-  **slice 30**: a capture that splits waits for you, with Keep as one
-  (`kis/intent/slice-30-split-asks.md`), and **slice 31**: the first line is the title (migration
-  0018 -- **dry-run it on a copy of the live database first**), the switches are pills, and every
-  question asks in a modal (`kis/intent/slice-31-titles-and-modals.md`). Each
-  was proved in Chrome against local; none has been on a phone. Until the cache fix is out, a new
-  version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
-  and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
-  `sw.js` from Cloudflare once**, or the copy cached under the old headers lingers.
+- **Cloudflare still overrides the browser cache on `sw.js`** (`max-age=14400` where the app
+  sends `no-cache`; Knowledge, Deploy). Until Browser Cache TTL is set to Respect Existing
+  Headers, a new version can take four hours to reach the phone, or a delete and re-add.
+- **Not yet seen on the phone:** everything since `v2.0` -- the modals (`<dialog>` on iOS),
+  tickable checklists, the first line as the title, the pills. Each was proved in Chrome only.
 - **Real data is now accumulating on the deployed database**, and two things are set up to read
   it later. `ai_calls` records what was in each prompt (migration 0017), which cannot be
   backfilled; and `TARTIB_DUPLICATE_PARK` is **off**, so duplicate verdicts are recorded while
@@ -40,9 +34,8 @@
 
 ## Next
 
-1. **Deploy what is on `main`** (Open, above), then the backlog (`kis/intent/backlog.md`): links
-   between items, approved 2026-09-22, lead it now that the first-day feedback is done. The fixes above
-   ship with it.
+1. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`): links
+   between items, approved 2026-09-22, lead it now that the first-day feedback is done.
 2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
 3. **Answer the four questions** under Known gaps, now that `v2.0` is on a device.

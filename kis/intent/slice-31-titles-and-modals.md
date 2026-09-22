@@ -80,7 +80,7 @@ the update bar (an offer), and "Not saved · Retry".
   More abrupt than the strip; accepted with decision 3.
 - `<dialog>` needs iOS 15.4 or later: check on the phone.
 
-## Done, 2026-09-22 (on `main`, not deployed)
+## Done, 2026-09-22 (deployed as `v2.1` the same day)
 
 - **Phase 0** (`2e5f8bd`): the three switches match the filter pills' computed radius, colours and
   height, desktop and phone.
