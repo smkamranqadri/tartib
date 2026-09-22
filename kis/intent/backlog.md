@@ -20,10 +20,12 @@ Approved, not yet planned. Each gets a plan file when it comes up:
   "that one" can reach. The other half of 14 that did not ship, multiple-choice answers, is not
   carried: a field holds one value and there is nothing like tags for a multi-answer to land in.
 - **An item graph.** Notes and tasks as nodes, the links between them as edges, clustered by
-  space and sized by how often an item is referenced. This is the whole point of linking, and it
-  is unblocked now that slice 28 has shipped linking: with no links there are no edges and the graph is
-  a scatter of unconnected dots. A deterministic force layout drawn as plain SVG is enough, so
-  this needs no charting or graph dependency.
+  space and sized by how often an item is referenced. **Blocked on links**, below. This entry
+  used to say slice 28 had shipped linking; it had not. Slice 28 added `duplicate_of`, one
+  classifier-set pointer used only for the "Looks like #N" warning, and nothing a person can
+  write (checked against the migrations, 2026-09-22). With no links there are no edges and the
+  graph is a scatter of unconnected dots. A deterministic force layout drawn as plain SVG is
+  enough, so this needs no charting or graph dependency.
 - **Photo and voice on the capture box.** The mic already dictates into the text field with the
   browser's speech recognition, so speech-to-text is not the ask; keeping the audio itself is, and
   it raises the same question a photo does. Neither has anywhere to go today: captures are text,
@@ -70,6 +72,56 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   "there is no modal, here or anywhere." This request reverses that for delete. Decide whether
   deleting a space (`Space.tsx`, the same `Confirm`) follows it, and whether the other inline
   questions stay as they are.
+
+- **Links between items: approved, the owner's words "we definitely need links."** Raised while
+  moving existing notes into Tartib (copied by hand -- no import feature is wanted). Two kinds,
+  both from real notes:
+  (a) note to note -- a CapRover setup note includes the Docker setup note, which includes the
+  server setup note; one note should open the next, and the one linked to should show what links
+  to it;
+  (b) item to another space -- a task to build a console app belongs to its own work but also
+  to `coding`. Today an item has exactly one space, so this is either a link to a space or an
+  item living in more than one, and that is the larger decision.
+  Undecided: how a link is written (`[[Title]]` is the familiar form, and notes have no title
+  field -- the title entry above bears on it), what happens to a link when its target is renamed
+  or deleted, and whether the classifier may propose links. Unblocks the item graph.
+- **A space becomes one long flat list -- being tried with more spaces first.** Same report: the
+  notes come from folders (`Documents`, `Feedback` with one note per person, and a `Resource`
+  folder of about 27 notes mixing infra, reading, work and personal). Spaces are flat and a
+  space is one list; the in-space tree was tried and dropped in slice 21. On 2026-09-22 the owner
+  chose to split into narrower spaces, which needs no code, and see how it holds before designing
+  anything. Revisit after links: an index note linking to its children may be structure enough,
+  and sections or tags inside a space are the option if it is not.
+
+- **Routines: recurring tasks. Asked for 2026-09-22 and not yet planned.** The owner's
+  Routine note, copied from their old notes, has a daily group (check WhatsApp, Slack, email,
+  stocks, server status, ten error-log entries) and monthly groups on rules like "1st Monday of
+  Month" (rotating credentials across named servers), "1st Tuesday" (reviewing WordPress
+  plugins) and "1st Wednesday" (disk cleanup). Tartib has no recurrence at all: no column, and
+  nothing in SPEC; the only mention is that habits "stay undated" (checked 2026-09-22). The
+  smallest shape that fits: a task carries a repeat rule (daily, weekly, the nth weekday of the
+  month), and ticking it done moves `due` to the next occurrence instead of closing it, so it
+  reaches Today on its day and reminders work unchanged. Two things it depends on: each group is
+  a checklist, so **tickable checklists** (entry above) come first or with it, and ticking the
+  routine done must reset its boxes. Undecided: whether a missed day piles up or skips, and
+  whether the classifier may propose a repeat rule from text like "every 1st Monday".
+  The owner will bring more detail when this is planned; what is here is only what the one note
+  shows.
+- **A simple vault inside Tartib: the owner's direction, 2026-09-22, not now.** Credentials are
+  the last of the owner's old notes with nowhere to go. A vault like Bitwarden was the question;
+  the owner chose to build a simple one into the app, **kept in a separate database or separate
+  tables**, later. Until it exists, no secret goes into an item. What any design has to answer,
+  because of how items work today:
+  - **It must never reach a prompt.** An item's text goes into model prompts beyond
+    classification: Ask and the space brief read items and their thoughts (SPEC, Item page), and
+    similar-item retrieval feeds the classifier. Vault entries must be outside every one of those
+    paths, and outside search and FTS, by construction rather than by a filter.
+  - **Encryption at rest.** The database is plain SQLite and one env password guards the app
+    (rule 5); whether the vault needs its own key or unlock step is the central decision.
+  - **Backup.** There is none for the deployed database (deferred 2026-09-18), and a lost vault
+    is worse than lost notes.
+  Items keep only pointers, such as "CapRover admin password: in the vault". The Routine note
+  already does this: it names what to rotate and on which servers, never the secret itself.
 
 Unscheduled candidates:
 

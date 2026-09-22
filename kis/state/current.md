@@ -12,12 +12,9 @@
 
 ## Open
 
-- **Unconfirmed: whether the model pin reached the server.** `TARTIB_AI_MODEL=gpt-5.6-luna` and
-  `TARTIB_AI_REASONING=medium` had to be set in CapRover's app config before deploying. Nothing
-  reachable without signing in shows the model, so this cannot be checked from here. If they
-  were not set, the server classifies on whatever the CLI defaults to and every measurement in
-  `kis/` describes a different model. Settings -> "What it has done" names the model once a
-  capture has been classified.
+- **Confirmed 2026-09-22 over SSH: the model pin reached the server.** The running container
+  has `TARTIB_AI_MODEL=gpt-5.6-luna` and `TARTIB_AI_REASONING=medium`, and every row in `ai_calls`
+  names that model. So the measurements in `kis/` describe the model that is running.
 - **The service-worker cache fix is on `main` and ships with the next version.** Until then a new
   version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
   and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
@@ -28,6 +25,9 @@
   nothing is held back. What it should answer: whether the prompt grows with the database,
   whether the examples are ever real corrections rather than padding, and a real false-positive
   rate for duplicates instead of eight seeded cases.
+- **House rules are set on the live app since 2026-09-22** (four rules, written after reading the
+  live database). Captures before that day were classified without any, so compare accuracy
+  before and after that date when the duplicate verdicts are judged.
 - No backups of the deployed database. Deferred by decision on 2026-09-18 and not reopened.
 
 ## Next
@@ -35,7 +35,8 @@
 1. **The next cycle's backlog** (`kis/intent/backlog.md`), led by the first-day feedback on `v2.0`:
    the title shows in several places and is editable in only one, and a checklist typed as
    `[x]` / `[]` does not become one -- and could not be ticked if it did. The cache fix above goes
-   out with it.
+   out with it. **Links between items** are approved and wanted (owner, 2026-09-22); organizing a
+   long space waits on the owner trying narrower spaces first.
 2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
 3. **Answer the four questions** under Known gaps, now that `v2.0` is on a device.
