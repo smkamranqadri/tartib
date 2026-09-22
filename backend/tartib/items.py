@@ -15,6 +15,7 @@ from tartib.classify import ClassifyError, Context, classify
 from tartib.clock import utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
+from tartib.links import link_view
 from tartib.spaces import add_space
 from tartib.store import (
     NotWhole,
@@ -95,7 +96,8 @@ def capture(
 
 @router.get("/items/{item_id}")
 def get_item(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
-    return serialize_item(fetch_item(conn, item_id))
+    row = fetch_item(conn, item_id)
+    return {**serialize_item(row), **link_view(conn, row)}
 
 
 class EditBody(BaseModel):

@@ -56,6 +56,10 @@ export interface Item {
   updated_at: string | null;
   /** Entries in the item's thought log. */
   thought_count: number;
+  /** From GET /api/items/{id} only (slice 33): each `[[…]]` as written, to the id it opens or
+   *  null; and the items whose links open this one. */
+  links?: Record<string, number | null>;
+  linked_from?: Item[];
 }
 
 export interface Answer {

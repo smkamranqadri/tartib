@@ -3,6 +3,7 @@
 Planned 2026-09-22 with the owner, from the backlog entry approved that day ("we definitely need
 links"). Phase mode: A and B each committed and proved on their own; C is direction only and gets
 its own plan later.
+**Phase A built and verified 2026-09-22 (Proof, below); B next. Nothing of 33 is deployed.**
 
 ## What was reported
 
@@ -100,3 +101,36 @@ B:
 
 `technical.md`: the link key, the grammar, the rewrite rule. SPEC: item page and space page.
 Backlog: the links entry leaves; the item graph drops "blocked on links". history.md.
+
+## Proof: phase A (2026-09-22, local)
+
+- As built: migration 0020 adds `item_keys(item_id, key, title)` and `item_links(source_id,
+  target)`, apart from `items` so the touch trigger never fires for bookkeeping; written by
+  `store.index_links` from `insert_item` and `update_fields` (every text write goes through one
+  or the other, checked), cascaded on delete, rebuilt whole at startup (`reindex_links`). The key
+  is `link_title`: `title_of`, with a link inside the line read as its words, so "[[Alpha]]
+  notes" is named "Alpha notes". `GET /api/items/{id}` adds `links` (each `[[…]]` as written, to
+  an id or null) and `linked_from`; `/api/links/suggest` and `/api/links/resolve` are new
+  (`links.py`). The client lexes `[[…]]` as its own marked token in a dedicated `Marked`
+  instance: `marked.lexer(text, options)` drops what `marked.use` registered, which the first
+  build hit -- every link drew as its brackets. A link the page has no target for goes through
+  `/link?title=`, resolved on the tap.
+- `uv run pytest -q`: **328 passed, 8 deselected** (315 plus 13 in `test_links.py`: acceptance
+  1, 3, 4 and 5, suggest and resolve, the rebuild, and two from review); `ruff` clean; schema
+  asserts moved to 20.
+- `npm run ui`: **17/17**, two new: S33 render (href to the target, missing dimmed, link at
+  5.63:1, tap navigates without opening the editor, target lists the source) and S33 picker
+  (offered with its space, inserted, autosaved). `tsc` clean.
+- Looked at on 390px and 1280px: links, the dimmed missing link, "Linked from", and the picker,
+  restyled from CodeMirror's default blue list to the app's panel with 44px rows.
+- **Review** (a separate agent, backend only): one confirmed defect, fixed with a test -- the
+  rewrite read every linking item's text before its loop, so a nested rewrite (B's first line
+  links to A; C links to B and A) was overwritten by the stale copy, leaving C's link dead
+  depending on row order. Also taken: no rewrite to a title whose own `[[…]]` would not key back
+  to it (`**# odd**`).
+- **Known gaps, accepted for now**, from the review: the server's `LINK` and marked disagree on a
+  lone ```` ``` ```` mid-line, a code span across a line break, an escaped `\[[X]]`, and indented
+  code; an item's link to itself is not renamed; a rename onto a title another item already has
+  hands its links to whichever was touched last; past three levels of nested retitling the rest
+  dims, unlogged; a rewritten item's text is trimmed of outer whitespace (`_clean`). On a phone
+  the picker can reach the screen's right edge.

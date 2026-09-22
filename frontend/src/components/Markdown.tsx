@@ -1,4 +1,5 @@
 import { Fragment, createContext, useContext, useMemo, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { decodeEntities, eachTask, lex, safeHref } from "../markdown";
 import Highlight from "./Highlight";
 
@@ -32,6 +33,29 @@ type Loose = {
   rows?: { tokens?: Loose[] }[][];
   align?: ("center" | "left" | "right" | null)[];
 };
+
+/** What each `[[…]]` in the text opens, as written: an id, or null when nothing answers to it
+ *  (slice 33). Given where the item's own links are known; elsewhere -- a brief, an answer, a
+ *  line typed since the page loaded -- a link goes through `/link` and is resolved on the tap. */
+export const LinkTargets = createContext<Record<string, number | null> | null>(null);
+
+function WikiLink({ title, query }: { title: string; query: string | null }) {
+  const targets = useContext(LinkTargets);
+  const known = targets && title in targets ? targets[title] : undefined;
+  if (known === null) {
+    return (
+      <span className="md-link-missing" title="No item has this as its first line">
+        {plain(title, query)}
+      </span>
+    );
+  }
+  const to = known !== undefined ? `/items/${known}` : `/link?title=${encodeURIComponent(title)}`;
+  return (
+    <Link className="md-link" to={to} onClick={(e) => e.stopPropagation()}>
+      {plain(title, query)}
+    </Link>
+  );
+}
 
 /** Set only where the text is the person's to change. Everywhere else -- the brief, an Ask
  *  answer, a thought -- a box is drawn and cannot be ticked. */
@@ -237,6 +261,8 @@ function inline(token: Loose, query: string | null): ReactNode {
       return <em>{inlines(token.tokens, query)}</em>;
     case "del":
       return <del>{inlines(token.tokens, query)}</del>;
+    case "wikilink":
+      return <WikiLink title={token.text ?? ""} query={query} />;
     case "codespan":
       return <code>{plain(token.text ?? "", query)}</code>;
     case "br": {

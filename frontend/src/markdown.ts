@@ -3,13 +3,34 @@
  *  line for a row, and finding a checklist box in the source so a tap can tick it. A tick is the
  *  one write here, and it is yours: the same edit as typing the `x`. */
 
-import { marked } from "marked";
+import { Marked } from "marked";
+
+/** `[[Title]]`, a link to the item whose first line is Title (slice 33). An inline token of its
+ *  own, so code spans and fences keep it as text -- the same line the server's `LINK` draws. */
+export const WIKILINK = /^\[\[([^[\]\n]+?)\]\]/;
+/* An instance of its own, options and extension together: `marked.lexer(text, options)` lexes
+   with exactly the options passed and drops whatever `marked.use` registered -- which is how the
+   first build of this drew every link as its brackets. */
+const md = new Marked({ gfm: true, breaks: true }, {
+  extensions: [
+    {
+      name: "wikilink",
+      level: "inline",
+      start: (src: string) => src.indexOf("[["),
+      tokenizer(src: string) {
+        const m = WIKILINK.exec(src);
+        if (m) return { type: "wikilink", raw: m[0], text: m[1] };
+        return undefined;
+      },
+    },
+  ],
+});
 
 /** The one way item text is lexed. The renderer and `toggleTask` must count boxes the same way,
  *  so they share this rather than each passing their own options. `breaks: true` is explained
  *  where the renderer uses it. */
 export function lex(text: string) {
-  return marked.lexer(text, { gfm: true, breaks: true });
+  return md.lexer(text);
 }
 
 type Tok = { type: string; raw?: string; task?: boolean; tokens?: Tok[]; items?: Tok[] };
@@ -115,6 +136,7 @@ function stripLeaders(line: string): string {
  *  would lose its underscores; no lookbehind, because this runs on phones. */
 function stripInline(text: string): string {
   return text
+    .replace(/\[\[([^[\]\n]+?)\]\]/g, "$1")
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/!?\[([^\]]*)\]\[[^\]]*\]/g, "$1")
     .replace(/`+([^`]+)`+/g, "$1")

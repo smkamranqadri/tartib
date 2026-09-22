@@ -61,6 +61,125 @@ def retitle(text: str, title: str | None, *, replace: bool = False) -> str:
     return f"{new}\n\n{text}" if text.strip() else new
 
 
+# --- links: `[[Title]]` in the text (slice 33) ---
+#
+# A link names its target's first line. The key is that line flattened by `title_of` and
+# case-folded, which is `same_title`'s notion of equal, so `[[call the dentist]]` finds "Call the
+# dentist". Two items with one key: the most recently touched wins. Code is not text: a `[[…]]`
+# inside a fence or a code span is not a link, as the renderer does not draw it as one (indented
+# code blocks are the known gap).
+
+LINK = re.compile(r"(```.*?(?:```|\Z)|~~~.*?(?:~~~|\Z)|`[^`\n]*`)|\[\[([^\[\]\n]+?)\]\]", re.S)
+MAX_REWRITE_DEPTH = 3
+
+
+_BRACKETS = re.compile(r"\[\[([^\[\]\n]+?)\]\]")
+
+
+def link_title(text: str | None) -> str:
+    """The first line as a link names it: flattened, and a link inside it read as its words, as
+    the rendered title shows it -- "[[Alpha]] notes" is named "Alpha notes"."""
+    return " ".join(_BRACKETS.sub(r"\1", title_of(text) or "").split())
+
+
+def link_key(text: str | None) -> str:
+    return link_title(text).casefold()
+
+
+def links_in(text: str) -> list[str]:
+    """The keys the text links to, in order, once each."""
+    out = [link_key(m.group(2)) for m in LINK.finditer(text or "") if m.group(2)]
+    return list(dict.fromkeys(k for k in out if k))
+
+
+def relink(text: str, old: str, new: str) -> str:
+    """`text` with every link naming `old` (a key) renamed to `new` (a title). Code untouched."""
+
+    def swap(m: re.Match) -> str:
+        if m.group(2) and link_key(m.group(2)) == old:
+            return f"[[{new}]]"
+        return m.group(0)
+
+    return LINK.sub(swap, text)
+
+
+def index_links(conn: sqlite3.Connection, item_id: int, text: str) -> None:
+    """Record the item's key and what it links to. Writes only the two link tables."""
+    title = link_title(text)
+    conn.execute(
+        "INSERT INTO item_keys (item_id, key, title) VALUES (?, ?, ?)"
+        " ON CONFLICT(item_id) DO UPDATE SET key = excluded.key, title = excluded.title",
+        (item_id, title.casefold(), title),
+    )
+    conn.execute("DELETE FROM item_links WHERE source_id = ?", (item_id,))
+    conn.executemany(
+        "INSERT INTO item_links (source_id, target) VALUES (?, ?)",
+        [(item_id, k) for k in links_in(text) if k],
+    )
+
+
+def reindex_links(conn: sqlite3.Connection) -> int:
+    """Rebuild both link tables from the text. Run at startup; they are an index, never a source."""
+    rows = conn.execute("SELECT id, raw_text FROM items").fetchall()
+    conn.execute("DELETE FROM item_links")
+    conn.execute("DELETE FROM item_keys")
+    for r in rows:
+        index_links(conn, r["id"], r["raw_text"])
+    conn.commit()
+    return len(rows)
+
+
+def resolve_link(conn: sqlite3.Connection, key: str) -> int | None:
+    row = conn.execute(
+        "SELECT i.id FROM item_keys k JOIN items i ON i.id = k.item_id WHERE k.key = ?"
+        " ORDER BY i.updated_at DESC, i.id DESC LIMIT 1",
+        (key,),
+    ).fetchone()
+    return row["id"] if row else None
+
+
+def _rewrite_links_to(
+    conn: sqlite3.Connection,
+    item_id: int,
+    old: str,
+    new_key: str,
+    new_title: str,
+    allowed,
+    depth: int,
+) -> None:
+    """The item's key changed from `old`: rewrite the links that meant it. Not when another item
+    still answers to `old` -- those links may mean that one, and it would win them anyway -- and
+    not when `[[new_title]]` would not key back to this item (a title only markdown can make, such
+    as `**# heading**`); those links dim rather than point somewhere wrong."""
+    if not old or not new_title or depth >= MAX_REWRITE_DEPTH:
+        return
+    if links_in(f"[[{new_title}]]") != [new_key]:
+        return
+    if conn.execute(
+        "SELECT 1 FROM item_keys WHERE key = ? AND item_id != ?", (old, item_id)
+    ).fetchone():
+        return
+    sources = [
+        r["source_id"]
+        for r in conn.execute(
+            "SELECT source_id FROM item_links WHERE target = ? AND source_id != ?",
+            (old, item_id),
+        ).fetchall()
+    ]
+    for source_id in sources:
+        # Read now, not with the list: a rewrite earlier in this loop can retitle an item that
+        # this one links to, and that nested rewrite may already have changed this text.
+        row = conn.execute("SELECT raw_text FROM items WHERE id = ?", (source_id,)).fetchone()
+        if row is None:
+            continue
+        text = relink(row["raw_text"], old, new_title)
+        if text != row["raw_text"]:
+            # Through update_fields, so the linking item's title, key and own backlinks follow,
+            # and the touch trigger moves its `updated_at`: an editor open on it gets the
+            # changed-elsewhere question instead of saving the old link back over this.
+            update_fields(conn, source_id, {"text": text}, allowed, _depth=depth + 1)
+
+
 class SpaceError(ValueError):
     """A space that is not configured, or a missing space where one is required."""
 
@@ -777,7 +896,9 @@ def insert_item(
     cur = conn.execute(
         f"INSERT INTO items ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})", params
     )
-    return int(cur.lastrowid or 0)
+    item_id = int(cur.lastrowid or 0)
+    index_links(conn, item_id, raw_text)
+    return item_id
 
 
 class NotWhole(Exception):
@@ -882,9 +1003,17 @@ def keep_whole(conn: sqlite3.Connection, capture_id: int) -> int:
 
 
 def update_fields(
-    conn: sqlite3.Connection, item_id: int, fields: dict, allowed: Sequence[str]
+    conn: sqlite3.Connection,
+    item_id: int,
+    fields: dict,
+    allowed: Sequence[str],
+    *,
+    _depth: int = 0,
 ) -> None:
-    """Apply editable fields. Raises SpaceError for a bad space; the DB rejects filed + null."""
+    """Apply editable fields. Raises SpaceError for a bad space; the DB rejects filed + null.
+
+    A text change re-indexes the item's links, and a changed first line rewrites the links to
+    it in other items, in the caller's transaction (slice 33)."""
     values = _clean(fields, allowed)
     if not values:
         return
@@ -916,8 +1045,18 @@ def update_fields(
         if row is not None and row["remind_at"] != values["remind_at"]:
             values["reminded_at"] = None
             values["updated_at"] = utcnow_ms_iso()
+    old_key = None
+    if "raw_text" in values:
+        row = conn.execute("SELECT key FROM item_keys WHERE item_id = ?", (item_id,)).fetchone()
+        old_key = row["key"] if row else None
     assignments = ", ".join(f"{k} = ?" for k in values)
     conn.execute(f"UPDATE items SET {assignments} WHERE id = ?", (*values.values(), item_id))
+    if "raw_text" in values:
+        index_links(conn, item_id, values["raw_text"])
+        new_key = link_key(values["raw_text"])
+        if old_key and new_key != old_key:
+            new_title = link_title(values["raw_text"])
+            _rewrite_links_to(conn, item_id, old_key, new_key, new_title, allowed, _depth)
 
 
 def file_item(

@@ -121,7 +121,7 @@ def test_0018_puts_the_old_title_on_line_one_without_touching_updated_at(tmp_pat
         )
     conn.commit()
 
-    assert db.migrate(conn) == 19
+    assert db.migrate(conn) == 20
     got = {r["id"]: r for r in conn.execute("SELECT * FROM items")}
     assert (got[1]["raw_text"], got[1]["title"]) == ("Call Ali\n\nneed to call Ali", "Call Ali")
     assert (got[2]["raw_text"], got[2]["title"]) == ("buy milk", "buy milk")

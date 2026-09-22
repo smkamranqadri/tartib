@@ -15,6 +15,7 @@ import UpdateBar from "./components/UpdateBar";
 import Home from "./screens/Home";
 import Inbox from "./screens/Inbox";
 import ItemPage from "./screens/ItemPage";
+import LinkTo from "./screens/LinkTo";
 import Login from "./screens/Login";
 import Space from "./screens/Space";
 import Spaces from "./screens/Spaces";
@@ -279,6 +280,7 @@ export default function App() {
             <Route path="/all" element={<Navigate to="/spaces" replace />} />
             <Route path="/settings" element={<Settings onSignedOut={() => setAuthed(false)} />} />
             <Route path="/items/:id" element={<ItemPage version={version} />} />
+            <Route path="/link" element={<LinkTo />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

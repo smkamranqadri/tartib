@@ -103,6 +103,7 @@ export default function TextEditor({
   blocked,
   draftId,
   queued = false,
+  itemId,
 }: {
   value: string;
   query: string | null;
@@ -113,6 +114,8 @@ export default function TextEditor({
   draftId: string;
   /** An edit for this item is already written down and waiting to go (slice 25). */
   queued?: boolean;
+  /** The item being edited, left out of the `[[` picker's suggestions (slice 33). */
+  itemId?: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [spot, setSpot] = useState<Spot | null>(null);
@@ -262,7 +265,7 @@ export default function TextEditor({
       {editing ? (
         <Suspense fallback={<div className="raw big md-loading">{draft}</div>}>
           <div className="raw big cm-host">
-            <MarkdownEditor value={draft} onChange={change} onBlur={() => void flush()} spot={spot} />
+            <MarkdownEditor value={draft} onChange={change} onBlur={() => void flush()} spot={spot} exclude={itemId} />
           </div>
         </Suspense>
       ) : (

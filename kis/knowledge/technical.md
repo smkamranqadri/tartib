@@ -375,7 +375,7 @@ cd backend && uv run pytest -m eval        # 8 evals, 56 real calls, ~2m45s. One
 # An eval run that fails fast is the CLI being rate-limited, not a result: 45s for five
 # failures against 131s for a clean run. Re-run before believing a failure.
 cd frontend && npm run typecheck && npm run build
-cd frontend && TARTIB_PASSWORD=... npm run ui   # 15 UI checks, needs the app up and real Chrome
+cd frontend && TARTIB_PASSWORD=... npm run ui   # 17 UI checks, needs the app up and real Chrome
 # against a scratch server: it needs at least one space (TARTIB_SPACES) or every check that makes an item fails
 docker compose build && docker compose up -d && curl localhost:8000/api/health && docker stats --no-stream
 ```

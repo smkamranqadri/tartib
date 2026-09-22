@@ -1,6 +1,6 @@
 /**
  * Re-runs the UI checks slices 23, 24 and 25 proved once and then threw away, and since
- * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 and 32.
+ * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 to 33.
  *
  *     TARTIB_PASSWORD=... node frontend/tools/ui/check.mjs [--url http://localhost:8000] [--head]
  *
@@ -433,6 +433,71 @@ async function main() {
       if (await page.locator("dialog.modal[open]").count()) throw new Error("the modal stayed open");
       if (sent?.steer !== "an hour") throw new Error(`sent ${JSON.stringify(sent)}`);
       return "modal, steer sent, picked task on Today";
+    });
+
+    // --- slice 33: links between items ---
+    await check("S33 a link opens its target, a missing one dims, the target lists it", async () => {
+      const stamp = Date.now();
+      const target = await api(page, "POST", "/api/items", { shape: "note", space, text: `UI link target ${stamp}` });
+      made.push(target.id);
+      const source = await api(page, "POST", "/api/items", {
+        shape: "note",
+        space,
+        text: `UI link source ${stamp}\n\nsee [[UI link target ${stamp}]] and [[UI link nowhere ${stamp}]]`,
+      });
+      made.push(source.id);
+      await page.goto(`${URL}/items/${source.id}`);
+      const link = page.locator(".text-body a.md-link");
+      await link.waitFor({ timeout: 8000 });
+      if ((await link.getAttribute("href")) !== `/items/${target.id}`) throw new Error(`href ${await link.getAttribute("href")}`);
+      const missing = page.locator(".text-body .md-link-missing");
+      if ((await missing.count()) !== 1) throw new Error("the missing link is not dimmed");
+      const [fg, bg] = await link.evaluate((el) => {
+        let e = el;
+        let c = "rgba(0, 0, 0, 0)";
+        while (e && c.startsWith("rgba(0, 0, 0, 0)")) {
+          c = getComputedStyle(e).backgroundColor;
+          e = e.parentElement;
+        }
+        return [getComputedStyle(el).color, c];
+      });
+      const ratio = contrast(rgb(fg), rgb(bg));
+      if (ratio < 4.5) throw new Error(`link contrast ${ratio.toFixed(2)}:1`);
+      await link.tap();
+      await page.waitForURL(`**/items/${target.id}`, { timeout: 8000 });
+      if (await page.locator(".cm-editor").count()) throw new Error("the tap opened the editor");
+      const from = page.locator(".linked-from .rows li");
+      await from.first().waitFor({ timeout: 8000 });
+      if (!(await from.first().innerText()).includes(`UI link source ${stamp}`)) throw new Error("Linked from misses the source");
+      return `opened, missing dimmed, listed back, ${ratio.toFixed(2)}:1`;
+    });
+
+    await check("S33 [[ offers items and writes the link", async () => {
+      const stamp = Date.now();
+      const target = await api(page, "POST", "/api/items", { shape: "task", space, text: `Picker target ${stamp}` });
+      made.push(target.id);
+      const note = await api(page, "POST", "/api/items", { shape: "note", space, text: `Picker note ${stamp}` });
+      made.push(note.id);
+      await page.goto(`${URL}/items/${note.id}`);
+      await page.locator(".text-body .md").waitFor({ timeout: 8000 });
+      await page.locator(".text-body .md").tap();
+      const editor = page.locator(".cm-content");
+      await editor.waitFor({ timeout: 8000 });
+      await page.keyboard.press("End");
+      await page.keyboard.type(` [[Picker target ${String(stamp).slice(0, 6)}`);
+      const option = page.locator(".cm-tooltip-autocomplete li", { hasText: `Picker target ${stamp}` });
+      await option.waitFor({ timeout: 8000 });
+      const detail = await page.locator(".cm-tooltip-autocomplete li").first().innerText();
+      if (!detail.includes(space)) throw new Error(`no space shown: ${detail}`);
+      await option.click();
+      // The autosave waits for a pause, then the network: poll rather than guess how long.
+      let text = "";
+      for (let i = 0; i < 20 && !text.endsWith(`[[Picker target ${stamp}]]`); i++) {
+        await page.waitForTimeout(250);
+        text = (await api(page, "GET", `/api/items/${note.id}`)).raw_text;
+      }
+      if (!text.endsWith(`[[Picker target ${stamp}]]`)) throw new Error(JSON.stringify(text));
+      return "offered with its space, inserted, saved";
     });
 
   } finally {

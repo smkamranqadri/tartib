@@ -196,6 +196,13 @@ export const ask = (question: string, space?: string, prior?: { question: string
 export const pick = (steer?: string) =>
   send<{ picks: { item: Item; reason: string }[]; message?: string }>("POST", "/api/pick", { steer: steer || undefined });
 
+/** The `[[` picker (slice 33): items whose first line contains `q`. */
+export const suggestLinks = (q: string, exclude?: number) =>
+  api<{ items: { id: number; title: string; space: string | null; shape: "task" | "note" }[] }>(
+    `/api/links/suggest?q=${encodeURIComponent(q)}${exclude ? `&exclude=${exclude}` : ""}`,
+  );
+export const resolveLink = (title: string) => api<{ id: number }>(`/api/links/resolve?title=${encodeURIComponent(title)}`);
+
 export const addItem = (item: { shape: "task" | "note"; space: string; text: string; due?: string }) =>
   send<Item>("POST", "/api/items", item);
 /** `keepalive` lets an edit outlive the page that sent it: the autosave flushed when a tab

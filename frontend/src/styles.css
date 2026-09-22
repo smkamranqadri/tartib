@@ -557,6 +557,10 @@ button:disabled { opacity: .5; cursor: default; }
 .modal-title { margin: 0 0 6px; font-size: 16px; font-weight: 600; line-height: 1.4; }
 .modal-body { color: var(--muted); font-size: 14px; line-height: 1.5; }
 .modal-body p { margin: 0 0 10px; }
+/* Links between items (slice 33): a link reads as a link; one whose target is gone is dimmed and
+   struck through lightly, still readable, so the words are never lost. */
+.md a.md-link { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.md .md-link-missing { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); cursor: help; }
 .pick-steer { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }
 .pick-steer:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 16px; }

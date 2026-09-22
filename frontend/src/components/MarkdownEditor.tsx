@@ -1,8 +1,10 @@
 import { useCallback } from "react";
 import CodeMirror, { Decoration, EditorView, type ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { autocompletion, type CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
 import { markdown } from "@codemirror/lang-markdown";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
+import { suggestLinks } from "../api";
 import { findSpot, type Spot } from "../markdown";
 
 /** Everything CodeMirror is in this module and nothing else imports it, so it is its own chunk.
@@ -57,9 +59,68 @@ const theme = EditorView.theme(
     ".cm-gutters": { display: "none" },
     ".cm-activeLine": { backgroundColor: "transparent" },
     ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.55" },
+    // The `[[` picker (slice 33), as a panel of this app rather than CodeMirror's default list:
+    // rows reach the 44px tap floor, the choice is marked in the accent, the space stays muted.
+    ".cm-tooltip.cm-tooltip-autocomplete": {
+      backgroundColor: "var(--panel)",
+      border: "1px solid var(--line)",
+      borderRadius: "10px",
+      overflow: "hidden",
+      boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+      fontFamily: "var(--font-mono)",
+      fontSize: "15px",
+      maxHeight: "min(50vh, 320px)",
+      maxWidth: "min(calc(100vw - 32px), 420px)",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul > li": {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      minHeight: "44px",
+      padding: "0 12px",
+      color: "var(--fg)",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 22%, transparent)",
+      color: "var(--fg)",
+    },
+    ".cm-completionLabel": { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+    ".cm-completionDetail": { marginLeft: "auto", fontStyle: "normal", color: "var(--muted)", fontSize: "13px" },
   },
   { dark: true },
 );
+
+/** The `[[` picker (slice 33). Completion is otherwise off in this editor; this is its one
+ *  source, so nothing else is ever offered while typing. It answers only after `[[`, and picking
+ *  an item writes `[[Its first line]]`, closing the brackets if they were not already. */
+function linkSource(exclude?: number) {
+  return async (ctx: CompletionContext): Promise<CompletionResult | null> => {
+    const open = ctx.matchBefore(/\[\[[^[\]\n]*$/);
+    if (!open) return null;
+    const q = open.text.slice(2);
+    let items;
+    try {
+      items = (await suggestLinks(q, exclude)).items;
+    } catch {
+      return null; // offline: typing a link by hand still works
+    }
+    if (ctx.aborted || !items.length) return null;
+    const closed = ctx.state.sliceDoc(ctx.pos, ctx.pos + 2) === "]]";
+    return {
+      from: open.from + 2,
+      to: closed ? ctx.pos + 2 : ctx.pos,
+      filter: false,
+      options: items.map((i) => ({
+        label: i.title,
+        detail: i.space ?? "no space",
+        type: i.shape === "task" ? "task" : "note",
+        apply: `${i.title}]]`,
+      })),
+    };
+  };
+}
 
 export default function MarkdownEditor({
   value,
@@ -68,11 +129,14 @@ export default function MarkdownEditor({
   /** The word the tap landed on, which is how a point in the rendered text is carried across
    *  to the source. Null means the end of the document. */
   spot,
+  exclude,
 }: {
   value: string;
   onChange: (next: string) => void;
   onBlur: () => void;
   spot: Spot | null;
+  /** The item being edited, never offered as a link to itself. */
+  exclude?: number;
 }) {
   const onCreate = useCallback(
     (view: EditorView) => {
@@ -94,7 +158,13 @@ export default function MarkdownEditor({
       onChange={onChange}
       onBlur={onBlur}
       theme={theme}
-      extensions={[markdown(), syntaxHighlighting(highlight), EditorView.lineWrapping, titleLine]}
+      extensions={[
+        markdown(),
+        syntaxHighlighting(highlight),
+        EditorView.lineWrapping,
+        titleLine,
+        autocompletion({ override: [linkSource(exclude)], icons: false, activateOnTyping: true }),
+      ]}
       basicSetup={{
         lineNumbers: false,
         foldGutter: false,

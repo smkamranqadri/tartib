@@ -9,13 +9,26 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from tartib import ask, auth, briefs, captures, db, items, pick, push, queries, sessions, spaces
+from tartib import (
+    ask,
+    auth,
+    briefs,
+    captures,
+    db,
+    items,
+    links,
+    pick,
+    push,
+    queries,
+    sessions,
+    spaces,
+)
 from tartib.config import Settings, load_settings
 from tartib.reminders import Reminders
 from tartib.runner import Runner
 from tartib.sessions import Sessions
 from tartib.spaces import seed_spaces
-from tartib.store import list_spaces, reconcile_spaces
+from tartib.store import list_spaces, reconcile_spaces, reindex_links
 
 DEFAULT_STATIC = Path(__file__).resolve().parent.parent / "static"
 log = logging.getLogger("tartib")
@@ -35,6 +48,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             moved = reconcile_spaces(conn, list_spaces(conn))
             if moved:
                 log.warning("%d items had unconfigured spaces; moved to Needs Attention", moved)
+            # The link tables are an index of the text, rebuilt whole: cheap at this size, and
+            # it means a key rule changed in code applies to every item on the next start.
+            reindex_links(conn)
         finally:
             conn.close()
         runner = Runner(settings)
@@ -80,6 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(push.router)
     app.include_router(sessions.router)
     app.include_router(pick.router)
+    app.include_router(links.router)
 
     # Everything this app loads, it ships. Fonts are bundled, there is no CDN and no analytics,
     # so the policy can be tight. `img-src 'self' data:` is the line that matters: item text,

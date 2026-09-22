@@ -6,6 +6,9 @@ import { applyTo, editFor } from "../pending";
 import { usePending } from "../usePending";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
+import { LinkIcon } from "../components/Icons";
+import ItemRow from "../components/ItemRow";
+import { LinkTargets } from "../components/Markdown";
 import Modal, { ConfirmModal } from "../components/Modal";
 import TextEditor, { type SaveResult } from "../components/TextEditor";
 import Thoughts from "../components/Thoughts";
@@ -38,6 +41,12 @@ export default function ItemPage({
   const itemId = embedded ? embeddedId : Number(id);
   const navigate = useNavigate();
   const { data: item, setData, error, loading, cachedAt } = useLoad(() => getItem(itemId), [itemId, version]);
+  // Only GET answers with the links; a save answers with the bare item, so the last known view
+  // is kept across saves rather than dropped. A link typed since goes through /link instead.
+  const [linkView, setLinkView] = useState<{ links: Record<string, number | null>; from: Item[] }>({ links: {}, from: [] });
+  useEffect(() => {
+    if (item?.links) setLinkView({ links: item.links, from: item.linked_from ?? [] });
+  }, [item]);
   const spaces = useSpaces(version);
   const [capture, setCapture] = useState<CaptureRecord | null>(null);
   // Bumped on Reload and on Overwrite: the editor remounts clean against the settled text.
@@ -212,15 +221,18 @@ export default function ItemPage({
           Your text is kept until you choose. Reload theirs shows the version saved elsewhere
           and drops your edit; Keep mine saves yours over it.
         </Modal>
-        <TextEditor
-          key={editorKey}
-          draftId={String(itemId)}
-          value={shown.raw_text}
-          query={query}
-          onSave={saveText}
-          blocked={!!stale}
-          queued={!!queued && !queued.conflict}
-        />
+        <LinkTargets.Provider value={linkView.links}>
+          <TextEditor
+            key={editorKey}
+            draftId={String(itemId)}
+            value={shown.raw_text}
+            query={query}
+            onSave={saveText}
+            blocked={!!stale}
+            queued={!!queued && !queued.conflict}
+            itemId={item.id}
+          />
+        </LinkTargets.Provider>
         <ConfirmModal
           open={confirmDelete}
           question={`Delete this ${item.shape}?`}
@@ -239,6 +251,20 @@ export default function ItemPage({
           </div>
         )}
       </Card>
+
+      {linkView.from.length > 0 && (
+        <Card className="linked-from" icon={<LinkIcon />} label="Linked from" aside={<span className="muted">{linkView.from.length}</span>}>
+          <ul className="rows flat">
+            {linkView.from.map((row) => (
+              <ItemRow
+                key={row.id}
+                item={row}
+                onChange={(next) => setLinkView((v) => ({ ...v, from: v.from.map((i) => (i.id === next.id ? next : i)) }))}
+              />
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Thoughts itemId={item.id} onAdded={onChanged} />
 
