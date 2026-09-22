@@ -556,6 +556,9 @@ button:disabled { opacity: .5; cursor: default; }
 .modal-panel:focus { outline: none; }
 .modal-title { margin: 0 0 6px; font-size: 16px; font-weight: 600; line-height: 1.4; }
 .modal-body { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.modal-body p { margin: 0 0 10px; }
+.pick-steer { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); }
+.pick-steer:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 @media (max-width: 640px) {
   .modal { margin: auto 16px calc(16px + env(safe-area-inset-bottom)); max-width: none; width: auto; }

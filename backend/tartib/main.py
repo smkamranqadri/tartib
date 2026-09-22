@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from tartib import ask, auth, briefs, captures, db, items, push, queries, sessions, spaces
+from tartib import ask, auth, briefs, captures, db, items, pick, push, queries, sessions, spaces
 from tartib.config import Settings, load_settings
 from tartib.reminders import Reminders
 from tartib.runner import Runner
@@ -79,6 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(spaces.router)
     app.include_router(push.router)
     app.include_router(sessions.router)
+    app.include_router(pick.router)
 
     # Everything this app loads, it ships. Fonts are bundled, there is no CDN and no analytics,
     # so the policy can be tight. `img-src 'self' data:` is the line that matters: item text,

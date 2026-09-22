@@ -10,8 +10,8 @@
   classifying on the pinned `gpt-5.6-luna` at medium reasoning (checks under Proof). The
   database as it was just before is backed up (`private.md`, Backups); that file and `v2.0` are
   the rollback.
-- Task: **slice 32, Pick for me** -- planned 2026-09-22 (`../intent/slice-32-pick-for-me.md`),
-  not started.
+- Task: none in flight. **Slice 32, Pick for me, is built and verified on `main`, not deployed**
+  (`../intent/slice-32-pick-for-me.md`, Proof).
 
 ## Open
 
@@ -30,8 +30,8 @@
 
 ## Next
 
-1. **Implement slice 32** (`../intent/slice-32-pick-for-me.md`): migration 0019, `POST /api/pick`,
-   the Today modal. The owner put it ahead of links, 2026-09-22.
+1. **Deploy slice 32 as `v2.2`**: bump `SW_VERSION`, back up the database first (`private.md`),
+   `./deploy.sh v2.2`, then check migration 0019 applied and one Pick from the phone.
 2. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`): links
    between items, approved 2026-09-22.
 3. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
@@ -41,8 +41,8 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **308 passed, 8 deselected** (the eight are the evals) and
-  **14/14** from `npm run ui`. Any red is real.
+  Verification commands. Expect **315 passed, 8 deselected** (the eight are the evals) and
+  **15/15** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
   Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;

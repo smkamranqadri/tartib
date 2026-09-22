@@ -37,6 +37,32 @@ RECENT_PAGE = 50
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
 
+def today_rows(
+    conn: sqlite3.Connection, settings: Settings, now, *, without_picks: bool = False
+) -> tuple[list[sqlite3.Row], dict]:
+    """Today's tasks and today's session counts. One definition of Today: the screen reads it,
+    and Pick for me reads it to know what is already there (slice 32).
+
+    `without_picks` is Today as it will be once the last pick's stars are gone: a task there
+    only because Pick starred it is a candidate again, not something already on the list."""
+    star = "(starred = 1 AND picked_at IS NULL)" if without_picks else "starred = 1"
+    day = today_in(settings.zone, now).isoformat()
+    counts = counts_today(conn, settings, now)
+    worked_on = [int(i) for i in counts["by_item"]]
+    placeholders = ", ".join("?" * len(worked_on))
+    worked_clause = f" OR items.id IN ({placeholders})" if worked_on else ""
+    rows = conn.execute(
+        f"""
+        SELECT * FROM items
+        WHERE stage = 'filed' AND shape = 'task' AND status = 'open'
+          AND (due <= ? OR {star} OR remind_at <= ?{worked_clause})
+        ORDER BY due IS NULL, due, remind_at IS NULL, remind_at, starred DESC, created_at DESC
+        """,
+        (day, utcnow_iso(), *worked_on),
+    ).fetchall()
+    return rows, counts
+
+
 @router.get("/today")
 def today(
     conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
@@ -47,21 +73,8 @@ def today(
     A task you are running pomodoros on is today's work whatever its due date says, and it is
     the only place its session count can be shown."""
     now = utcnow()
-    today = today_in(settings.zone, now)
-    day = today.isoformat()
-    counts = counts_today(conn, settings, now)
-    worked_on = [int(i) for i in counts["by_item"]]
-    placeholders = ", ".join("?" * len(worked_on))
-    worked_clause = f" OR items.id IN ({placeholders})" if worked_on else ""
-    rows = conn.execute(
-        f"""
-        SELECT * FROM items
-        WHERE stage = 'filed' AND shape = 'task' AND status = 'open'
-          AND (due <= ? OR starred = 1 OR remind_at <= ?{worked_clause})
-        ORDER BY due IS NULL, due, remind_at IS NULL, remind_at, starred DESC, created_at DESC
-        """,
-        (day, utcnow_iso(), *worked_on),
-    ).fetchall()
+    day = today_in(settings.zone, now).isoformat()
+    rows, counts = today_rows(conn, settings, now)
     recent = conn.execute("SELECT * FROM captures ORDER BY id DESC LIMIT ?", (RECENT,)).fetchall()
     active = conn.execute(
         "SELECT space FROM items WHERE space IS NOT NULL ORDER BY updated_at DESC, id DESC LIMIT 1"

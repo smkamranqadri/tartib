@@ -4,6 +4,7 @@ import AnswerView from "../components/AnswerView";
 import Card from "../components/Card";
 import { AlertIcon, ClockIcon, StarIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
+import PickForMe from "../components/PickForMe";
 import SessionBar from "../components/SessionBar";
 import Tiles from "../components/Tiles";
 import PageHead from "../components/PageHead";
@@ -24,7 +25,7 @@ function rank(item: Item, today: string): number {
 /** Dashboard. DOM order is Today, Needs attention, Recent, which is the phone order;
  *  the desktop grid places Needs attention in the right column. */
 export default function Home({ version, answer, pending, onCloseAnswer }: { version: number; answer: Answer | null; pending: Pending[]; onCloseAnswer: () => void }) {
-  const { data, setData, error, loading, cachedAt } = useLoad(getToday, [version]);
+  const { data, setData, error, loading, cachedAt, reload } = useLoad(getToday, [version]);
   const sessions = data?.sessions.total ?? 0;
   const attention = useLoad(getAttention, [version]);
   const today = todayLocal();
@@ -68,10 +69,20 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
         {/* Two columns that stack on their own, so a long one never leaves a gap in the
             other. On a phone the columns dissolve and the cards take their own order. */}
         <div className="dash-col">
-          <Card className="area-today" icon={<StarIcon />} label="Today" aside={data ? items.length : "…"}>
+          <Card
+            className="area-today"
+            icon={<StarIcon />}
+            label="Today"
+            aside={
+              <>
+                {data ? items.length : "…"}
+                <PickForMe onPicked={reload} />
+              </>
+            }
+          >
             {error && <ErrorLine>{error}</ErrorLine>}
             {loading && !data && <Loading />}
-            {data && items.length === 0 && <Empty>Nothing due today.</Empty>}
+            {data && items.length === 0 && <Empty>Nothing due today. Pick for me chooses a few open tasks to start on.</Empty>}
             {items.length > 0 && (
               <ul className="rows flat">
                 {items.map((item) => (

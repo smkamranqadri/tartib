@@ -1,6 +1,6 @@
 /**
  * Re-runs the UI checks slices 23, 24 and 25 proved once and then threw away, and since
- * 2026-09-22 the fixes after v2.0 (F1, F2) and slice 31.
+ * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 and 32.
  *
  *     TARTIB_PASSWORD=... node frontend/tools/ui/check.mjs [--url http://localhost:8000] [--head]
  *
@@ -401,6 +401,38 @@ async function main() {
       const gone = await page.evaluate((id) => fetch(`/api/items/${id}`).then((r) => r.status), doomed.id);
       if (gone !== 404) throw new Error(`after confirming: ${gone}`);
       return "asked, Escape kept it, confirm deleted it";
+    });
+
+    // --- slice 32: Pick for me ---
+    // The AI is stubbed at the network: this checks the button, the modal and Today refilling,
+    // not the model, and a UI run must not spend quota. The stub stars a real task the way a pick
+    // would, so Today's reload has something true to show. The endpoint has its own tests.
+    await check("S32 Pick for me asks in a modal and Today refills", async () => {
+      const undated = await api(page, "POST", "/api/items", { shape: "task", space, text: "UI check pick" });
+      made.push(undated.id);
+      let sent = null;
+      await page.route("**/api/pick", async (route) => {
+        sent = JSON.parse(route.request().postData() || "{}");
+        const item = await (await page.request.patch(`${URL}/api/items/${undated.id}`, { data: { starred: true } })).json();
+        await route.fulfill({ json: { picks: [{ item, reason: "stub" }] } });
+      });
+      await page.goto(`${URL}/`);
+      const open = page.locator(".area-today .card-aside button", { hasText: "Pick for me" });
+      await open.waitFor({ timeout: 8000 });
+      const head = await page.locator(".area-today .card-head").boundingBox();
+      const btn = await open.boundingBox();
+      if (btn.x + btn.width > head.x + head.width + 1) throw new Error("button overflows the card head");
+      if (Math.min(btn.width, btn.height) < 44) throw new Error(`button ${btn.width}x${btn.height}`);
+      await open.tap();
+      const modal = page.locator("dialog.modal[open]");
+      await modal.waitFor({ timeout: 5000 });
+      await modal.locator("input.pick-steer").fill("an hour");
+      await modal.locator("button.primary", { hasText: "Pick" }).click();
+      await page.locator(".area-today", { hasText: "UI check pick" }).waitFor({ timeout: 8000 });
+      await page.unroute("**/api/pick");
+      if (await page.locator("dialog.modal[open]").count()) throw new Error("the modal stayed open");
+      if (sent?.steer !== "an hour") throw new Error(`sent ${JSON.stringify(sent)}`);
+      return "modal, steer sent, picked task on Today";
     });
 
   } finally {

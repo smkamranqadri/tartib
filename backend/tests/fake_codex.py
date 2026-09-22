@@ -3,6 +3,7 @@
 FAKE_CODEX_REPLY_CLASSIFY  reply for classify prompts
 FAKE_CODEX_REPLY_ASK       reply for ask prompts (prompt starts with "You answer")
 FAKE_CODEX_REPLY_TERMS     reply for the search-term expansion call ("You propose search terms")
+FAKE_CODEX_REPLY_PICK      reply for Pick for me ("You pick what")
 FAKE_CODEX_REPLY           fallback for either
 FAKE_CODEX_EXIT            exit code (default 0)
 FAKE_CODEX_ERROR           the failure message, delivered as an error event under --json
@@ -24,6 +25,7 @@ argv = sys.argv[1:]
 prompt = argv[-1] if argv else ""
 is_ask = prompt.startswith("You answer one person's question")
 is_terms = prompt.startswith("You propose search terms")
+is_pick = prompt.startswith("You pick what")
 if os.environ.get("FAKE_CODEX_RECORD"):
     with open(os.environ["FAKE_CODEX_RECORD"], "a") as f:
         f.write(
@@ -33,6 +35,7 @@ if os.environ.get("FAKE_CODEX_RECORD"):
                     "stdin_is_tty": sys.stdin.isatty(),
                     "ask": is_ask,
                     "terms": is_terms,
+                    "pick": is_pick,
                 }
             )
             + "\n"
@@ -61,7 +64,9 @@ if code:
     else:
         print(message, file=sys.stderr)
     sys.exit(code)
-if is_terms:
+if is_pick:
+    key = "FAKE_CODEX_REPLY_PICK"
+elif is_terms:
     key = "FAKE_CODEX_REPLY_TERMS"
 elif is_ask:
     key = "FAKE_CODEX_REPLY_ASK"

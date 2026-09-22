@@ -902,6 +902,10 @@ def update_fields(
                 if text != row["raw_text"]:
                     values["raw_text"] = text
             values["title"] = title_of(text)
+    if "starred" in values:
+        # Any star set or cleared by a person is theirs from then on: Pick for me removes only the
+        # stars it set itself (slice 32), so touching one hands it over.
+        values["picked_at"] = None
     if "remind_at" in values:
         # Moving a reminder re-arms it; without this a reminder that fired could never fire
         # again. It has to be a real *change*: the editor resends `remind_at` on every save,

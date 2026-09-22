@@ -37,6 +37,8 @@ export interface Item {
   due: string | null;
   remind_at: string | null;
   starred: boolean;
+  /** Set when Pick for me starred it (slice 32); any star set by hand clears it. */
+  picked_at?: string | null;
   status: Status;
   proposal: Proposal | null;
   /** The item this one looks like. Recorded whether or not parking is switched on. */

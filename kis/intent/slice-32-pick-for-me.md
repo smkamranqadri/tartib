@@ -1,6 +1,7 @@
 # Slice 32: Pick for me
 
 Planned 2026-09-22 with the owner. Standard mode: one migration, one endpoint, one modal.
+**Built and verified 2026-09-22 (below, Proof); not deployed.**
 
 ## What was reported
 
@@ -73,3 +74,25 @@ the ask bar.
 
 SPEC's Home line gains Pick for me; `technical.md` gains `picked_at` and the new `ai_calls`
 kind; history.md gets the slice; `SW_VERSION` is bumped.
+
+## Proof (2026-09-22, local)
+
+- `uv run pytest -q`: **315 passed, 8 deselected** (308 plus seven in `test_pick.py`, covering
+  acceptance 1 to 5 and the no-candidates and AI-off cases); `ruff check`: clean. Five older tests
+  asserted schema 18 and were moved to 19, as each migration before did.
+- `npm run ui` against the rebuilt local app: **15/15**, the new check S32 stubbing `/api/pick` at
+  the network (a UI run must not spend quota) and seeing the modal, the steer sent and the picked
+  task on Today (acceptance 6). `tsc --noEmit` clean.
+- Looked at on a 390px phone and at 1280px: the button sits in Today's header beside the count,
+  44px tall on the phone, and the modal fits both.
+- **One real call** on `gpt-5.6-luna`, local app, steer "about two hours this evening": 13.0s,
+  23 candidates, 4346 prompt chars, 14764 input and 238 output tokens, recorded as `pick`, ok.
+  It picked 2 of 3 allowed -- an undated Play Store task and flights due 2026-10-03 -- each with
+  a plain one-line reason.
+- Review: self-review only, no separate reviewer ran. A task deleted between the read and the
+  write makes the thought insert fail and the whole pick roll back as a 500; accepted as rare.
+- As built, differing from Build above: the mark is cleared in `store.update_fields`, not
+  `items.py`, so every path that writes `starred` hands the star over; the UI is
+  `components/PickForMe.tsx` in `screens/Home.tsx`, not `App.tsx`; and a task Today holds only
+  because the last pick starred it is a candidate again (`today_rows(without_picks=True)`),
+  which the plan did not say and a re-run needs.

@@ -192,6 +192,10 @@ export const ask = (question: string, space?: string, prior?: { question: string
     prior_item_ids: prior?.item_ids.length ? prior.item_ids : undefined,
   });
 
+/** Pick for me (slice 32): the AI stars up to three open tasks off Today, each with a reason. */
+export const pick = (steer?: string) =>
+  send<{ picks: { item: Item; reason: string }[]; message?: string }>("POST", "/api/pick", { steer: steer || undefined });
+
 export const addItem = (item: { shape: "task" | "note"; space: string; text: string; due?: string }) =>
   send<Item>("POST", "/api/items", item);
 /** `keepalive` lets an edit outlive the page that sent it: the autosave flushed when a tab
