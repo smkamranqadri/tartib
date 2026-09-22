@@ -36,11 +36,13 @@
    migration 0020 (Proof; 0021, one added column, came after): bump `SW_VERSION`, back up the database first
    (`private.md`), `./deploy.sh v2.2`, then check migrations 0019 to 0021 applied, one Pick and
    one link from the phone.
-2. **Switch `TARTIB_LINK_PROPOSALS` on** once item 4 is done, and watch the inbox it fills.
-3. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`).
-4. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+2. **Slice 34, suggest links for items already filed** (`../intent/slice-34-suggest-links.md`),
+   planned 2026-09-22, not started.
+3. **Switch `TARTIB_LINK_PROPOSALS` on** once item 5 is done, and watch the inbox it fills.
+4. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`).
+5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-5. **Answer the four questions** under Known gaps, on `v2.1`.
+6. **Answer the four questions** under Known gaps, on `v2.1`.
 
 ## Commands
 
