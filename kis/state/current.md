@@ -4,7 +4,7 @@
   in `kis/state/private.md`, gitignored and never published. This file carries the substance and
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  In step with `origin/main` since 2026-09-22 (pushed after `v2.1` went live).
+  In step with `origin/main` since 2026-09-23 (pushed after `v2.2` went live).
 - **Live: `v2.2`**, deployed 2026-09-23 on the CapRover VPS as `smkamranqadri/tartib:v2.2`:
   slices 32 to 35 and the pre-deploy review fixes (history.md), with `TARTIB_LINK_PROPOSALS` off
   and `/mcp` on. The database as it was just before is backed up (`private.md`, Backups); that
