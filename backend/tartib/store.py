@@ -507,6 +507,7 @@ def record_call(
     capture_id: int | None = None,
     duration_ms: int = 0,
     failure: str | None = None,
+    shape=None,
 ) -> None:
     """Write down one AI call. **Never raises**: a bookkeeping failure must not cost a capture."""
     try:
@@ -525,8 +526,9 @@ def record_call(
         conn.execute(
             "INSERT INTO ai_calls (created_at, kind, model, capture_id, ok, failure, reason,"
             " resets_at, duration_ms, input_tokens, cached_input_tokens,"
-            " cache_write_input_tokens, output_tokens, reasoning_output_tokens, total_tokens)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " cache_write_input_tokens, output_tokens, reasoning_output_tokens, total_tokens,"
+            " prompt_chars, candidates_n, examples_n, corrections_n, house_rules)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 utcnow_iso(),
                 kind,
@@ -538,6 +540,11 @@ def record_call(
                 resets_at,
                 duration_ms,
                 *counts.values(),
+                int(getattr(shape, "chars", 0) or 0),
+                int(getattr(shape, "candidates", 0) or 0),
+                int(getattr(shape, "examples", 0) or 0),
+                int(getattr(shape, "corrections", 0) or 0),
+                1 if getattr(shape, "house_rules", False) else 0,
             ),
         )
         conn.commit()
@@ -568,6 +575,13 @@ def usage_totals(conn: sqlite3.Connection) -> dict:
     out = {k: int(row[k] or 0) for k in row.keys() if k != "ok"}
     out["failed"] = int(row["calls"] or 0) - int(row["ok"] or 0)
     out["captures"] = int(captures or 0)
+    shape = conn.execute(
+        "SELECT AVG(prompt_chars) AS prompt_chars, MAX(prompt_chars) AS prompt_chars_max,"
+        " SUM(candidates_n) AS candidates, SUM(examples_n) AS examples,"
+        " SUM(corrections_n) AS corrections_used, SUM(house_rules) AS with_house_rules"
+        " FROM ai_calls WHERE kind = 'classify' AND prompt_chars > 0"
+    ).fetchone()
+    out["prompt"] = {k: int(shape[k] or 0) for k in shape.keys()}
     out["usage_limit"] = {
         "count": int(limits["n"] or 0),
         "last": limits["last"],

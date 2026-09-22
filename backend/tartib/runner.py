@@ -122,8 +122,8 @@ class Runner:
         seen: list = []
         started = time.monotonic()
 
-        def note(usage, quota) -> None:
-            seen.append((usage, quota))
+        def note(usage, quota, shape) -> None:
+            seen.append((usage, quota, shape))
 
         try:
             proposals = await classify(text, context, on_usage=note)
@@ -133,9 +133,9 @@ class Runner:
             )
             await asyncio.to_thread(self._fallback, capture_id, str(e))
             return
-        usage, quota = seen[0] if seen else (None, None)
+        usage, quota, shape = seen[0] if seen else (None, None, None)
         await asyncio.to_thread(
-            self._record, "classify", capture_id, started, usage, None, quota
+            self._record, "classify", capture_id, started, usage, None, quota, shape
         )
         await asyncio.to_thread(self._apply, capture_id, text, created_at, proposals)
         questions = [p for p in proposals if p.shape == "question"]
@@ -258,6 +258,7 @@ class Runner:
         usage,
         failure: str | None,
         quota=None,
+        shape=None,
     ) -> None:
         """One row per call, on its own connection. Neither write raises."""
         conn = self._connect()
@@ -271,6 +272,7 @@ class Runner:
                 capture_id=capture_id,
                 duration_ms=int((time.monotonic() - started) * 1000),
                 failure=failure,
+                shape=shape,
             )
         finally:
             conn.close()

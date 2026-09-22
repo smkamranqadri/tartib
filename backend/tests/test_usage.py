@@ -348,3 +348,48 @@ def test_a_reported_total_is_trusted_over_the_computed_one():
         ).encode()
     )
     assert usage.total_tokens == 99
+
+
+# --- what was in the prompt, recorded because it cannot be worked out afterwards ---
+
+
+def test_the_shape_of_the_prompt_is_recorded(settings):
+    from tartib.classify import PromptShape
+    from tartib.store import record_call, usage_totals
+
+    conn = _conn(settings)
+    record_call(
+        conn,
+        kind="classify",
+        model="gpt-5.6-luna",
+        usage=Usage(input_tokens=15579, output_tokens=145, total_tokens=15724),
+        capture_id=1,
+        duration_ms=12656,
+        shape=PromptShape(chars=9741, candidates=8, examples=5, corrections=2, house_rules=True),
+    )
+    totals = usage_totals(conn)
+    assert totals["prompt"]["prompt_chars"] == 9741
+    assert totals["prompt"]["candidates"] == 8
+    assert totals["prompt"]["examples"] == 5
+    assert totals["prompt"]["corrections_used"] == 2
+    assert totals["prompt"]["with_house_rules"] == 1
+    conn.close()
+
+
+def test_a_call_with_no_shape_still_records(settings):
+    """Ask and the term expansion carry only a size; nothing should require the rest."""
+    from tartib.store import record_call, usage_totals
+
+    conn = _conn(settings)
+    record_call(conn, kind="ask", model=None, usage=Usage(input_tokens=10), duration_ms=1)
+    assert usage_totals(conn)["calls"] == 1
+    conn.close()
+
+
+def test_a_real_capture_records_what_was_in_its_prompt(ai_client, monkeypatch):
+    set_classify_reply(monkeypatch, proposal(shape="note", text="x", space="work"))
+    capture(ai_client, "something with a prompt behind it")
+
+    prompt = ai_client.get("/api/usage").json()["prompt"]
+    assert prompt["prompt_chars"] > 0  # the real prompt, measured where it was built
+    assert prompt["with_house_rules"] == 0  # none set in the test client

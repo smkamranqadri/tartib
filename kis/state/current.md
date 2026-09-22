@@ -8,9 +8,15 @@
 - Task: none in flight. **Slice 29 (what the AI costs) is done and committed on `main`**, not
   deployed. `kis/intent/slice-29-ai-usage.md`. No blockers: one real capture classified end to
   end with `--json` on, and the cost arithmetic reconciles to the penny.
-- **One capture costs ~15,600 input tokens, and only ~2,400 of that is Tartib's prompt.** The
+- **One capture costs 13k-15.6k input tokens, and only ~1.9k-2.4k of that is Tartib's prompt.** The
   rest is the CLI's own instructions, on every call. That, not slice 26-28's prompt growth, is
   what eats the subscription: an eval run is ~810k input tokens.
+- **`ai_calls` now records what was in each prompt** (migration 0017): its size, how many
+  candidates, examples and real corrections it carried, and whether house rules were on. Added
+  2026-09-22 before a capture session, because none of it can be backfilled. It is what will
+  answer whether slices 26-28 earn their tokens once there is real usage.
+- **`TARTIB_DUPLICATE_PARK` stays off during that session on purpose**: the duplicate verdict
+  records on every capture while nothing is held back, which is the dark run the flag exists for.
 - The quota readout is **built and dormant** -- `codex exec` emits no `token_count` event, so the
   windows stay unknown and the line does not render. Not a fault to chase.
 - **The whole eval suite is green in one run on the pinned model** (2026-09-22, 7 passed, 4m38s).

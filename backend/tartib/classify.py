@@ -148,6 +148,18 @@ OUTPUT_SCHEMA = {
 
 
 @dataclass(frozen=True)
+class PromptShape:
+    """What went into one prompt. Recorded at the moment of the call because none of it can be
+    worked out afterwards -- the prompt is not kept, and the database it was built from moves."""
+
+    chars: int = 0
+    candidates: int = 0
+    examples: int = 0
+    corrections: int = 0
+    house_rules: bool = False
+
+
+@dataclass(frozen=True)
 class Context:
     now: datetime  # timezone-aware, in the user's zone
     zone: ZoneInfo
@@ -427,20 +439,26 @@ async def classify(
     text: str,
     context: Context,
     correction: tuple[str, str] | None = None,
-    on_usage: Callable[[Usage, tuple], None] | None = None,
+    on_usage: Callable[[Usage, tuple, PromptShape], None] | None = None,
 ) -> list[Proposal]:
     """`on_usage` is handed what the call consumed and what the CLI said about the rate-limit
     windows, when a caller wants them recorded (slice 29). A parameter rather than a return
     value, so the callers that do not care -- the evals, chiefly -- are untouched, and so
     nothing has to reach for global state to find it."""
+    prompt = build_prompt(text, context, correction)
+    shape = PromptShape(
+        chars=len(prompt),
+        candidates=len(context.candidates),
+        examples=len(context.examples),
+        corrections=sum(1 for e in context.examples if e.corrected),
+        house_rules=bool(context.house_rules),
+    )
     try:
-        reply = await run_json(
-            build_prompt(text, context, correction), OUTPUT_SCHEMA, context.codex
-        )
+        reply = await run_json(prompt, OUTPUT_SCHEMA, context.codex)
     except CodexError as e:
         raise ClassifyError(str(e), quota=getattr(e, "quota", None)) from e
     if on_usage is not None:
-        on_usage(reply.usage, reply.quota)
+        on_usage(reply.usage, reply.quota, shape)
     try:
         parsed = Proposals.model_validate(reply.data)
     except ValidationError as e:
