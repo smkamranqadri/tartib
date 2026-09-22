@@ -64,17 +64,24 @@ def set_policy(name: str, body: PolicyBody, conn: sqlite3.Connection = Depends(g
     return {"name": space, "policy": body.policy}
 
 
-@router.post("/spaces", status_code=201)
-def create_space(body: SpaceBody, conn: sqlite3.Connection = Depends(get_db)) -> dict:
-    name = clean_name(body.name)
-    if name in list_spaces(conn):
+def add_space(conn: sqlite3.Connection, name: str) -> str:
+    """Create a space and return its name. Shared so accepting a classifier's proposed space
+    (slice 28) means exactly what the Spaces page means by creating one."""
+    clean = clean_name(name)
+    if clean in list_spaces(conn):
         raise HTTPException(status_code=409, detail="that space already exists")
     position = conn.execute("SELECT COALESCE(MAX(position), -1) + 1 FROM spaces").fetchone()[0]
     conn.execute(
         "INSERT INTO spaces (name, position, created_at) VALUES (?, ?, ?)",
-        (name, position, utcnow_iso()),
+        (clean, position, utcnow_iso()),
     )
     conn.commit()
+    return clean
+
+
+@router.post("/spaces", status_code=201)
+def create_space(body: SpaceBody, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    name = add_space(conn, body.name)
     return {"spaces": list_spaces(conn), "name": name}
 
 

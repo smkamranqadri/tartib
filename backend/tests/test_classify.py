@@ -738,3 +738,137 @@ def test_no_examples_leaves_the_prompt_untouched(settings):
 def test_the_readout_says_how_many_corrections_are_real(ai_client):
     """Zero must read as a fact about the data, not as a broken feature."""
     assert ai_client.get("/api/config").json()["corrections"] == 0
+
+
+# --- slice 28: what the classifier may name ---
+
+
+def _dup_proposal(ref=None, new_space=None, **kw):
+    p = proposal(**{"shape": "task", "text": "x", "space": "work", "confidence": 0.95, **kw})
+    p["duplicate_of"] = ref
+    p["new_space"] = new_space
+    return p
+
+
+def _file_one(client, monkeypatch, text, space="work"):
+    set_classify_reply(monkeypatch, proposal(shape="task", text=text, space=space, title=text))
+    return capture(client, text)["items"][0]
+
+
+def test_an_ordinal_resolves_to_the_item_it_was_shown(ai_client, monkeypatch, tmp_path):
+    first = _file_one(ai_client, monkeypatch, "renew the car insurance")
+    record = tmp_path / "calls.jsonl"
+    monkeypatch.setenv("FAKE_CODEX_RECORD", str(record))
+    set_classify_reply(monkeypatch, _dup_proposal(ref="i1"))
+    item = capture(ai_client, "car insurance needs renewing")["items"][0]
+
+    prompt = records(record)[-1]["argv"][-1]
+    assert "[i1]" in prompt and f"[id {first['id']}]" not in prompt  # labels, never ids
+    assert item["duplicate_of"] == first["id"]
+
+
+def test_an_invented_ordinal_resolves_to_nothing(ai_client, monkeypatch):
+    """SABOTAGE GUARD. The model's label is never trusted unresolved."""
+    _file_one(ai_client, monkeypatch, "renew the car insurance")
+    set_classify_reply(monkeypatch, _dup_proposal(ref="i99"))
+    item = capture(ai_client, "car insurance needs renewing")["items"][0]
+    assert item["duplicate_of"] is None
+
+
+def test_a_real_id_offered_as_a_ref_is_not_accepted(ai_client, monkeypatch):
+    """SABOTAGE GUARD. A real id is exactly what must not work: it could be an item never shown."""
+    first = _file_one(ai_client, monkeypatch, "renew the car insurance")
+    set_classify_reply(monkeypatch, _dup_proposal(ref=str(first["id"])))
+    item = capture(ai_client, "car insurance needs renewing")["items"][0]
+    assert item["duplicate_of"] is None
+
+
+def test_with_the_flag_off_the_verdict_is_recorded_but_nothing_is_parked(ai_client, monkeypatch):
+    """SABOTAGE GUARD. Off is the default, and off must mean filing behaves exactly as before."""
+    first = _file_one(ai_client, monkeypatch, "renew the car insurance")
+    set_classify_reply(monkeypatch, _dup_proposal(ref="i1", confidence=0.99))
+    item = capture(ai_client, "car insurance needs renewing")["items"][0]
+    assert item["duplicate_of"] == first["id"]
+    assert item["stage"] == "filed"  # not held back
+    assert item["wait_reason"] is None
+
+
+def test_with_the_flag_on_a_duplicate_waits_and_says_why(tmp_path, monkeypatch):
+    for var in ("FAKE_CODEX_REPLY_CLASSIFY", "FAKE_CODEX_REPLY"):
+        monkeypatch.delenv(var, raising=False)
+    settings = make_settings(tmp_path, **AI_ENV, TARTIB_DUPLICATE_PARK="1")
+    with TestClient(create_app(settings)) as client:
+        client.headers["Authorization"] = f"Bearer {PASSWORD}"
+        first = _file_one(client, monkeypatch, "renew the car insurance")
+        set_classify_reply(monkeypatch, _dup_proposal(ref="i1", confidence=0.99))
+        item = capture(client, "car insurance needs renewing")["items"][0]
+
+        assert item["stage"] == "attention"
+        assert item["duplicate_of"] == first["id"]
+        assert item["wait_reason"] == "duplicate"
+        # The item it matched is untouched: park and name, never merge.
+        again = client.get(f"/api/items/{first['id']}").json()
+        assert again["stage"] == "filed" and again["duplicate_of"] is None
+
+
+def test_a_waiting_item_says_which_of_the_three_reasons_it_is(ai_client, monkeypatch):
+    set_classify_reply(monkeypatch, _dup_proposal(space=None, confidence=0.4))
+    assert capture(ai_client, "something vague")["items"][0]["wait_reason"] == "no_space"
+    set_classify_reply(monkeypatch, _dup_proposal(space="work", confidence=0.4))
+    assert capture(ai_client, "a low confidence one")["items"][0]["wait_reason"] == "low_confidence"
+
+
+def test_a_proposed_space_that_already_exists_is_dropped(ai_client, monkeypatch):
+    """SABOTAGE GUARD. Proposing an existing space is just picking it, badly."""
+    set_classify_reply(monkeypatch, _dup_proposal(space=None, new_space="work", confidence=0.5))
+    item = capture(ai_client, "x")["items"][0]
+    assert item["proposal"]["new_space"] is None
+
+
+def test_a_proposed_space_failing_the_name_rules_is_dropped(ai_client, monkeypatch):
+    set_classify_reply(
+        monkeypatch, _dup_proposal(space=None, new_space="Not A Valid Name!", confidence=0.5)
+    )
+    assert capture(ai_client, "x")["items"][0]["proposal"]["new_space"] is None
+
+
+def test_a_proposed_space_does_nothing_until_it_is_accepted(ai_client, monkeypatch):
+    set_classify_reply(monkeypatch, _dup_proposal(space=None, new_space="car", confidence=0.5))
+    item = capture(ai_client, "service the car")["items"][0]
+    assert item["proposal"]["new_space"] == "car"
+    assert item["space"] is None and item["stage"] == "attention"
+    assert "car" not in ai_client.get("/api/spaces").json()["spaces"]  # naming created nothing
+
+
+def test_accepting_a_proposed_space_creates_it_and_files_there(ai_client, monkeypatch):
+    set_classify_reply(monkeypatch, _dup_proposal(space=None, new_space="car", confidence=0.5))
+    item = capture(ai_client, "service the car")["items"][0]
+
+    filed = ai_client.post(f"/api/items/{item['id']}/approve").json()
+    assert filed["stage"] == "filed" and filed["space"] == "car"
+    assert "car" in ai_client.get("/api/spaces").json()["spaces"]
+
+
+def test_a_question_capture_carries_neither_new_field(ai_client, monkeypatch):
+    p = _dup_proposal(shape="question", ref="i1", new_space="car")
+    set_classify_reply(monkeypatch, p)
+    assert capture(ai_client, "what did I decide?")["items"] == []
+
+
+def test_choosing_the_proposed_space_in_the_sentence_also_creates_it(ai_client, monkeypatch):
+    """The UI sends the chosen space; at that moment it still does not exist."""
+    set_classify_reply(monkeypatch, _dup_proposal(space=None, new_space="car", confidence=0.5))
+    item = capture(ai_client, "service the car")["items"][0]
+
+    filed = ai_client.post(f"/api/items/{item['id']}/approve", json={"space": "car"}).json()
+    assert filed["stage"] == "filed" and filed["space"] == "car"
+    assert "car" in ai_client.get("/api/spaces").json()["spaces"]
+
+
+def test_approving_into_a_real_space_ignores_the_proposal(ai_client, monkeypatch):
+    set_classify_reply(monkeypatch, _dup_proposal(space=None, new_space="car", confidence=0.5))
+    item = capture(ai_client, "service the car")["items"][0]
+
+    filed = ai_client.post(f"/api/items/{item['id']}/approve", json={"space": "home"}).json()
+    assert filed["space"] == "home"
+    assert "car" not in ai_client.get("/api/spaces").json()["spaces"]  # never created

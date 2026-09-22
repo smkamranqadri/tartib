@@ -15,6 +15,7 @@ from tartib.classify import ClassifyError, Context, classify
 from tartib.clock import utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
+from tartib.spaces import add_space
 from tartib.store import (
     SpaceError,
     capture_by_client_id,
@@ -27,6 +28,7 @@ from tartib.store import (
     list_spaces,
     serialize_item,
     should_file,
+    similar_items,
     space_policies,
     thoughts_for,
     update_fields,
@@ -213,13 +215,21 @@ def approve(
     _require_attention(row)
     fields: dict = json.loads(row["proposal_json"]) if row["proposal_json"] else {}
     fields = {
-        k: v for k, v in fields.items() if k in ("shape", "space", "title", "due", "remind_at")
+        k: v
+        for k, v in fields.items()
+        if k in ("shape", "space", "title", "due", "remind_at", "new_space")
     }
     fields.setdefault("shape", row["shape"])
+    proposed_new = fields.pop("new_space", None)
     if body is not None:
         fields.update(body.provided())
-    if not fields.get("space"):
-        fields["space"] = row["space"]
+    # Accepting a proposed space is what creates it: naming it did nothing (slice 28, rule 7).
+    # Approving with no body accepts it; so does tapping it in the sentence, which sends it as
+    # the chosen space -- in both cases the name does not exist yet and this is where it starts.
+    chosen = fields.get("space") or proposed_new or row["space"]
+    if chosen and chosen == proposed_new and chosen not in list_spaces(conn):
+        chosen = add_space(conn, proposed_new)
+    fields["space"] = chosen
 
     def go() -> dict:
         file_item(conn, item_id, fields, list_spaces(conn))
@@ -270,6 +280,7 @@ async def redo(
         existing=classify_context(conn),
         house_rules=house_rules(conn),
         examples=classifier_examples(conn, threshold=settings.autofile_confidence)[0],
+        candidates=similar_items(conn, row["raw_text"]),
     )
     try:
         proposals = await classify(row["raw_text"], context, correction=(earlier, reason))

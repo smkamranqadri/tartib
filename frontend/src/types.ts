@@ -18,6 +18,11 @@ export interface Proposal {
   remind_at: string | null;
   confidence: number;
   clarify?: Clarify | null;
+  /** An item this capture looks like a duplicate of, already resolved to a real id by the
+   *  server -- the classifier only ever named an ordinal (slice 28). */
+  duplicate_of?: string | null;
+  /** A space that does not exist yet. A proposal: accepting it is what creates it. */
+  new_space?: string | null;
 }
 
 export interface Item {
@@ -34,6 +39,11 @@ export interface Item {
   starred: boolean;
   status: Status;
   proposal: Proposal | null;
+  /** The item this one looks like. Recorded whether or not parking is switched on. */
+  duplicate_of?: number | null;
+  /** Why it is waiting: "no_space" | "low_confidence" | "duplicate". A short code, not text --
+   *  the client has the matched item and writes the sentence itself (slice 28). */
+  wait_reason?: string | null;
   proposal_error: string | null;
   classified_at: string | null;
   updated_at: string | null;

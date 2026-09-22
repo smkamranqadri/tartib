@@ -17,40 +17,22 @@ from tartib.clock import utcnow
 from tartib.codex import CodexError, run_json
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
-from tartib.store import item_header, items_by_thoughts, serialize_item, thoughts_for
+from tartib.store import (
+    MAX_ITEMS,
+    _fts_term,
+    _space_clause,
+    item_header,
+    retrieval_query,
+    search,
+    serialize_item,
+    thoughts_for,
+)
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
-
-MAX_ITEMS = 20
-
-STOPWORDS = frozenset(
-    """a about after again all am an and any are as at be because been before being but by
-    can could did do does doing down during for from had has have having he her here hers him
-    his how i if in into is it its just me more most my no nor not of off on once only or
-    other our ours out over own same she should so some such than that the their theirs them
-    then there these they this those through to too under until up very was we were what when
-    where which while who whom why will with would you your yours decide decided decision
-    say said tell told think thought remember note notes wrote write""".split()
-)
 
 
 class AskError(Exception):
     pass
-
-
-def _fts_term(word: str) -> str | None:
-    """One FTS5 term, or None when the word is not worth searching for. Prefix-matched when
-    long enough, so 'decide' finds 'decided'."""
-    w = word.lower()
-    if w in STOPWORDS or len(w) < 2 or (w.isdigit() and len(w) < 4):
-        return None
-    return f'"{w}"*' if len(w) >= 4 else f'"{w}"'
-
-
-def retrieval_query(question: str) -> str:
-    """OR of the question's own content words."""
-    words = dict.fromkeys(w.lower() for w in re.findall(r"\w+", question, flags=re.UNICODE))
-    return " OR ".join(t for w in words if (t := _fts_term(w)))
 
 
 def terms_query(terms: Sequence[str]) -> str:
@@ -62,28 +44,6 @@ def terms_query(terms: Sequence[str]) -> str:
             if t := _fts_term(word):
                 out.append(t)
     return " OR ".join(dict.fromkeys(out))
-
-
-def _space_clause(space: str | None) -> tuple[str, list[object]]:
-    if not space:
-        return "", []
-    return " AND items.space = ?", [space.strip().lower()]
-
-
-def search(conn: sqlite3.Connection, match: str, space: str | None) -> list:
-    """Items matching an FTS5 query, best first, plus any whose thoughts match it."""
-    space_sql, params = _space_clause(space)
-    rows = conn.execute(
-        "SELECT items.* FROM items_fts JOIN items ON items.id = items_fts.rowid"
-        f" WHERE items_fts MATCH ?{space_sql} ORDER BY items_fts.rank, items.id DESC LIMIT ?",
-        [match, *params, MAX_ITEMS],
-    ).fetchall()
-    if len(rows) < MAX_ITEMS:  # and what only an item's thoughts mention
-        where = [space_sql.removeprefix(" AND ")] if space_sql else []
-        rows += items_by_thoughts(
-            conn, match, where, params, [r["id"] for r in rows], MAX_ITEMS - len(rows)
-        )
-    return rows
 
 
 def more_to_find(conn: sqlite3.Connection, space: str | None, matched_rows: int) -> bool:
@@ -216,8 +176,13 @@ Items ({count}):
 
 
 def format_item(row: sqlite3.Row, thoughts: list | None = None) -> str:
-    """The header comes from store.item_header, which classify's context block also uses."""
-    text = f"{item_header(row)}\n{row['raw_text']}"
+    """The header comes from store.item_header, which classify's context block also uses.
+
+    Ask passes the real id: the answer cites `item_ids`, and `answer_from_rows` drops any id
+    that was not in the set retrieved, so a wrong one cannot survive.
+    """
+    head = item_header(row, "id " + str(row["id"]))
+    text = f"{head}\n{row['raw_text']}"
     if thoughts:
         text += "\nThoughts:\n" + "\n".join(
             f"- {t['created_at'][:10]}: {t['body']}" for t in thoughts

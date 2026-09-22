@@ -56,6 +56,12 @@ export default function ApprovalCard({
      approving is still a separate, deliberate act, so a mis-tap costs nothing. */
   const ask = item.proposal && item.proposal.shape !== "question" ? (item.proposal.clarify ?? null) : null;
   const chosen = (value: string) => (ask?.field === "space" ? draft.space === value : draft.shape === value);
+  /* The item this looks like. Recorded even when parking is off, so it is worth showing either
+     way: it is the difference between filing a second copy knowingly and doing it blind. */
+  const dupId = item.duplicate_of ?? null;
+  /* A space the classifier proposed that does not exist. Naming it did nothing; choosing it
+     here is what will create it, on approve (slice 28). */
+  const newSpace = item.proposal && item.proposal.shape !== "question" ? (item.proposal.new_space ?? null) : null;
   function answer(value: string) {
     if (!ask) return;
     setMsg(null);
@@ -141,6 +147,13 @@ export default function ApprovalCard({
           {item.raw_text}
         </button>
       )}
+      {dupId && (
+        <p className="looks-like">
+          Looks like{" "}
+          <Link to={`/items/${dupId}`}>#{dupId}</Link>
+          {" "}already here. Filing this keeps both.
+        </p>
+      )}
       {ask && (
         <div className="asked">
           <p className="asked-q">{ask.question}</p>
@@ -180,6 +193,14 @@ export default function ApprovalCard({
           <SpaceSelect value={draft.space} spaces={spaces} onChange={(space) => setDraft({ ...draft, space })} />
           <b>{draft.space ?? "no space"}</b>
         </span>
+        {newSpace && draft.space !== newSpace && (
+          <>
+            {" "}
+            <button type="button" className="word new-space" onClick={() => setDraft({ ...draft, space: newSpace })}>
+              + {newSpace}
+            </button>
+          </>
+        )}
         {draft.shape === "task" && (
           <>
             , due{" "}

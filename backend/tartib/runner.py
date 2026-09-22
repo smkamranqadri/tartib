@@ -22,7 +22,9 @@ from tartib.store import (
     insert_item,
     list_spaces,
     should_file,
+    similar_items,
     space_policies,
+    wait_reason_for,
 )
 
 log = logging.getLogger("tartib.runner")
@@ -99,7 +101,7 @@ class Runner:
         loaded = await asyncio.to_thread(self._load, capture_id)
         if loaded is None:
             return
-        text, created_at, spaces, existing, rules, examples = loaded
+        text, created_at, spaces, existing, rules, examples, candidates = loaded
         s = self.settings
         if not s.ai_enabled:
             await asyncio.to_thread(self._fallback, capture_id, NOT_CONFIGURED)
@@ -112,6 +114,7 @@ class Runner:
             existing=existing,
             house_rules=rules,
             examples=examples,
+            candidates=candidates,
         )
         try:
             proposals = await classify(text, context)
@@ -208,7 +211,10 @@ class Runner:
 
     def _load(
         self, capture_id: int
-    ) -> tuple[str, str, list[str], tuple[SpaceContext, ...], str, tuple[Example, ...]] | None:
+    ) -> (
+        tuple[str, str, list[str], tuple[SpaceContext, ...], str, tuple[Example, ...], tuple]
+        | None
+    ):
         conn = self._connect()
         try:
             row = conn.execute(
@@ -223,6 +229,7 @@ class Runner:
                 classify_context(conn),
                 house_rules(conn),
                 classifier_examples(conn, threshold=self.settings.autofile_confidence)[0],
+                similar_items(conn, row["raw_text"]),
             )
         finally:
             conn.close()
@@ -277,8 +284,16 @@ class Runner:
                     continue
                 # A proposal that asks you something is waiting on you by definition, whatever
                 # its confidence and whatever the space's policy says.
-                filed = p.clarify is None and should_file(
-                    p.space, p.confidence, self.settings.autofile_confidence, policies
+                duplicate_of = int(p.duplicate_of) if p.duplicate_of else None
+                # The verdict is recorded either way; only the flag decides whether it holds
+                # anything back. Eight seeded cases are not a false-positive rate.
+                parked = self.settings.duplicate_park and duplicate_of is not None
+                filed = (
+                    p.clarify is None
+                    and not parked
+                    and should_file(
+                        p.space, p.confidence, self.settings.autofile_confidence, policies
+                    )
                 )
                 fields = p.model_dump(include={"shape", "space", "title", "due", "remind_at"})
                 try:
@@ -291,6 +306,12 @@ class Runner:
                         stage="filed" if filed else "attention",
                         allowed=list_spaces(conn),
                         proposal_json=p.model_dump_json(exclude={"text"}),
+                        duplicate_of=duplicate_of,
+                        wait_reason=(
+                            None
+                            if filed
+                            else wait_reason_for(p.space, duplicate_of, parked)
+                        ),
                     )
                 except SpaceError:  # cannot happen after _normalize, but never lose a capture
                     insert_item(

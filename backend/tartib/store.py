@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -177,19 +178,130 @@ def space_policies(conn: sqlite3.Connection) -> dict[str, str]:
     return {r["name"]: r["policy"] for r in conn.execute("SELECT name, policy FROM spaces")}
 
 
+# --- retrieval (moved here from ask.py in slice 28) ---------------------------------------
+# Ask built these; classify needs them too, to find the items a capture might duplicate.
+# They live here rather than in ask.py because classify must not import from ask.
+
+MAX_ITEMS = 20
+
+STOPWORDS = frozenset(
+    """a about after again all am an and any are as at be because been before being but by
+    can could did do does doing down during for from had has have having he her here hers him
+    his how i if in into is it its just me more most my no nor not of off on once only or
+    other our ours out over own same she should so some such than that the their theirs them
+    then there these they this those through to too under until up very was we were what when
+    where which while who whom why will with would you your yours decide decided decision
+    say said tell told think thought remember note notes wrote write""".split()
+)
+
+
+def _fts_term(word: str) -> str | None:
+    """One FTS5 term, or None when the word is not worth searching for. Prefix-matched when
+    long enough, so 'decide' finds 'decided'."""
+    w = word.lower()
+    if w in STOPWORDS or len(w) < 2 or (w.isdigit() and len(w) < 4):
+        return None
+    return f'"{w}"*' if len(w) >= 4 else f'"{w}"'
+
+
+def retrieval_query(question: str) -> str:
+    """OR of the question's own content words."""
+    words = dict.fromkeys(w.lower() for w in re.findall(r"\w+", question, flags=re.UNICODE))
+    return " OR ".join(t for w in words if (t := _fts_term(w)))
+
+
+
+def _space_clause(space: str | None) -> tuple[str, list[object]]:
+    if not space:
+        return "", []
+    return " AND items.space = ?", [space.strip().lower()]
+
+
+def search(conn: sqlite3.Connection, match: str, space: str | None) -> list:
+    """Items matching an FTS5 query, best first, plus any whose thoughts match it."""
+    space_sql, params = _space_clause(space)
+    rows = conn.execute(
+        "SELECT items.* FROM items_fts JOIN items ON items.id = items_fts.rowid"
+        f" WHERE items_fts MATCH ?{space_sql} ORDER BY items_fts.rank, items.id DESC LIMIT ?",
+        [match, *params, MAX_ITEMS],
+    ).fetchall()
+    if len(rows) < MAX_ITEMS:  # and what only an item's thoughts mention
+        where = [space_sql.removeprefix(" AND ")] if space_sql else []
+        rows += items_by_thoughts(
+            conn, match, where, params, [r["id"] for r in rows], MAX_ITEMS - len(rows)
+        )
+    return rows
+
+
+CANDIDATES = 8  # similar items shown to the classifier for one capture
+
+# Why an item is waiting. `attention` has had one meaning until now; it has three.
+WAIT_NO_SPACE = "no_space"
+WAIT_LOW_CONFIDENCE = "low_confidence"
+WAIT_DUPLICATE = "duplicate"
+
+
+def wait_reason_for(space: str | None, duplicate_of: int | None, parked: bool) -> str | None:
+    """The code a waiting row carries. Short, not display text: the client has the matched
+    item and writes the sentence itself."""
+    if parked and duplicate_of is not None:
+        return WAIT_DUPLICATE
+    if not space:
+        return WAIT_NO_SPACE
+    return WAIT_LOW_CONFIDENCE
+
+
+def similar_items(
+    conn: sqlite3.Connection, text: str, limit: int = CANDIDATES
+) -> tuple[tuple[str, sqlite3.Row], ...]:
+    """Filed items that resemble this capture, each paired with the ordinal the model may name.
+
+    The ordinals are `i1`, `i2`, ... and the map back to real ids **never leaves the server**.
+    That is the whole defence: an ordinal the model invents resolves to nothing, whereas an id
+    it invents can be a real item it was never shown, and a schema check cannot tell the
+    difference because a made-up integer is a valid integer.
+    """
+    match = retrieval_query(text)
+    if not match:
+        return ()
+    rows = [r for r in search(conn, match, None) if r["stage"] == "filed"][:limit]
+    return tuple((f"i{n}", row) for n, row in enumerate(rows, start=1))
+
+
+def resolve_ref(
+    candidates: tuple[tuple[str, sqlite3.Row], ...], ref: str | None
+) -> int | None:
+    """The item id an ordinal points at, or None. Anything unrecognised is None, silently."""
+    if not ref:
+        return None
+    wanted = str(ref).strip().lower()
+    for ordinal, row in candidates:
+        if ordinal == wanted:
+            return int(row["id"])
+    return None
+
+
 CONTEXT_PER_SPACE = 5  # most recent items shown per space in the classifier's context
 CONTEXT_EXCERPT = 60  # characters of a note shown there; a task shows its title instead
 
 
-def item_header(row: sqlite3.Row) -> str:
+def item_header(row: sqlite3.Row, ref: str | None = None) -> str:
     """The one line that identifies an item to the AI.
 
     Both prompts use it: ask puts the item's text and thoughts underneath, classify shows it
     alone as context. One format in one place, so the two prompts cannot drift apart about what
-    an item looks like -- which is the whole of the backlog's "shared rules" entry that mattered.
+    an item looks like.
+
+    `ref` is the label the model may point at, and it differs on purpose (slice 28). Ask passes
+    the real id, because its whole contract is returning `item_ids` and it validates them against
+    the set it retrieved. Classify passes an **ordinal** -- an invented ordinal resolves to
+    nothing, while an invented id can be a real item the model was never shown, and no schema
+    check would catch it. Where the model is not meant to point at anything, `ref` is None and
+    no label is printed at all.
     """
     space = row["space"] or "(none)"
-    head = f"[id {row['id']}] {row['created_at'][:10]} · space: {space} · {row['shape']}"
+    label = f"[{ref}] " if ref else ""
+    head = f"{label}{row['created_at'][:10]} · space: {space} · {row['shape']}"
     if row["shape"] == "task":
         head += f": {row['title'] or ''}"
         if row["due"]:
@@ -198,10 +310,10 @@ def item_header(row: sqlite3.Row) -> str:
     return head
 
 
-def context_line(row: sqlite3.Row) -> str:
+def context_line(row: sqlite3.Row, ref: str | None = None) -> str:
     """One item as the classifier sees it: its shared header, plus the start of a note's text,
     since a note's header has no content in it."""
-    line = item_header(row)
+    line = item_header(row, ref)
     if row["shape"] == "task":
         return line
     first = " ".join((row["raw_text"] or "").split())
@@ -382,6 +494,8 @@ def insert_item(
     allowed: Sequence[str],
     proposal_json: str | None = None,
     proposal_error: str | None = None,
+    duplicate_of: int | None = None,
+    wait_reason: str | None = None,
 ) -> int:
     values = _clean(fields, allowed)
     if stage == "filed" and not values.get("space"):
@@ -394,6 +508,8 @@ def insert_item(
         "proposal_json",
         "proposal_error",
         "classified_at",
+        "duplicate_of",
+        "wait_reason",
         *values.keys(),
     ]
     params = [
@@ -404,6 +520,8 @@ def insert_item(
         proposal_json,
         proposal_error,
         utcnow_iso(),
+        duplicate_of,
+        wait_reason,
         *values.values(),
     ]
     cur = conn.execute(

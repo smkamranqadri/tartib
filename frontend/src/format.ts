@@ -94,6 +94,7 @@ export function waitingReason(item: Item, short = false): string {
   const pct = item.proposal ? Math.round(item.proposal.confidence * 100) : 0;
   if (item.proposal_error) return short ? "AI failed" : `AI failed: ${item.proposal_error}`;
   if (!item.proposal) return short ? "proposal rejected" : "Proposal rejected";
+  if (item.wait_reason === "duplicate") return short ? "looks like a duplicate" : "Looks like something already here";
   if (!item.space) return short ? "no space matched" : "No space matched";
   return short ? `unsure, ${pct}%` : `Unsure (${pct}%)`;
 }

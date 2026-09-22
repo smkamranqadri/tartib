@@ -460,3 +460,97 @@ def test_the_classifier_asks_rather_than_guessing_when_it_cannot_tell():
         f"asked about captures it could place: {asked_on_placeable}\n{report}"
     )
     assert not failures, "\n".join(failures)
+
+
+# --- slice 28: can it point at the right thing, and refuse to point at the wrong one? ---
+
+
+class FakeRow(dict):
+    """Enough of a sqlite3.Row for the context renderers, without a database."""
+
+    def __getitem__(self, k):
+        return self.get(k)
+
+
+def _candidate(n, shape, title, text, space):
+    return FakeRow(
+        id=900 + n,
+        created_at="2026-09-15T10:00:00Z",
+        space=space,
+        shape=shape,
+        title=title,
+        due=None,
+        status="open",
+        raw_text=text,
+    )
+
+
+# What is already filed. The model sees these as i1..i4 and never sees an id.
+FILED = [
+    _candidate(1, "task", "Renew the car insurance", "renew the car insurance", "finance"),
+    _candidate(2, "task", "Review Sarah's PRD", "review sarah's prd", "work"),
+    _candidate(3, "note", None, "Physio said swim twice a week for the shoulder.", "health"),
+    _candidate(4, "task", "Book flights to Istanbul", "book flights to istanbul", "travel"),
+]
+CANDIDATES = tuple((f"i{n}", row) for n, row in enumerate(FILED, start=1))
+
+# The same thing, said differently. Each should come back as the matching ordinal.
+DUPLICATES = [
+    ("car insurance needs renewing before it lapses", "i1"),
+    ("i still need to go through Sarah's PRD", "i2"),
+    ("book the Istanbul flights", "i4"),
+]
+
+# Same subject, different action. These are the ones that matter: a near miss is not a duplicate.
+NEAR_MISSES = [
+    "schedule the car service",
+    "email Sarah the PRD feedback",
+    "buy new goggles for swimming",
+    "renew my passport before the trip",
+    "pay the electricity bill",
+]
+
+
+@pytest.mark.eval
+def test_it_names_a_duplicate_and_refuses_a_near_miss():
+    if shutil.which("codex") is None:
+        pytest.skip("codex CLI not installed")
+
+    context = Context(
+        now=NOW,
+        zone=ZONE,
+        spaces=SPACES,
+        codex=CodexConfig(command="codex"),
+        candidates=CANDIDATES,
+    )
+    texts = [t for t, _ in DUPLICATES] + NEAR_MISSES
+
+    async def run_all():
+        return await asyncio.gather(*(classify(t, context) for t in texts))
+
+    results = asyncio.run(run_all())
+    got = {}
+    for text, proposals in zip(texts, results, strict=True):
+        p = next((x for x in proposals if x.shape != "question"), None)
+        got[text] = p.duplicate_of if p else None
+
+    # duplicate_of has already been resolved through the ordinal map, so it is a real id here.
+    by_ordinal = {ref: str(row["id"]) for ref, row in CANDIDATES}
+    caught = [t for t, want in DUPLICATES if got[t] == by_ordinal[want]]
+    wrong = [
+        f"{t!r} -> {got[t]}"
+        for t, want in DUPLICATES
+        if got[t] not in (None, by_ordinal[want])
+    ]
+    false_positives = [f"{t!r} -> {got[t]}" for t in NEAR_MISSES if got[t] is not None]
+
+    report = "\n".join(f"  {t[:44]!r:46} -> {got[t]}" for t in texts)
+    print(
+        f"\nduplicates caught: {len(caught)}/{len(DUPLICATES)}"
+        f"\nfalse positives:   {len(false_positives)}/{len(NEAR_MISSES)}\n{report}"
+    )
+
+    # A near miss filed as a duplicate is the failure that costs you a real capture.
+    assert not false_positives, f"near misses read as duplicates: {false_positives}\n{report}"
+    assert not wrong, f"pointed at the wrong item: {wrong}\n{report}"
+    assert len(caught) >= 2, f"only caught {len(caught)}/{len(DUPLICATES)}\n{report}"

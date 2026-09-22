@@ -290,6 +290,13 @@ button:disabled { opacity: .5; cursor: default; }
 
 /* The classifier asking (slice 27). It sits above the sentence, because it is the one thing
    the item is waiting for; answering it fills the sentence in rather than replacing it. */
+/* Slice 28. What this looks like a duplicate of -- shown whether or not parking is on, because
+   the point is to file a second copy knowingly rather than blind. */
+.looks-like { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.looks-like a { color: var(--fg); }
+/* A space the classifier proposed that does not exist yet. Dashed, because it is not real until
+   you approve. */
+.word.new-space { border-bottom-style: dashed; color: var(--accent); }
 .asked { margin: 10px 0 2px; }
 .asked-q { margin: 0 0 8px; font-weight: 600; }
 .asked-opts { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Literal
@@ -10,7 +11,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from tartib.codex import CodexConfig, CodexError, run_json
-from tartib.store import Example, SpaceContext
+from tartib.store import Example, SpaceContext, context_line, resolve_ref
 
 NULL_SPACE_CONFIDENCE_CAP = 0.6
 CONTEXT_BUDGET = 4000  # characters; this block rides on every capture
@@ -60,6 +61,12 @@ class Proposal(BaseModel):
     # Present when the classifier would rather ask than guess. An item carrying one never
     # auto-files, whatever its confidence: the whole point is that it is waiting on you.
     clarify: Clarify | None = None
+    # An ordinal from the candidate list -- never a database id. Resolved server-side; anything
+    # that does not resolve becomes None, silently (slice 28).
+    duplicate_of: str | None = None
+    # A space that does not exist yet. A proposal only: naming it does nothing, and accepting it
+    # is what creates it (slice 28, narrowing rule 7).
+    new_space: str | None = None
 
     @field_validator("space", "title", "text", mode="before")
     @classmethod
@@ -86,6 +93,8 @@ _PROPOSAL_SCHEMA = {
         "remind_at",
         "confidence",
         "clarify",
+        "duplicate_of",
+        "new_space",
     ],
     "properties": {
         "shape": {"type": "string", "enum": ["task", "note", "question"]},
@@ -95,6 +104,8 @@ _PROPOSAL_SCHEMA = {
         "due": {"type": ["string", "null"]},
         "remind_at": {"type": ["string", "null"]},
         "confidence": {"type": "number"},
+        "duplicate_of": {"type": ["string", "null"]},
+        "new_space": {"type": ["string", "null"]},
         "clarify": {
             "type": ["object", "null"],
             "additionalProperties": False,
@@ -141,6 +152,8 @@ class Context:
     house_rules: str = ""
     # Recent filings to learn from, from store.classifier_examples. Corrections first.
     examples: tuple[Example, ...] = ()
+    # (ordinal, row) pairs from store.similar_items. The map stays here and on the server.
+    candidates: tuple[tuple[str, object], ...] = ()
 
 
 PROMPT = """You file short personal captures for one person. Reply with one JSON object only:
@@ -185,13 +198,35 @@ Each proposal has:
   must answer. Ask only about a capture you would otherwise have had to leave with no space at
   all.
 
+- "duplicate_of": normally null. When this capture is the *same thing* as one of the items
+  listed below -- not merely the same subject -- give that item's label, like "i2". Same
+  subject with a different action is not a duplicate: a note about a car and a task to service
+  the car are two things. Never invent a label that is not in the list.
+- "new_space": normally null. When a capture clearly belongs somewhere that does not exist yet,
+  name it: lowercase, digits and dashes, at most 24 characters. It is only a proposal -- naming
+  it files nothing and creates nothing. Do not use it to avoid choosing an existing space.
+
 Never rewrite or summarize the text itself. Do not run commands or read files.
 
 Current datetime: {now} ({zone})
 Existing spaces: {spaces}
-{existing}{house_rules}{examples}
+{existing}{house_rules}{examples}{candidates}
 Text:
 {text}"""
+
+
+CANDIDATES = """
+Items already filed that resemble this capture. Each is labelled `i1`, `i2` and so on -- those
+labels exist only in this list, so name one only if you mean that exact item.
+{lines}
+"""
+
+
+def render_candidates(candidates: tuple[tuple[str, object], ...]) -> str:
+    if not candidates:
+        return ""
+    lines = "\n".join(f"- {context_line(row, ref)}" for ref, row in candidates)
+    return CANDIDATES.format(lines=lines)
 
 
 EXAMPLES = """
@@ -282,6 +317,7 @@ def build_prompt(text: str, context: Context, correction: tuple[str, str] | None
         existing=render_existing(context.existing),
         house_rules=HOUSE_RULES.format(rules=context.house_rules) if context.house_rules else "",
         examples=render_examples(context.examples),
+        candidates=render_candidates(context.candidates),
         text=text,
     )
     if correction is not None:
@@ -289,6 +325,31 @@ def build_prompt(text: str, context: Context, correction: tuple[str, str] | None
         head, _, tail = prompt.rpartition("\n\nText:\n")
         prompt = head + CORRECTION.format(earlier=earlier, reason=reason) + "\n\nText:\n" + tail
     return prompt
+
+
+SPACE_NAME = re.compile(r"^[a-z0-9-]{1,24}$")
+
+
+def _resolve_duplicate(ref: str | None, context: Context) -> str | None:
+    """An ordinal becomes the real item id, as a string; anything else becomes None.
+
+    This is the whole reason the model is shown labels rather than ids: a label it invents
+    resolves to nothing here, with no validation rule needed, while an invented id could be a
+    real item it was never shown.
+    """
+    item_id = resolve_ref(context.candidates, ref)
+    return str(item_id) if item_id is not None else None
+
+
+def _clean_new_space(name: str | None, context: Context) -> str | None:
+    """A proposed space, or None. It must pass the same rules the Spaces page enforces, and it
+    must not already exist -- proposing one that exists is just picking it, badly."""
+    if not name:
+        return None
+    proposed = str(name).strip().lower()
+    if proposed in context.spaces or not SPACE_NAME.match(proposed):
+        return None
+    return proposed
 
 
 def _clean_clarify(c: Clarify | None, context: Context) -> Clarify | None:
@@ -320,9 +381,22 @@ def _normalize(p: Proposal, context: Context) -> Proposal:
 
     Questions carry nothing. Notes carry no task fields. Unknown spaces become null and cap
     confidence. Naive reminder times are in the user's zone; store UTC."""
-    update: dict = {"clarify": _clean_clarify(p.clarify, context)}
+    update: dict = {
+        "clarify": _clean_clarify(p.clarify, context),
+        # Resolved to a real id here, or dropped. The model's label never reaches storage.
+        "duplicate_of": _resolve_duplicate(p.duplicate_of, context),
+        "new_space": _clean_new_space(p.new_space, context),
+    }
     if p.shape == "question":
-        update.update(space=None, title=None, due=None, remind_at=None, clarify=None)
+        update.update(
+            space=None,
+            title=None,
+            due=None,
+            remind_at=None,
+            clarify=None,
+            duplicate_of=None,
+            new_space=None,
+        )
         return p.model_copy(update=update)
     space = p.space.lower() if p.space else None
     if space not in context.spaces:
