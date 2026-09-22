@@ -181,3 +181,23 @@ def test_suggest_leaves_what_changed_meanwhile_alone(pair, tmp_path):
     conn.rollback()
     conn.close()
     assert rows(tmp_path, "SELECT count(*) c FROM link_suggestions")[0]["c"] == 0
+
+
+def test_a_target_sent_back_earlier_in_the_run_still_counts(ai_client, monkeypatch, tmp_path):
+    """Pre-deploy review: #3 -> #1 sent #3 back, then #2 -> #3 was dropped as "changed"."""
+    add(ai_client, "server setup notes base")
+    add(ai_client, "server setup notes middle")
+    add(ai_client, "server setup notes top")
+    reply_related(monkeypatch, "i1")
+    report = go(tmp_path)
+    assert report.suggested == report.links
+    stored = rows(tmp_path, "SELECT count(*) c FROM link_suggestions")[0]["c"]
+    assert stored == report.links and stored >= 2
+
+
+def test_space_is_required(monkeypatch):
+    from tartib.suggest_links import main
+
+    with pytest.raises(SystemExit) as e:
+        main([])
+    assert e.value.code == 2

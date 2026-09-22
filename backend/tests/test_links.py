@@ -207,3 +207,9 @@ def test_a_space_link_never_opens_an_item(auth):
     src = add(auth, "see [[space:home]]")
     assert get(auth, src["id"])["links"] == {}
     assert auth.get("/api/links/resolve", params={"title": "space:home"}).status_code == 404
+
+
+def test_a_space_after_the_colon_is_the_same_space_link(auth):
+    """Pre-deploy review: `[[space: home]]` rendered as a link but was not indexed as one."""
+    item = add(auth, "see [[space: home]]")
+    assert [i["id"] for i in auth.get("/api/spaces/home/linked").json()["items"]] == [item["id"]]

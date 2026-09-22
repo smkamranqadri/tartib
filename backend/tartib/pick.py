@@ -117,19 +117,29 @@ def chosen(data: dict, rows: list[sqlite3.Row]) -> list[tuple[sqlite3.Row, str]]
     return list(out.values())[:MAX_PICKS]
 
 
-def apply(conn: sqlite3.Connection, picks: list[tuple[sqlite3.Row, str]]) -> None:
-    """Take back the last pick's stars and give the new ones, in one transaction."""
+def apply(
+    conn: sqlite3.Connection, picks: list[tuple[sqlite3.Row, str]]
+) -> list[tuple[sqlite3.Row, str]]:
+    """Take back the last pick's stars and give the new ones, in one transaction. Returns the
+    picks actually starred."""
+    done = []
     now = utcnow_iso()
     with conn:
         conn.execute("UPDATE items SET starred = 0, picked_at = NULL WHERE picked_at IS NOT NULL")
         for row, reason in picks:
-            conn.execute(
-                "UPDATE items SET starred = 1, picked_at = ? WHERE id = ?", (now, row["id"])
-            )
-            conn.execute(
-                "INSERT INTO item_thoughts (item_id, body, created_at) VALUES (?, ?, ?)",
-                (row["id"], THOUGHT + reason, now),
-            )
+            # Checked again: the model took seconds, and the task may have been finished or
+            # deleted meanwhile. Only a task still open is starred and given the reason.
+            if conn.execute(
+                "UPDATE items SET starred = 1, picked_at = ? WHERE id = ?"
+                " AND stage = 'filed' AND shape = 'task' AND status = 'open'",
+                (now, row["id"]),
+            ).rowcount:
+                conn.execute(
+                    "INSERT INTO item_thoughts (item_id, body, created_at) VALUES (?, ?, ?)",
+                    (row["id"], THOUGHT + reason, now),
+                )
+                done.append((row, reason))
+    return done
 
 
 @router.post("/pick")
@@ -170,7 +180,9 @@ async def pick(
         record(reply.usage, "unusable reply: no pick named a candidate", reply.quota)
         raise HTTPException(status_code=502, detail="pick failed: the reply named no task")
     record(reply.usage, None, reply.quota)
-    apply(conn, picks)
+    picks = apply(conn, picks)
+    if not picks:
+        return {"picks": [], "message": "The tasks it picked changed meanwhile; pick again."}
     fresh = {r["id"]: r for r in conn.execute(
         f"SELECT * FROM items WHERE id IN ({', '.join('?' * len(picks))})",
         [row["id"] for row, _ in picks],

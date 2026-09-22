@@ -215,8 +215,8 @@ def _require_attention(row: sqlite3.Row) -> None:
 
 
 class ApproveBody(EditBody):
-    """Filing, plus which of the proposed links to keep (slice 33 phase C). Absent keeps them
-    all, as the card's chips start; an empty list keeps none."""
+    """Filing, plus which of the proposed links to keep (slice 33 phase C). Only what is listed
+    is kept; absent keeps none, because only the card shows them (pre-deploy review)."""
 
     links: list[int] | None = Field(default=None, max_length=5)
 
@@ -271,9 +271,9 @@ def approve(
     # Kept links go in the text, as every link does: `Related: [[A]], [[B]]` at the end. Only ids
     # the classifier proposed count, so the body cannot link to anything else through here.
     proposed = [int(i) for i in (json.loads(row["proposal_json"] or "{}").get("related") or [])]
-    kept = proposed if body is None or body.links is None else [
-        i for i in body.links if i in proposed
-    ]
+    # Absent keeps none: the card always sends its choice, and an approval from anywhere that
+    # never showed the links -- the item page's "File it" -- must not write them into the text.
+    kept = [i for i in ((body.links if body is not None else None) or []) if i in proposed]
     line = related_line(conn, kept) if kept else None
     if line:
         text = str(fields.get("text") or row["raw_text"]).rstrip()

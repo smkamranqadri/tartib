@@ -153,3 +153,29 @@ def test_a_low_confidence_item_keeps_its_own_reason_and_the_chip(tmp_path, monke
         queue = client.get("/api/attention").json()["items"]
         card = next(i for i in queue if i["id"] == item["id"])
         assert len(card["related"]) == 1
+
+
+def test_an_approval_that_never_showed_the_links_keeps_none(tmp_path, monkeypatch):
+    """Pre-deploy review: the item page's "File it" sends no `links`; nothing unseen is written."""
+    with linking_client(tmp_path, monkeypatch) as client:
+        file_note(client, monkeypatch, "Docker setup for the server")
+        set_classify_reply(monkeypatch, linked("CapRover setup, after docker setup", ["i1"]))
+        item = capture(client, "CapRover setup, after docker setup")["items"][0]
+        filed = client.post(f"/api/items/{item['id']}/approve", json={"space": "work"}).json()
+        assert filed["raw_text"] == "CapRover setup, after docker setup"
+
+
+def test_a_title_edit_survives_a_kept_link(tmp_path, monkeypatch):
+    """Pre-deploy review: approving with a new title and a kept link used to drop the title."""
+    with linking_client(tmp_path, monkeypatch) as client:
+        docker = file_note(client, monkeypatch, "Docker setup for the server")
+        p = linked("caprover after docker setup", ["i1"])
+        p.update(shape="task", title="Caprover")
+        set_classify_reply(monkeypatch, p)
+        item = capture(client, "caprover after docker setup")["items"][0]
+        filed = client.post(
+            f"/api/items/{item['id']}/approve",
+            json={"title": "Set up CapRover", "links": [docker["id"]]},
+        ).json()
+        assert filed["title"] == "Set up CapRover"
+        assert filed["raw_text"].endswith("Related: [[Docker setup for the server]]")

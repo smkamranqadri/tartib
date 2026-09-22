@@ -83,7 +83,9 @@ def link_title(text: str | None) -> str:
 
 
 def link_key(text: str | None) -> str:
-    return link_title(text).casefold()
+    key = link_title(text).casefold()
+    # `[[space: coding]]` is `[[space:coding]]`, as the renderer already reads it.
+    return re.sub(r"^space:\s+", "space:", key)
 
 
 def links_in(text: str) -> list[str]:
@@ -1052,7 +1054,11 @@ def suggest(conn: sqlite3.Connection, item_id: int, targets: Sequence[int]) -> l
     alive = {
         r["id"]
         for r in conn.execute(
-            f"SELECT id FROM items WHERE id IN ({marks}) AND stage = 'filed'", list(targets)
+            # A target sent back as `relink` earlier in the same run is still that item; only
+            # a new capture waiting to be filed is not something to link to.
+            f"SELECT id FROM items WHERE id IN ({marks})"
+            f" AND (stage = 'filed' OR wait_reason = '{WAIT_RELINK}')",
+            list(targets),
         )
     }
     keep = [t for t in targets if t in alive]
@@ -1077,9 +1083,11 @@ def refile_relinked(
 ) -> None:
     """Approve a `relink` item: its own fields plus any edits in `fields`, the kept links
     appended, the rest marked skipped, back to filed. `classified_at` is left alone so a refiled
-    item is not a fresh example. `keep` None keeps every pending suggestion. Caller commits."""
+    item is not a fresh example. `keep` None keeps none: only the card shows the links, and it
+    always says which it kept, so an approval that never showed them links nothing. Caller
+    commits."""
     pending = pending_suggestions(conn, item_id)
-    kept = pending if keep is None else [t for t in keep if t in pending]
+    kept = [t for t in (keep or []) if t in pending]
     row = conn.execute("SELECT raw_text, space FROM items WHERE id = ?", (item_id,)).fetchone()
     if not (fields.get("space") or row["space"]):
         raise SpaceError("a space is required to file an item")
@@ -1185,9 +1193,11 @@ def update_fields(
         if row is not None and values.get("shape", row["shape"]) == "task":
             # A title edit -- the approval card's quoted word -- is an edit of line one.
             text = values.get("raw_text", row["raw_text"])
-            if "title" in values and "raw_text" not in values:
+            if "title" in values:
                 # Line one is the title, so renaming it is rewriting that line. Moving a note to a
-                # task is the same call with the note's first line already there.
+                # task is the same call with the note's first line already there. Applied to the
+                # text being written too: approving with a kept link sends both, and the title
+                # used to be dropped in favour of the text (pre-deploy review, 2026-09-23).
                 text = retitle(text, values["title"], replace=row["shape"] == "task")
                 if text != row["raw_text"]:
                     values["raw_text"] = text

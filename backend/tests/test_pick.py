@@ -139,3 +139,37 @@ def test_nothing_to_pick_costs_no_call(ai_client, monkeypatch, tmp_path):
 
 def test_pick_needs_ai(auth):
     assert auth.post("/api/pick", json={}).status_code == 503
+
+
+def test_at_most_three_are_starred(ai_client, monkeypatch):
+    for n in range(5):
+        task(ai_client, f"errand number {n}")
+    set_pick_reply(monkeypatch, *[(f"t{n}", "Why.") for n in range(1, 6)])
+    got = ai_client.post("/api/pick", json={}).json()["picks"]
+    assert len(got) == 3
+
+
+def test_a_malformed_reply_changes_nothing(ai_client, monkeypatch):
+    a = task(ai_client, "tidy the garage")
+    monkeypatch.setenv("FAKE_CODEX_REPLY_PICK", '{"picks": "not a list"}')
+    r = ai_client.post("/api/pick", json={})
+    assert r.status_code == 502
+    assert today_ids(ai_client) == set()
+    assert thoughts(ai_client, a["id"]) == []
+
+
+def test_a_task_finished_during_the_call_is_not_picked(ai_client, monkeypatch, settings):
+    """Pre-deploy review: the rows are read before the model is asked and written after."""
+    from tartib import db
+    from tartib.pick import apply
+
+    a = task(ai_client, "tidy the garage")
+    b = task(ai_client, "book dentist")
+    conn = db.connect(settings.db_path)
+    rows = {r["id"]: r for r in conn.execute("SELECT * FROM items")}
+    ai_client.patch(f"/api/items/{a['id']}", json={"status": "done"})
+    ai_client.delete(f"/api/items/{b['id']}")
+    assert apply(conn, [(rows[a["id"]], "x"), (rows[b["id"]], "y")]) == []
+    conn.close()
+    assert ai_client.get(f"/api/items/{a['id']}").json()["starred"] is False
+    assert thoughts(ai_client, a["id"]) == []

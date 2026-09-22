@@ -199,3 +199,7 @@ Backlog: the links entry leaves; the item graph drops "blocked on links". histor
   The test is `test_it_proposes_a_link_and_leaves_an_unrelated_capture_alone` (`-m eval`).
 - Not reviewed by a separate agent: it reuses the ordinal resolution slice 28 built and the link
   path phase A's review covered.
+- **Known, from the pre-deploy review (2026-09-23), not fixed because the switch is off:**
+  "Tell it why" on a `linked` item asks again without the hold -- a confident answer files at
+  once without asking about links, and a waiting one keeps reason `linked` even when the new
+  reply proposes none. Fix before switching `TARTIB_LINK_PROPOSALS` on.

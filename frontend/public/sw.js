@@ -91,6 +91,9 @@ self.addEventListener("fetch", (event) => {
     /* Sessions are not cached. A countdown is only true at the moment it is read, and a stale
        one is a lie rather than old news; starting and stopping needs the network anyway. */
     if (url.pathname.startsWith("/api/sessions/")) return;
+    /* Nor the link picker and resolver (slice 33): one entry per keystroke, kept forever, and
+       a lookup is only worth anything against the database as it is now. */
+    if (url.pathname.startsWith("/api/links/")) return;
     event.respondWith(
       (async () => {
         const cache = await caches.open(API_CACHE);

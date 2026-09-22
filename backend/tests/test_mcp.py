@@ -115,7 +115,8 @@ def test_the_tools_and_nothing_that_edits_text_or_deletes(served):
             listed = await s.list_tools()
             names = {t.name for t in listed.tools}
             assert names == TOOLS
-            assert "list_spaces" in (s.instructions or "") or s.initialize_result
+            instructions = s.initialize_result.instructions or ""
+            assert "list_spaces" in instructions and "asking the person" in instructions
 
     asyncio.run(go())
 

@@ -50,8 +50,9 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   folder of about 27 notes mixing infra, reading, work and personal). Spaces are flat and a
   space is one list; the in-space tree was tried and dropped in slice 21. On 2026-09-22 the owner
   chose to split into narrower spaces, which needs no code, and see how it holds before designing
-  anything. Revisit after links: an index note linking to its children may be structure enough,
-  and sections or tags inside a space are the option if it is not.
+  anything. **Links shipped with slice 33 (not yet deployed), so this is due for a look once they
+  are in use:** an index note linking to its children may be structure enough, and sections or
+  tags inside a space are the option if it is not.
 
 - **Routines: recurring tasks. Asked for 2026-09-22 and not yet planned.** The owner's
   Routine note, copied from their old notes, has a daily group (check WhatsApp, Slack, email,
@@ -87,6 +88,10 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   already does this: it names what to rotate and on which servers, never the secret itself.
 
 Unscheduled candidates:
+
+- **Clear the service worker's API cache on sign-out.** `tartib-api-v1` keeps every successful
+  `/api/*` GET for offline reading and nothing empties it when you sign out, so whoever holds the
+  device can read it offline. Older than v2.2; raised by its security review (2026-09-23).
 
 - Image was 1.62GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras, plus cryptography and aiohttp via pywebpush since slice 11). Not a stated constraint (memory is, and runtime is 42MiB). Slice 18 dropped the Claude CLI (1.07GB built locally on arm64, 2026-09-19; not measured on the x86_64 deploy build). A slimmer route: download the Codex release binary instead of npm. Worth more after slice 17: every deploy cross-builds this image under QEMU, where size is time.
 - Codex takes about 10s per item on the host. Fine for personal volume; a burst of captures queues serially.

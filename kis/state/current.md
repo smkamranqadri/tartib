@@ -51,7 +51,7 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **362 passed, 9 deselected** (the nine are the evals) and
+  Verification commands. Expect **370 passed, 9 deselected** (the nine are the evals) and
   **20/20** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
@@ -64,6 +64,17 @@
 ## Proof
 
 Each slice keeps its proof in its plan file and its commits.
+
+**`v2.2` reviewed before deploy, 2026-09-23 (`ae74c43..HEAD`, three separate agents, read-only):**
+code review, security review, and SPEC against the build. No crash, data loss or exploitable hole.
+Fixed, each with a test shown to fail without its fix: `suggest_links` dropped a pair whose target
+had been sent back earlier in the same run; approving from the item page wrote every proposed
+link unseen (absent `links` now keeps none); a card's title edit was lost when a link was kept;
+Pick starred a task finished or deleted during its call, or failed with a 500; `[[space: x]]` was
+half a link; the service worker cached every picker keystroke; `@codemirror/autocomplete` was
+undeclared. Rules 4, 5 and 7 amended to record slices 32, 34 and 35. Known and left: redo ignores
+the link hold (switch off; slice 33's plan), the API cache survives sign-out (backlog). After:
+370 passed, 9 deselected; `npm run ui` 20/20.
 
 **`v2.2` rehearsed on a live snapshot, 2026-09-22 (not deployed):** a read-only backup-API copy
 of the live database (schema 18, 196 items, 180 captures) run locally on `main` with AI and push
@@ -95,8 +106,8 @@ needing one moment online first -- is product truth: `../intent/SPEC.md`, Offlin
   4. whether a debounced autosave feels safe without a Save button to press. Only answerable
      from `v2.1` on: before `c91fbf9` every save reloaded the note in a space's split view, and
      "Saved" never showed.
-- The committed UI suite (`npm run ui`, 14 checks) guards slices 22 to 25, 27, 29 and 31, and the
-  reload fix and tickable boxes (F1, F2). It cannot judge how anything reads; slices 26 and 28
+- The committed UI suite (`npm run ui`, 20 checks) guards slices 22 to 25, 27, 29 and 31 to 34,
+  and the reload fix and tickable boxes (F1, F2). It cannot judge how anything reads; slices 26 and 28
   are outside it for a stated reason, and slice 30's split card was proved by a scratch script
   and is not in it.
 

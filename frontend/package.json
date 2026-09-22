@@ -11,6 +11,7 @@
     "ui": "node tools/ui/check.mjs"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/lang-markdown": "^6.5.2",
     "@uiw/react-codemirror": "^4.25.11",
     "marked": "^18.0.13",
