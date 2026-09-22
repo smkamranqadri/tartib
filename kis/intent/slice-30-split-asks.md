@@ -152,7 +152,7 @@ the ones the prompt gets wrong later.
   decisions: Keep as one; Screens, the Inbox card: the split line); history.md on close.
 - State: the task in flight while it runs. On close, "on this branch, not merged, not deployed".
 
-## What was built (2026-09-22) -- done and proved, on the branch, not merged
+## What was built (2026-09-22) -- done and proved; merged to `main` the same day
 
 Built as planned; commit `1f24ea0`. One thing the plan got wrong, caught by an existing test:
 
@@ -188,7 +188,8 @@ Built as planned; commit `1f24ea0`. One thing the plan got wrong, caught by an e
 
 ## Still open
 
-- **The two live captures are not repaired.** Blocked twice by the permission check on bulk
-  deletes on the live server; the owner's call. Keep as one cannot repair them after deploy:
-  their pieces already filed themselves, and it only acts on waiting ones.
-- Merge and deploy are the owner's decision.
+- **Deploy** is the owner's decision; it ships with the next version.
+- The two live captures (#91, #92) were repaired by hand on 2026-09-22, not by Keep as one,
+  which acts only on pieces still waiting: appended to the Prompts note, pieces deleted.
+- **Not yet seen on a device**: the split card and Keep as one were checked at 390px in Chrome
+  against local, not on the phone.
