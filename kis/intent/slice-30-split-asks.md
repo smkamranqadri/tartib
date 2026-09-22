@@ -1,8 +1,8 @@
 # Slice 30: a split waits for you, and can be kept as one
 
-Planned 2026-09-22, the day `v2.0` went live. Standard mode. On branch
-`sc-superfluid-magnon-e253`, not `main`: another agent is working on `main`. Not deployed; the
-owner decides when it merges.
+Planned 2026-09-22, the day `v2.0` went live. Standard mode. Built on its own branch while
+another agent worked on `main`; **merged to `main` the same day** after `main` was merged into it
+and the suite re-run. Not deployed.
 
 ## What happened
 
