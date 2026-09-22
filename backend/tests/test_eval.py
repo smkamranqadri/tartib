@@ -343,10 +343,15 @@ CAR_CAPTURES = [
 ]
 
 # Nothing to do with cars. If the rule drags these into `home`, it is over-applying.
+#
+# Each must be a capture the classifier places *unambiguously*. "prepare for the exam on Friday"
+# was here and had to go: it sits on the fence between work and ideas, and measured three times
+# it answered work, None and work. Since slice 27 an ambiguous capture legitimately comes back
+# with no space and a question, so a wobbling control measures the wobble, not the rule.
 CONTROLS = [
     ("clear the outstanding electricity bill", "finance"),
     ("book a dentist appointment", "health"),
-    ("prepare for the exam on Friday", "work"),
+    ("book flights to Istanbul in March", "travel"),
 ]
 
 
@@ -376,10 +381,18 @@ def test_a_house_rule_changes_filing_and_does_not_leak():
 
     control_blind = _spaces_for([t for t, _ in CONTROLS])
     control_ruled = _spaces_for([t for t, _ in CONTROLS], house_rules=HOUSE_RULE)
+    # Leaking means a control landing in the space the rule is about. A control that becomes
+    # None is the classifier declining to guess -- since slice 27 that comes with a question,
+    # and it is honest behaviour, not the rule reaching somewhere it should not.
+    leaked = [
+        f"{t!r}: {a} -> {b}"
+        for (t, _), a, b in zip(CONTROLS, control_blind, control_ruled, strict=True)
+        if b == "home" and a != "home"
+    ]
     drift = [
         f"{t!r}: {a} -> {b}"
         for (t, _), a, b in zip(CONTROLS, control_blind, control_ruled, strict=True)
-        if a != b
+        if a != b and b is not None
     ]
 
     report = (
@@ -389,7 +402,8 @@ def test_a_house_rule_changes_filing_and_does_not_leak():
     )
     print(report)
     assert ruled_home >= blind_home, f"the house rule made filing worse{report}"
-    assert not drift, f"the house rule leaked onto unrelated captures: {drift}{report}"
+    assert not leaked, f"the house rule pulled unrelated captures into home: {leaked}{report}"
+    assert not drift, f"a control moved between two definite spaces: {drift}{report}"
 
 
 @pytest.mark.eval

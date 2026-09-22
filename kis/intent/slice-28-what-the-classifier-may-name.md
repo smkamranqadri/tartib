@@ -129,3 +129,82 @@ columns only, and that is not negotiable in this slice.
 
 **Per-capture retrieval joins the hot path.** Cheap beside a ~10s model call, but it is measured
 rather than assumed.
+
+## What was built (2026-09-21, closed 2026-09-22)
+
+Both parts, as planned. The one thing the plan did not foresee was in the *test*, not the code.
+
+### The measurement that matters
+
+**3/3 duplicates caught, 0/5 false positives**, every ordinal resolving to the right item and
+none resolving to nothing:
+
+```
+'car insurance needs renewing before it lapses'  -> 901   (Renew the car insurance)
+"i still need to go through Sarah's PRD"         -> 902   (Review Sarah's PRD)
+'book the Istanbul flights'                      -> 904   (Book flights to Istanbul)
+'schedule the car service'                       -> None
+'email Sarah the PRD feedback'                   -> None
+'buy new goggles for swimming'                   -> None
+'renew my passport before the trip'              -> None
+'pay the electricity bill'                       -> None
+```
+
+The near misses are the whole test. "Schedule the car service" against "Renew the car insurance"
+and "email Sarah the PRD feedback" against "Review Sarah's PRD" are same-subject-different-action,
+and both came back null. Matches what an earlier build measured, on a different model.
+
+### The control that was not a control
+
+The house-rule eval failed on `"prepare for the exam on Friday"`: `work` without the rule,
+`None` with it. It reproduced after the model was pinned, which ruled out variance between
+models -- but measured a third time, in isolation, it answered the other way round (`None`
+without the rule, `work` with it).
+
+So the capture is simply on the fence between `work` and `ideas`, and **the control was
+measuring the wobble rather than the rule.** Worse, the assertion predated slice 27: it treated
+any move to `None` as drift, when since slice 27 an ambiguous capture *correctly* comes back with
+no space and a question. It was asserting that the classifier must not do the thing it was just
+taught to do.
+
+Two fixes, both to the test:
+
+- The fence-sitter was replaced with `"book flights to Istanbul in March"`. The three controls
+  now answer `finance, health, travel` identically with and without the rule.
+- The assertion now names what leaking actually is: **a control landing in the space the rule is
+  about**. A control that becomes `None` is the classifier declining to guess, which is honest
+  and is not the rule reaching where it should not. Drift between two *definite* spaces still
+  fails.
+
+No prompt change was needed. The code was right and the test was wrong, which is worth recording
+because the reflex after slice 27 was to reach for the prompt first.
+
+## Verification -- what actually ran
+
+On the **pinned model** (`gpt-5.6-luna`, reasoning `medium`), across two runs because the
+subscription limit landed between them:
+
+| | |
+|---|---|
+| duplicates | **3/3 caught, 0/5 false positives**, 0 refs resolving to nothing |
+| house rule | **0/3 to 3/3** into `home`; controls `finance, health, travel` **identical** with and without |
+| asking | three vague captures ask with real candidates; three placeable ones file silently |
+| context, clarify, tell-it-why | all pass; the 1/6-to-6/6 figure itself is from the earlier default model, not re-printed on luna |
+
+- `uv run pytest -q` -- **244 passed, 7 deselected**. `uv run ruff check .` clean.
+- **Four sabotages each turn a test red**, then restored: trust an unresolved ref; park with the
+  flag off; accept a proposed space that already exists; show the classifier real ids.
+- `npm run typecheck`, `npm run build` clean; `npm run ui` **9/9**.
+- Migration 0015 applied to the real local database (schema version 15, both columns present).
+- On glass at 390px: *"Looks like #52 already here. Filing this keeps both."* linking to the
+  matched item; the proposed space as a dashed `+ car` button at 46x44 that fills the sentence in.
+
+**Outstanding, and small:** every acceptance check has passed on luna, but not all inside one
+run -- the limit resets at 11:46. One consolidated `pytest -m eval` is worth doing before `v1.1`,
+purely to have the whole set green in a single breath.
+
+## Still open
+
+Nothing in the slice. `TARTIB_DUPLICATE_PARK` is off, by design: the verdict is being recorded
+now so it can be judged on real captures before it is ever allowed to hold one back. Turning it
+on is a decision for a later day, not a leftover task.

@@ -5,9 +5,13 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 28, what the classifier may name** -- Phase mode, in flight 2026-09-21.
-  A (park and name a duplicate), then B (propose a space that does not exist).
-  Verification: pytest + ruff, the evals, four sabotages, typecheck/build, `npm run ui`.
+- Task: none in flight. **Slice 28 (what the classifier may name) is done and committed on
+  `main`**, not deployed. Park-and-name a duplicate, and proposing a space that does not exist.
+  `kis/intent/slice-28-what-the-classifier-may-name.md`. `TARTIB_DUPLICATE_PARK` is **off** by
+  design: the verdict is recorded now so it can be judged on real captures before it is ever
+  allowed to hold one back.
+- Small and worth doing before `v1.1`: one consolidated `uv run pytest -m eval`. Every check has
+  passed on the pinned model, but across two runs -- the subscription limit landed in between.
   Park-and-name a duplicate, and proposing a space that does not exist yet. Phase mode.
   `kis/intent/slice-28-what-the-classifier-may-name.md`. It starts from a correction: the
   retrieval slice 26 shipped is about the database, not about the capture in hand, so
@@ -22,15 +26,15 @@
   until you are at the phone; `v1.1` is the next thing, and it now carries this fix too.
 - **Slice 26 (retrieval) is done and committed on `main`**, not deployed. The plan, the three
   things it did not foresee, and the proof: `kis/intent/slice-26-retrieval.md`.
-- **Slices 23 (the UI language), 24 (presentation), 25 (offline), 26 (retrieval) and 27 (the
-  AI contract) are committed on `main`, not deployed, and have never been seen on a device.** What each changed,
+- **Slices 23 to 28 are committed on `main`, not deployed, and have never been seen on a
+  device.** What each changed,
   in a line: `kis/intent/history.md`; the decisions and the proof:
-  `kis/intent/slice-2{3,4,5,6,7}-*.md`.
+  `kis/intent/slice-2{3,4,5,6,7,8}-*.md`.
   What being unseen leaves unsettled is under Known gaps.
 - **Slices 18 to 22 are closed and accepted on a device.** Plans: `kis/intent/slice-1{8,9}-*.md`,
   `kis/intent/slice-2{0,1,2}-*.md`; what each one changed, in a line: `kis/intent/history.md`.
-- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 27 are local commits on `main`
-  (unpushed). On the next deploy: migrations 0010-0014 run,
+- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 28 are local commits on `main`
+  (unpushed). On the next deploy: migrations 0010-0015 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config, **`TARTIB_AI_MODEL=gpt-5.6-luna` and
   `TARTIB_AI_REASONING=medium` go in** (pinned 2026-09-21; without them the server keeps
@@ -70,8 +74,8 @@
 
 - Verify: `cd backend && uv run pytest -q` and `uv run pytest -m eval` (two tests: 22 classify
   fixtures and 3 tell-it-why cases, ~30s, needs a Codex login); `cd frontend && npm run typecheck && npm run build`.
-  As of 2026-09-21 pytest is **229 passed, 6 deselected** (the six deselected are the evals;
-  slices 26 and 27 added four of them, and a full eval run is about 2m15s). **An eval run that
+  As of 2026-09-22 pytest is **244 passed, 7 deselected** (the six deselected are the evals;
+  slices 26 to 28 added five of them, and a full eval run is about 2m45s). **An eval run that
   fails fast is rate-limiting, not a result** -- 45s for five failures against 131s for a clean
   run. Re-run before believing it. `cd frontend && npm run ui` is the committed UI suite -- 8 checks
   re-running slices 22 to 25 against the local container, needs `TARTIB_PASSWORD` in the
@@ -91,6 +95,12 @@ showing the classifier what already exists took six deliberately ambiguous captu
 **0/6 to 6/6** on space, with the existing 22 fixtures unchanged. Measured on this build against
 the real Codex CLI, not carried over from an earlier one.
 
+Slice 28's headline proof: the classifier names a duplicate **3/3** and refuses a near miss
+**0/5 false positives**, with every reference resolving to a real item and none resolving to
+nothing. Measured on the pinned model. The near misses are the test -- "schedule the car service"
+against "Renew the car insurance" is the same subject and a different action, and it came back
+null.
+
 Slice 27's headline proof, for the same reason: a house rule moved three car captures from
 **0/3 to 3/3** into `home`, none of which the classifier would have filed there unaided, with
 three unrelated controls filing identically with and without it. The measurement also caught a
@@ -109,7 +119,7 @@ with a desktop tab open on the same countdown (the migration 0008 case), and `ht
 Offline behaviour that is designed rather than missing -- counts lagging, and text editing
 needing one moment online first -- is product truth: `../intent/SPEC.md`, Offline.
 
-- **Slices 23 to 27 were proved in headless Chrome only.** Since slice 26 that harness is
+- **Slices 23 to 28 were proved in headless Chrome only.** Since slice 26 that harness is
   committed (`cd frontend && npm run ui`, 8 checks, currently 8/8), so what it covers will not
   silently regress -- but it cannot judge how anything reads. Slice 26's own visible changes are
   the Note/Task buttons, now 44px wide, and the ask bar's follow-up carry; slice 27's are the

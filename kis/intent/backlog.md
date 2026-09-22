@@ -54,7 +54,7 @@ the AI, and both prompts use it.
 
 Deferred from a slice rather than never planned:
 
-- **Link, don't duplicate** — **planned as slice 28** (2026-09-21),
+- ~~**Link, don't duplicate**~~ — **done in slice 28** (closed 2026-09-22),
   `slice-28-what-the-classifier-may-name.md`. The classifier should attach a capture to an item
   that already exists instead of filing a near-duplicate beside it.
   **Correction (2026-09-21):** this entry used to claim slice 26 shipped its retrieval half.
@@ -81,10 +81,10 @@ Deferred from a slice rather than never planned:
   Counts are the feature; the cost is a derived number and must read as one.
 - **An item graph.** Notes and tasks as nodes, the links between them as edges, clustered by
   space and sized by how often an item is referenced. This is the whole point of linking, and it
-  is blocked on slice 28 above: with no links there are no edges and the graph is
+  is unblocked now that slice 28 has shipped linking: with no links there are no edges and the graph is
   a scatter of unconnected dots. A deterministic force layout drawn as plain SVG is enough, so
   this needs no charting or graph dependency.
-- **The classifier may propose a space that does not exist yet** — **planned as slice 28**
+- ~~**The classifier may propose a space that does not exist yet**~~ — **done in slice 28**
   (2026-09-21), beside park-and-name, because both are a proposal naming something outside its
   own fields. A proposal only: naming it does
   nothing, and accepting it is what creates the space. An unaccepted proposal leaves the item
