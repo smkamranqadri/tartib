@@ -4,7 +4,10 @@
   reached the phone before the move -- lives in `kis/state/private.md`, gitignored and never
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  `v1.0` is tagged and released; `main` is ahead of it, unpushed.
+  **`v2.0` is pushed, tagged and its image published** (2026-09-22, `93bff99`):
+  `smkamranqadri/tartib:v2.0` on Docker Hub, `linux/amd64`, confirmed by manifest rather than by
+  the script's word. **The server still runs `v1.0`** until it is deployed in CapRover -- that
+  step, and the env vars below, are the owner's.
 - Task: none in flight. **Slice 29 (what the AI costs) is done and committed on `main`**, not
   deployed, no blockers: `kis/intent/slice-29-ai-usage.md`. How any of it works -- the event
   stream, the cost, the prompt instrumentation, the dormant quota readout -- is
@@ -53,8 +56,8 @@
   What being unseen leaves unsettled is under Known gaps.
 - **Slices 18 to 22 are closed and accepted on a device.** Plans: `kis/intent/slice-1{8,9}-*.md`,
   `kis/intent/slice-2{0,1,2}-*.md`; what each one changed, in a line: `kis/intent/history.md`.
-- **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 29 are local commits on `main`
-  (unpushed). On the next deploy: migrations 0010-0017 run,
+- **Everything since `v1.0` is pushed but not deployed.** Slices 18 to 29 are on `origin/main`
+  and in `v2.0`. On the deploy: migrations 0010-0017 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config, **`TARTIB_AI_MODEL=gpt-5.6-luna` and
   `TARTIB_AI_REASONING=medium` go in** (pinned 2026-09-21; without them the server keeps
