@@ -79,6 +79,9 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   whether the classifier may propose a repeat rule from text like "every 1st Monday".
   The owner will bring more detail when this is planned; what is here is only what the one note
   shows.
+- **Notes in Pick for me.** Slice 32 picks from open tasks only; on 2026-09-22 the owner left
+  notes out, to be thought through separately. Stars are task-only today (SPEC, task fields), so
+  including notes means deciding what a picked note is and when it leaves Today.
 - **A simple vault inside Tartib: the owner's direction, 2026-09-22, not now.** Credentials are
   the last of the owner's old notes with nowhere to go. A vault like Bitwarden was the question;
   the owner chose to build a simple one into the app, **kept in a separate database or separate

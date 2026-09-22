@@ -10,7 +10,8 @@
   classifying on the pinned `gpt-5.6-luna` at medium reasoning (checks under Proof). The
   database as it was just before is backed up (`private.md`, Backups); that file and `v2.0` are
   the rollback.
-- Task: none in flight.
+- Task: **slice 32, Pick for me** -- planned 2026-09-22 (`../intent/slice-32-pick-for-me.md`),
+  not started.
 
 ## Open
 
@@ -29,11 +30,13 @@
 
 ## Next
 
-1. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`): links
-   between items, approved 2026-09-22, lead it now that the first-day feedback is done.
-2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+1. **Implement slice 32** (`../intent/slice-32-pick-for-me.md`): migration 0019, `POST /api/pick`,
+   the Today modal. The owner put it ahead of links, 2026-09-22.
+2. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`): links
+   between items, approved 2026-09-22.
+3. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-3. **Answer the four questions** under Known gaps, on `v2.1`.
+4. **Answer the four questions** under Known gaps, on `v2.1`.
 
 ## Commands
 
