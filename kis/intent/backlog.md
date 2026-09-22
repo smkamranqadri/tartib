@@ -61,6 +61,15 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   things to decide: whether to accept the looser form people actually type, and whether the boxes
   should be **tickable** -- today they are drawn `readOnly disabled`, so even a correct checklist
   cannot be ticked, which is half a feature for a to-do list.
+- **Deleting a note or task should ask in a modal, not inside the note's body.** The owner's
+  words: *"should ask to delete note or task in modal not in note's body."* What the code does:
+  Delete in the item page's header sets `confirmDelete`, and `Confirm` renders inline **below the
+  text editor** (`ItemPage.tsx`), far from the button that asked. `Confirm.tsx` is inline by
+  design ("with no dialog"), and so far the product has had no modal anywhere: the session outcome,
+  the update bar and the stale-save strip all say so in their comments, and `technical.md` records
+  "there is no modal, here or anywhere." This request reverses that for delete. Decide whether
+  deleting a space (`Space.tsx`, the same `Confirm`) follows it, and whether the other inline
+  questions stay as they are.
 
 Unscheduled candidates:
 
