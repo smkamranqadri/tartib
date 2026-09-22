@@ -6,10 +6,10 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   **`v2.0` is deployed and live** (2026-09-22), and the phone reports `SW_VERSION`
   `2026-09-22.2`. It took deleting and re-adding the home-screen app, because Cloudflare was
-  serving the old service worker -- fixed on `main`, not yet deployed; see Open. That also removed
-  the phone's push subscription, so **reminders must be switched back on in Settings on the
-  phone**. Desktop push still fails, as it always has: `../knowledge/technical.md`, "What browsers
-  do to this app".
+  serving the old service worker -- fixed on `main` for the next version; see Open. Reinstalling
+  removed the phone's push subscription, so **reminders must be switched back on in Settings on
+  the phone**. Desktop push works in Safari (subscribed 2026-09-22); it never worked in Helix,
+  which cannot reach Google's push service -- the browser, not Tartib.
 - Task: none in flight. **Slice 29 (what the AI costs) is done and committed on `main`**, not
   deployed, no blockers: `kis/intent/slice-29-ai-usage.md`. How any of it works -- the event
   stream, the cost, the prompt instrumentation, the dormant quota readout -- is
@@ -88,10 +88,11 @@
 
 ## Open
 
-- **The service-worker cache fix is on `main` but not deployed** -- it needs a `v2.0.1`. Until
-  then every future deploy reaches phones only when Cloudflare's four-hour cache turns over,
-  or after deleting and re-adding the app. After it deploys, purge `sw.js` from Cloudflare once,
-  so the copy cached under the old headers does not linger.
+- **The service-worker cache fix is on `main` and ships with the next version** -- decided
+  2026-09-22 not to cut a `v2.0.1` for it, since reinstalling the app already got the phone onto
+  v2.0. Until it deploys, a new version reaches a phone only when Cloudflare's four-hour cache
+  turns over, or after deleting and re-adding the app. **When it does deploy, purge `sw.js` from
+  Cloudflare once**, so the copy cached under the old headers does not linger.
 
 - **The deployed `v1.0` still carries the Claude fallback**, which hangs for the full 120s
   timeout on that host, so a Codex failure there costs 120s per capture and fails anyway. Removed

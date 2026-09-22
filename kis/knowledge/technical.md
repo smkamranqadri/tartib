@@ -256,10 +256,14 @@ Found by testing, and none of it changes by deploying:
 - Tapping a reminder on iOS opens Tartib but does not route to the notification's URL. Whether
   iOS runs the worker's `notificationclick` at all was never established; what was tried is under
   Reminders above.
-- A desktop Chrome fails to subscribe to push with "Registration failed - push service error":
-  the browser cannot register with FCM and `pushManager.subscribe()` never reaches Tartib. iOS
-  accepted the same key. Not worth chasing -- one switch covers all three pushers, so a second
-  subscription means two buzzes for every reminder and digest.
+- A Chromium-based desktop browser can fail to subscribe to push with "Registration failed - push
+  service error": it cannot register with Google's push service (FCM), so
+  `pushManager.subscribe()` never reaches Tartib. **Confirmed on 2026-09-22 to be the browser,
+  not the app:** it failed in Helix and worked straight away in desktop Safari, with the same
+  server and the same VAPID key. Chromium browsers that turn off or never ship Google's push
+  services cannot do Web Push at all; nothing on the server can fix that. Worth knowing before
+  enabling it anywhere else: one switch covers all three pushers, so every subscribed device
+  gets its own buzz for every reminder and every digest.
 - `pushsubscriptionchange` is handled (slice 15) but unproved: it needs a push service to retire
   an endpoint, and Safari never fires it.
 - The service worker shows nothing when a session ends with the app on screen. Browsers allow
