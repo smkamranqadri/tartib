@@ -143,7 +143,7 @@ export default function Capture({
             <MicIcon />
           </button>
         )}
-        <span className="capture-hint muted">{listening ? "Listening…" : "The first line becomes the title"}</span>
+        <span className="capture-hint muted">{listening ? "Listening…" : "Tartib titles it and files it"}</span>
         <button type="submit" className="primary" disabled={busy || !text.trim()}>
           Add
         </button>

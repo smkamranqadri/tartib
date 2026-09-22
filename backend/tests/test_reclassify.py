@@ -57,7 +57,7 @@ def test_reclassify_all_rebuilds_items_and_carries_flags(tmp_path, monkeypatch):
     with TestClient(create_app(settings)) as client:
         client.headers["Authorization"] = f"Bearer {PASSWORD}"
         rent = client.get(f"/api/captures/{task['capture_id']}").json()
-        assert [i["title"] for i in rent["items"]] == ["Pay", None]
+        assert [i["title"] for i in rent["items"]] == ["pay", None]
         assert rent["items"][0]["status"] == "open"  # split into two: flags not carried
         assert report.carried == 0
         # the old item is gone (SQLite may reuse its id for a rebuilt one)
@@ -80,7 +80,8 @@ def test_reclassify_carries_done_and_star_for_single_task(tmp_path, monkeypatch)
     with TestClient(create_app(settings)) as client:
         client.headers["Authorization"] = f"Bearer {PASSWORD}"
         [item] = client.get(f"/api/captures/{task['capture_id']}").json()["items"]
-        assert item["space"] == "finance" and item["title"] == "Pay rent"  # manual title not kept
+        # The manual title is not kept: the rebuilt text is the title.
+        assert item["space"] == "finance" and item["title"] == "pay rent"
         assert item["status"] == "done" and item["starred"] is True
 
 

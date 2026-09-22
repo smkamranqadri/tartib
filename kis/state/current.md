@@ -10,8 +10,10 @@
   the pinned `gpt-5.6-luna` at medium reasoning (confirmed in the container over SSH,
   2026-09-22). What each slice changed: `kis/intent/history.md`; decisions and proof:
   `kis/intent/slice-*.md`.
-- Task: **slice 31** (`kis/intent/slice-31-titles-and-modals.md`), phase 0 of three: the `.seg`
-  switches become the pills, then the first line as the title, then every question in a modal.
+- Task: **slice 31** (`kis/intent/slice-31-titles-and-modals.md`), **phase B** next: every
+  question in a modal. Phase 0 (the switches are pills, `2e5f8bd`) and phase A (the first line
+  is the title, migration 0018) are done on `main`. **Before deploying 0018, dry-run it on a copy
+  of the live database**: locally it prepended 25 of 40 tasks and moved no `updated_at`.
 
 ## Open
 
@@ -49,8 +51,8 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **299 passed, 8 deselected** (the eight are the evals) and
-  **10/10** from `npm run ui`. Any red is real.
+  Verification commands. Expect **308 passed, 8 deselected** (the eight are the evals) and
+  **13/13** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
   Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;

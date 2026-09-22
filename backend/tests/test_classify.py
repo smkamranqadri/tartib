@@ -51,7 +51,8 @@ def test_confident_proposal_is_filed_with_excerpt(ai_client, monkeypatch, tmp_pa
     assert item["remind_at"] == "2026-09-18T04:00:00Z"  # 09:00 Karachi -> UTC
     assert item["proposal"]["confidence"] == 0.95
     assert "text" not in item["proposal"]
-    assert item["raw_text"] == "call the dentist tomorrow"
+    # The AI title differs from the words, so it becomes line one (slice 31).
+    assert item["raw_text"] == "Call the dentist\n\ncall the dentist tomorrow"
     assert item["capture_id"] == cap["id"]
 
     [call] = records(record)
@@ -138,7 +139,8 @@ def test_mixed_capture_files_items_and_answers_question(ai_client, monkeypatch):
     )
     set_ask_reply(monkeypatch, "No idea.", [])
     cap = capture(ai_client, "buy milk. where did I park?")
-    assert [i["title"] for i in cap["items"]] == ["Buy milk"]
+    # Only case differs, so the text is the title.
+    assert [i["title"] for i in cap["items"]] == ["buy milk"]
     assert cap["answer"]["answer"] == "No idea."
 
 
@@ -249,7 +251,7 @@ def test_startup_requeues_pending_captures(tmp_path, monkeypatch):
     with TestClient(create_app(settings)) as client:
         client.headers["Authorization"] = f"Bearer {PASSWORD}"
         cap = wait_capture(client, 1)
-    assert cap["status"] == "done" and cap["items"][0]["title"] == "Left over"
+    assert cap["status"] == "done" and cap["items"][0]["title"] == "left over"
 
 
 def test_crash_in_one_capture_does_not_stop_the_runner(ai_client, monkeypatch, settings):

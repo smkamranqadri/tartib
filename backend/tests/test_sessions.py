@@ -345,7 +345,7 @@ def test_recent_lists_finished_sessions_and_scopes_to_a_space(auth, tmp_path):
     every = auth.get("/api/sessions/recent", params={"limit": 10}).json()["sessions"]
     assert running["id"] not in [s["id"] for s in every]
     assert [s["id"] for s in every[:3]] == list(reversed(ids))
-    assert every[2]["item_title"] == "Ship it" and every[0]["item_title"] is None
+    assert every[2]["item_title"] == "ship it" and every[0]["item_title"] is None
 
     work_only = auth.get("/api/sessions/recent", params={"space": "work"}).json()["sessions"]
     assert [s["id"] for s in work_only] == [ids[0]] and work_only[0]["item_space"] == "work"

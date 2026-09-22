@@ -14,7 +14,7 @@ function EditorUnavailable({ value }: { value: string }) {
   return (
     <>
       <div className="raw big">
-        <Markdown text={value} query={null} />
+        <Markdown text={value} query={null} titled />
       </div>
       <p className="save-state bad">
         <span className="tone warn">The editor could not load{navigator.onLine ? "" : " -- you are offline"}. Your text is unchanged.</span>
@@ -267,7 +267,7 @@ export default function TextEditor({
         </Suspense>
       ) : (
         <div className="raw big" ref={rendered} onClick={enter} role="presentation" title="Click to edit">
-          <Markdown text={draft} query={query} onTick={tick} />
+          <Markdown text={draft} query={query} onTick={tick} titled />
         </div>
       )}
       <SaveState status={status} offline={offline} onRetry={() => void flush()} />

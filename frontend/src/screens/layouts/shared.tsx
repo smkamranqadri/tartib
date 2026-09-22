@@ -61,7 +61,9 @@ export function ItemLead({ item: serverItem, onChanged }: { item: Item; onChange
 export function ItemLine({ item: serverItem, meta = true }: { item: Item; meta?: boolean }) {
   const pending = usePending();
   const item = applyTo(serverItem, pending);
-  const title = item.shape === "task" ? item.title || flattenFirstLine(item.raw_text) : flattenFirstLine(item.raw_text);
+  // The first line is the title (slice 31), so a row reads it straight from the text -- which is
+  // also what a queued offline edit changes.
+  const title = flattenFirstLine(item.raw_text);
   return (
     <>
       <span className={`line-title ${item.status === "done" ? "done" : ""}`}>{title}</span>

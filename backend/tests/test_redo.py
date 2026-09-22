@@ -28,7 +28,9 @@ def test_a_reason_is_sent_and_a_confident_answer_files_itself(ai_client, monkeyp
     assert r.status_code == 200, r.text
     body = r.json()
     assert (body["stage"], body["shape"], body["space"]) == ("filed", "task", "home")
-    assert body["proposal"]["space"] == "home" and body["raw_text"] == item["raw_text"]
+    assert body["proposal"]["space"] == "home"
+    # A note had no title to protect: the task's goes above the text, as on filing (slice 31).
+    assert body["raw_text"] == "Call Sara\n\n" + item["raw_text"] and body["title"] == "Call Sara"
     assert body["feedback"].endswith(": this is a home task, not a work note")
 
     [call] = records(record)

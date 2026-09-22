@@ -88,7 +88,7 @@ def test_task_header_carries_status(ai_client, monkeypatch, tmp_path):
     ai_client.post("/api/ask", json={"question": "invoice status?"})
     prompt = records(record)[-1]["argv"][-1]
     assert f"[id {item['id']}] " in prompt
-    assert "task: Ship the invoice · due 2026-09-20 · done" in prompt
+    assert "task: ship the invoice · due 2026-09-20 · done" in prompt
 
 
 def test_ask_falls_back_to_recent_in_space(ai_client, monkeypatch, tmp_path):

@@ -21,7 +21,7 @@ export default function AnswerView({ result, onClose }: { result: Answer; onClos
           {result.items.map((item) => (
             <li key={item.id}>
               <Link to={`/items/${item.id}`}>
-                <span className="muted">#{item.id}</span> {item.shape === "task" && item.title ? item.title : flattenFirstLine(item.raw_text)}
+                <span className="muted">#{item.id}</span> {flattenFirstLine(item.raw_text)}
               </Link>
             </li>
           ))}

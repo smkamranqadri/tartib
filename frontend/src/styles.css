@@ -448,7 +448,9 @@ button:disabled { opacity: .5; cursor: default; }
 /* item page */
 .crumbs { margin: 0; font-size: 14px; }
 .crumbs a { text-decoration: none; }
-.item-title { margin: 8px 16px 0; font-size: 20px; }
+/* The item's first line is its title (slice 31), drawn once, as a title, in the rendered text
+   (`.md-title`) and in the editor (`.cm-title-line`) alike, so tapping in does not jump. */
+.md-title, .cm-title-line { font-size: 1.15em; font-weight: 600; line-height: 1.4; }
 .card-body .raw.big { margin: 8px 16px; }
 .item-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 16px 8px; font-size: 12px; }
 .chip.stage-attention { color: var(--warn); }

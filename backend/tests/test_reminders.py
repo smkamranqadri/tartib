@@ -499,7 +499,7 @@ def test_the_running_app_pushes_without_anyone_calling_tick(auth, tmp_path, monk
         while time.monotonic() < deadline and not sent:
             time.sleep(0.02)
 
-    assert sent == [{"title": "Call the bank", "url": "/today", "tag": f"item-{task['id']}"}]
+    assert sent == [{"title": "call the bank", "url": "/today", "tag": f"item-{task['id']}"}]
     assert item_row(tmp_path, task["id"])["reminded_at"] is not None
 
 

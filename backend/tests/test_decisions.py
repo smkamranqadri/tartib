@@ -19,7 +19,7 @@ def test_approve_requires_a_space(auth):
     body = r.json()
     assert body["stage"] == "filed" and body["shape"] == "task" and body["space"] == "home"
     assert body["title"] == "Pay rent" and body["due"] == "2026-09-19"
-    assert body["raw_text"] == "pay rent friday"
+    assert body["raw_text"] == "Pay rent\n\npay rent friday"  # the title is line one
 
 
 def test_approve_applies_stored_proposal(auth, settings):

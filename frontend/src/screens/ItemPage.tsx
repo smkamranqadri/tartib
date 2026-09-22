@@ -192,7 +192,6 @@ export default function ItemPage({
           </span>
         }
       >
-        {isTask && item.title && item.title.trim() !== item.raw_text.trim() && <h2 className="item-title">{item.title}</h2>}
         {stale && (
           <div className="conflict-strip">
             <span className="tone warn">Changed elsewhere since you opened it. Your text is kept.</span>

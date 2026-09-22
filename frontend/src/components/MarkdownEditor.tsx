@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import CodeMirror, { EditorView, type ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import CodeMirror, { Decoration, EditorView, type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
@@ -33,6 +33,15 @@ const highlight = HighlightStyle.define([
   { tag: tags.processingInstruction, color: "var(--muted)", opacity: "0.6" },
   { tag: tags.contentSeparator, color: "var(--muted)" },
 ]);
+
+/** Line one is the item's title (slice 31), drawn as `Markdown` draws it -- unless it is a
+ *  heading, a list item, a quote or a fence, which the renderer does not title either. */
+const NOT_A_TITLE = /^\s*(#|>|```|~~~|[-*+]\s|\d+[.)]\s)/;
+const titleLine = EditorView.decorations.compute(["doc"], (state) => {
+  const line = state.doc.line(1);
+  if (!line.text.trim() || NOT_A_TITLE.test(line.text)) return Decoration.none;
+  return Decoration.set([Decoration.line({ class: "cm-title-line" }).range(line.from)]);
+});
 
 /** Bronze, from the app's own tokens rather than a second palette. */
 const theme = EditorView.theme(
@@ -85,7 +94,7 @@ export default function MarkdownEditor({
       onChange={onChange}
       onBlur={onBlur}
       theme={theme}
-      extensions={[markdown(), syntaxHighlighting(highlight), EditorView.lineWrapping]}
+      extensions={[markdown(), syntaxHighlighting(highlight), EditorView.lineWrapping, titleLine]}
       basicSetup={{
         lineNumbers: false,
         foldGutter: false,

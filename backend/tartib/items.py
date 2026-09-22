@@ -28,6 +28,7 @@ from tartib.store import (
     insert_item,
     keep_whole,
     list_spaces,
+    same_title,
     serialize_item,
     should_file,
     similar_items,
@@ -308,6 +309,13 @@ async def redo(
         raise HTTPException(status_code=502, detail="The classifier read it as a question.")
 
     fields = proposal.model_dump(include={"shape", "space", "title", "due", "remind_at"})
+    # Line one is the classifier's only while it is still the title it proposed. Once you have
+    # edited it, it is yours, and a second attempt does not write over it or above it. With no
+    # earlier title -- a note becoming a task -- there is nothing of yours to protect, and the new
+    # title goes above the text as it would on filing.
+    earlier_title = (json.loads(row["proposal_json"] or "{}") or {}).get("title")
+    if earlier_title and not same_title(row["raw_text"], earlier_title):
+        fields.pop("title", None)
     proposal_json = proposal.model_dump_json(exclude={"text"})
     allowed = list_spaces(conn)
     if proposal.clarify is None and should_file(

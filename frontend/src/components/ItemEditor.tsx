@@ -31,7 +31,6 @@ export default function ItemEditor({
   const base = fromProposal && item.proposal && item.proposal.shape !== "question" ? item.proposal : item;
   const [shape, setShape] = useState<Shape>(base.shape === "question" ? "note" : base.shape);
   const [space, setSpace] = useState<string | null>(base.space ?? item.space);
-  const [title, setTitle] = useState(base.title ?? "");
   const [due, setDue] = useState(base.due ?? "");
   const [remind, setRemind] = useState(toLocalInput(base.remind_at));
   const [busy, setBusy] = useState(false);
@@ -47,7 +46,6 @@ export default function ItemEditor({
     setSaved(false);
     const edit: Edit = { shape, space };
     if (shape === "task") {
-      edit.title = title.trim() || null;
       edit.due = due || null;
       edit.remind_at = fromLocalInput(remind);
     }
@@ -78,10 +76,6 @@ export default function ItemEditor({
       </div>
       {shape === "task" && (
         <>
-          <label>
-            <span>Title</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short imperative title" />
-          </label>
           <div className="editor-row">
             <label>
               <span>Due</span>

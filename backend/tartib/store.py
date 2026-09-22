@@ -15,6 +15,52 @@ FILING_FIELDS = ("shape", "space", "title", "due", "remind_at")
 EDITABLE_FIELDS = FILING_FIELDS + ("starred", "status", "text")
 
 
+# --- the title is the text's first line (slice 31) ---
+#
+# `title` is still a column, and everything that names an item reads it -- rows, reminders,
+# sessions, Ask's item header, the classifier's context -- but it is **derived**: for a task it
+# is always the flattened first line of `raw_text`, set here on every write, never stored apart
+# from the text. A note keeps `title` null; what names a note is its first line too, read
+# straight from the text. The AI's task title reaches the text as line one (rule 1, amended
+# 2026-09-22); the capture's own text is never touched.
+
+_LEADERS = re.compile(r"^\s*(?:#{1,6}\s+|>\s*|(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)*")
+_INLINE = re.compile(r"(\*\*|__|~~|`)")
+
+
+def title_of(text: str | None) -> str | None:
+    """The first non-empty line, with its markdown taken off. None for empty text."""
+    for line in (text or "").split("\n"):
+        flat = _INLINE.sub("", _LEADERS.sub("", line)).strip()
+        if flat:
+            return flat
+    return None
+
+
+def same_title(a: str | None, b: str | None) -> bool:
+    """Whether two lines name the same thing: markdown off, case ignored. "Call the dentist" and
+    "call the dentist" are one title, and adding the first above the second would repeat it."""
+    fa, fb = title_of(a), title_of(b)
+    return (fa or "").casefold() == (fb or "").casefold()
+
+
+def retitle(text: str, title: str | None, *, replace: bool = False) -> str:
+    """`text` with `title` as its first line, or unchanged when it already is.
+
+    `replace` is an edit of the title: for a task, line one *is* the title, so that line is
+    rewritten. Without it -- a task being filed -- the title goes above, a blank line between,
+    so nothing captured is overwritten."""
+    new = (title or "").strip()
+    if not new or same_title(text, new):
+        return text
+    if replace and text.strip():
+        lines = text.split("\n")
+        at = next(i for i, line in enumerate(lines) if line.strip())
+        lines[at] = new
+        return "\n".join(lines)
+    return f"{new}\n\n{text}" if text.strip() else new
+
+
 class SpaceError(ValueError):
     """A space that is not configured, or a missing space where one is required."""
 
@@ -694,6 +740,9 @@ def insert_item(
     values = _clean(fields, allowed)
     if stage == "filed" and not values.get("space"):
         raise SpaceError("a space is required to file an item")
+    if values.get("shape") == "task":
+        raw_text = retitle(raw_text, values.get("title"))
+        values["title"] = title_of(raw_text)
     cols = [
         "capture_id",
         "raw_text",
@@ -839,6 +888,20 @@ def update_fields(
     values = _clean(fields, allowed)
     if not values:
         return
+    if {"raw_text", "title", "shape"} & values.keys():
+        row = conn.execute(
+            "SELECT raw_text, shape FROM items WHERE id = ?", (item_id,)
+        ).fetchone()
+        if row is not None and values.get("shape", row["shape"]) == "task":
+            # A title edit -- the approval card's quoted word -- is an edit of line one.
+            text = values.get("raw_text", row["raw_text"])
+            if "title" in values and "raw_text" not in values:
+                # Line one is the title, so renaming it is rewriting that line. Moving a note to a
+                # task is the same call with the note's first line already there.
+                text = retitle(text, values["title"], replace=row["shape"] == "task")
+                if text != row["raw_text"]:
+                    values["raw_text"] = text
+            values["title"] = title_of(text)
     if "remind_at" in values:
         # Moving a reminder re-arms it; without this a reminder that fired could never fire
         # again. It has to be a real *change*: the editor resends `remind_at` on every save,

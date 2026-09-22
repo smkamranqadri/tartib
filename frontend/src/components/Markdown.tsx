@@ -42,6 +42,7 @@ export default function Markdown({
   query = null,
   className,
   onTick,
+  titled = false,
 }: {
   text: string;
   /** The search that brought you here, so the match is marked where it sits. */
@@ -49,6 +50,8 @@ export default function Markdown({
   className?: string;
   /** Tapping the `n`th checklist box. */
   onTick?: (box: number) => void;
+  /** Draw the first line as the item's title (slice 31). Only an item's own text is titled. */
+  titled?: boolean;
 }) {
   const tokens = useMemo(() => {
     try {
@@ -81,7 +84,7 @@ export default function Markdown({
 
   return (
     <Tick.Provider value={onTick ?? null}>
-      <div className={`md ${className ?? ""}`}>{blocks(tokens, query)}</div>
+      <div className={`md ${className ?? ""}`}>{titled ? titledBlocks(tokens, query) : blocks(tokens, query)}</div>
     </Tick.Provider>
   );
 }
@@ -99,6 +102,29 @@ function TaskBox({ item }: { item: Loose }) {
       aria-label={item.checked ? "Untick" : "Tick"}
       onChange={() => tick(box)}
     />
+  );
+}
+
+/** The first line is the title when the text opens with a paragraph. A heading already looks
+ *  like one, and a list, a quote or code is not a title, so those are drawn as they are -- the
+ *  same rule `titleLine` applies in the editor. The line ends at the first `br`, which keeps its
+ *  indent. */
+function titledBlocks(tokens: Loose[], query: string | null): ReactNode {
+  const first = tokens.findIndex((t) => t.type !== "space");
+  const head = tokens[first];
+  if (!head || head.type !== "paragraph" || !head.tokens) return blocks(tokens, query);
+  const cut = head.tokens.findIndex((t) => t.type === "br");
+  const line = cut < 0 ? head.tokens : head.tokens.slice(0, cut);
+  const rest = cut < 0 ? [] : head.tokens.slice(cut);
+  return (
+    <>
+      {blocks(tokens.slice(0, first), query)}
+      <p>
+        <span className="md-title">{inlines(line, query)}</span>
+        {inlines(rest, query)}
+      </p>
+      {blocks(tokens.slice(first + 1), query)}
+    </>
   );
 }
 

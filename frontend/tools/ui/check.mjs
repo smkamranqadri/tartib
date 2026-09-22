@@ -1,5 +1,6 @@
 /**
- * Re-runs the UI checks slices 23, 24 and 25 proved once and then threw away.
+ * Re-runs the UI checks slices 23, 24 and 25 proved once and then threw away, and since
+ * 2026-09-22 the fixes after v2.0 (F1, F2) and slice 31.
  *
  *     TARTIB_PASSWORD=... node frontend/tools/ui/check.mjs [--url http://localhost:8000] [--head]
  *
@@ -280,6 +281,81 @@ async function main() {
       const { cost_verified } = await api(page, "GET", "/api/usage");
       if (!cost_verified && /[$£€]/.test(row)) throw new Error("showed an unverified cost");
       return row.slice(0, 60);
+    });
+
+    // --- fixes after v2.0, proved once by hand on 2026-09-22 and kept here so they stay fixed ---
+    await check("F1 a save does not reload the note in a space's split view", async () => {
+      // Every save bumps `version`, which refetches the open item; ItemPage showed its skeleton
+      // for that, which unmounted the editor mid-sentence (c91fbf9).
+      const wide = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+      const desk = await wide.newPage();
+      try {
+        await desk.request.post(`${URL}/api/login`, { data: { password: PASSWORD } });
+        await desk.goto(`${URL}/spaces/${space}?item=${note.id}`);
+        await desk.locator(".split-item .text-body .md").waitFor({ timeout: 10000 });
+        await desk.evaluate(() => {
+          window.__skeleton = 0;
+          new MutationObserver(() => {
+            if (document.querySelector(".split-item .skeleton")) window.__skeleton++;
+          }).observe(document.body, { subtree: true, childList: true });
+        });
+        await desk.locator(".split-item .md p").last().click();
+        await desk.locator(".split-item .cm-editor").waitFor({ timeout: 8000 });
+        await desk.keyboard.press("End");
+        await desk.keyboard.type(" saved");
+        await desk.waitForTimeout(3500);
+        const skeletons = await desk.evaluate(() => window.__skeleton);
+        const open = await desk.locator(".split-item .cm-editor").count();
+        if (skeletons || !open) throw new Error(`skeleton ${skeletons}x, editor open ${open}`);
+        const text = (await api(desk, "GET", `/api/items/${note.id}`)).raw_text;
+        if (!text.endsWith(" saved")) throw new Error("the edit did not reach the server");
+        return "no skeleton, editor open, saved";
+      } finally {
+        await wide.close();
+      }
+    });
+
+    await check("F2 a checklist box ticks where it is drawn", async () => {
+      const list = await api(page, "POST", "/api/items", {
+        shape: "note",
+        space,
+        text: "UI check list\n\n- [ ] first\n- [ ] second\n\n```\n- [ ] not a box\n```",
+      });
+      made.push(list.id);
+      await page.goto(`${URL}/items/${list.id}`);
+      const boxes = page.locator(".text-body .md li.md-task > input");
+      await boxes.first().waitFor({ timeout: 8000 });
+      await boxes.nth(1).tap();
+      await page.waitForTimeout(1500);
+      const text = (await api(page, "GET", `/api/items/${list.id}`)).raw_text;
+      if (!text.includes("- [ ] first\n- [x] second")) throw new Error(JSON.stringify(text));
+      if (!text.includes("- [ ] not a box")) throw new Error("ticked inside a code block");
+      if (await page.locator(".cm-editor").count()) throw new Error("the tap opened the editor");
+      return "second box ticked, code untouched";
+    });
+
+    // --- slice 31: the first line is the title ---
+    await check("S31 the title is shown once, as a title", async () => {
+      const titled = await api(page, "POST", "/api/items", {
+        shape: "task",
+        space,
+        text: "UI check title\n\nthe words under it",
+      });
+      made.push(titled.id);
+      await page.goto(`${URL}/items/${titled.id}`);
+      await page.locator(".text-body .md").waitFor({ timeout: 8000 });
+      const seen = await page.evaluate(() => {
+        const card = document.querySelector(".text-body").closest(".card");
+        return {
+          times: card.innerText.split("UI check title").length - 1,
+          styled: document.querySelector(".text-body .md-title")?.textContent ?? null,
+          heading: !!document.querySelector(".item-title"),
+        };
+      });
+      if (seen.times !== 1) throw new Error(`shown ${seen.times} times`);
+      if (seen.styled !== "UI check title") throw new Error(`title line is ${seen.styled}`);
+      if (seen.heading) throw new Error("the old heading is back");
+      return "once, styled";
     });
 
   } finally {

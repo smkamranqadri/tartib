@@ -60,7 +60,7 @@ export default function ItemRow({
   }
 
   const firstLine = flattenFirstLine(item.raw_text);
-  const headline = isTask ? item.title || firstLine : firstLine;
+  const headline = firstLine; // the first line is the title (slice 31)
 
   /* The space is a chip, not another word in a grey run-on line: it is the one piece of metadata
      you scan a list by. Everything else stays plain text after it. */
