@@ -38,8 +38,36 @@ type Loose = {
  *  (slice 33). Given where the item's own links are known; elsewhere -- a brief, an answer, a
  *  line typed since the page loaded -- a link goes through `/link` and is resolved on the tap. */
 export const LinkTargets = createContext<Record<string, number | null> | null>(null);
+/** The same for `[[space:…]]`: the space it names, or null when there is no such space. */
+export const SpaceLinkTargets = createContext<Record<string, string | null> | null>(null);
+
+const SPACE_LINK = /^space:\s*(.+)$/i;
 
 function WikiLink({ title, query }: { title: string; query: string | null }) {
+  const space = SPACE_LINK.exec(title);
+  if (space) return <SpaceLink title={title} name={space[1].trim().toLowerCase()} query={query} />;
+  return <ItemLink title={title} query={query} />;
+}
+
+/** A link to a space (phase B), drawn by the space's name. With no such space it dims, as a
+ *  missing item does; unknown to the page, it opens the space page, which says if it is gone. */
+function SpaceLink({ title, name, query }: { title: string; name: string; query: string | null }) {
+  const targets = useContext(SpaceLinkTargets);
+  if (targets && targets[title] === null) {
+    return (
+      <span className="md-link-missing" title="No space has this name">
+        {plain(name, query)}
+      </span>
+    );
+  }
+  return (
+    <Link className="md-link md-space-link" to={`/spaces/${encodeURIComponent(name)}`} onClick={(e) => e.stopPropagation()}>
+      {plain(name, query)}
+    </Link>
+  );
+}
+
+function ItemLink({ title, query }: { title: string; query: string | null }) {
   const targets = useContext(LinkTargets);
   const known = targets && title in targets ? targets[title] : undefined;
   if (known === null) {

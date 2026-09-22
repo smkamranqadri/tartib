@@ -4,7 +4,7 @@ import { autocompletion, type CompletionContext, type CompletionResult } from "@
 import { markdown } from "@codemirror/lang-markdown";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { suggestLinks } from "../api";
+import { getSpaces, suggestLinks } from "../api";
 import { findSpot, type Spot } from "../markdown";
 
 /** Everything CodeMirror is in this module and nothing else imports it, so it is its own chunk.
@@ -100,6 +100,26 @@ function linkSource(exclude?: number) {
     const open = ctx.matchBefore(/\[\[[^[\]\n]*$/);
     if (!open) return null;
     const q = open.text.slice(2);
+    const closed = ctx.state.sliceDoc(ctx.pos, ctx.pos + 2) === "]]";
+    // After `space:` it offers spaces (phase B), matched by what follows the prefix.
+    const spaceQ = /^space:\s*(.*)$/i.exec(q);
+    if (spaceQ) {
+      let names: string[];
+      try {
+        names = (await getSpaces()).spaces;
+      } catch {
+        return null;
+      }
+      const want = spaceQ[1].trim().toLowerCase();
+      const hits = names.filter((n) => n.includes(want));
+      if (ctx.aborted || !hits.length) return null;
+      return {
+        from: open.from + 2,
+        to: closed ? ctx.pos + 2 : ctx.pos,
+        filter: false,
+        options: hits.map((n) => ({ label: `space:${n}`, detail: "space", apply: `space:${n}]]` })),
+      };
+    }
     let items;
     try {
       items = (await suggestLinks(q, exclude)).items;
@@ -107,7 +127,6 @@ function linkSource(exclude?: number) {
       return null; // offline: typing a link by hand still works
     }
     if (ctx.aborted || !items.length) return null;
-    const closed = ctx.state.sliceDoc(ctx.pos, ctx.pos + 2) === "]]";
     return {
       from: open.from + 2,
       to: closed ? ctx.pos + 2 : ctx.pos,

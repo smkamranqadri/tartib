@@ -129,7 +129,37 @@ def reindex_links(conn: sqlite3.Connection) -> int:
     return len(rows)
 
 
+SPACE_LINK = "space:"
+
+
+def space_of(key: str) -> str | None:
+    """The space a key names, for `[[space:coding]]` (phase B), else None. The prefix wins over
+    any item whose first line happens to start with it."""
+    if not key.startswith(SPACE_LINK):
+        return None
+    return key[len(SPACE_LINK) :].strip() or None
+
+
+def rewrite_space_links(conn: sqlite3.Connection, old: str, new: str, allowed) -> None:
+    """A space was renamed: `[[space:old]]` becomes `[[space:new]]` in every item that has one,
+    through update_fields like an item rename, in the caller's transaction."""
+    key = SPACE_LINK + old
+    ids = [
+        r["source_id"]
+        for r in conn.execute("SELECT source_id FROM item_links WHERE target = ?", (key,))
+    ]
+    for item_id in ids:
+        row = conn.execute("SELECT raw_text FROM items WHERE id = ?", (item_id,)).fetchone()
+        if row is None:
+            continue
+        text = relink(row["raw_text"], key, SPACE_LINK + new)
+        if text != row["raw_text"]:
+            update_fields(conn, item_id, {"text": text}, allowed)
+
+
 def resolve_link(conn: sqlite3.Connection, key: str) -> int | None:
+    if space_of(key) is not None:
+        return None  # a space link never opens an item
     row = conn.execute(
         "SELECT i.id FROM item_keys k JOIN items i ON i.id = k.item_id WHERE k.key = ?"
         " ORDER BY i.updated_at DESC, i.id DESC LIMIT 1",

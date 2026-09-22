@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from tartib.auth import require_auth
 from tartib.clock import utcnow_iso
 from tartib.deps import get_db
-from tartib.store import list_spaces, space_policies
+from tartib.store import list_spaces, rewrite_space_links, space_policies
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -98,6 +98,7 @@ def rename_space(name: str, body: SpaceBody, conn: sqlite3.Connection = Depends(
         conn.execute("UPDATE spaces SET name = ? WHERE name = ?", (new, old))
         conn.execute("UPDATE items SET space = ? WHERE space = ?", (new, old))
         conn.execute("UPDATE briefs SET space = ? WHERE space = ?", (new, old))
+        rewrite_space_links(conn, old, new, list_spaces(conn))
         conn.commit()
     return {"spaces": list_spaces(conn), "name": new}
 

@@ -9,7 +9,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from tartib.auth import require_auth
 from tartib.deps import get_db
-from tartib.store import LINK, link_key, resolve_link, serialize_item
+from tartib.store import (
+    LINK,
+    SPACE_LINK,
+    link_key,
+    list_spaces,
+    resolve_link,
+    serialize_item,
+    space_of,
+)
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -23,7 +31,16 @@ def link_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     `linked_from`: the items whose links open this one. With two items sharing a first line only
     the one that wins the link is linked from."""
     written = [m.group(2) for m in LINK.finditer(row["raw_text"] or "") if m.group(2)]
-    links = {w: resolve_link(conn, link_key(w)) if link_key(w) else None for w in written}
+    spaces = set(list_spaces(conn))
+    links: dict = {}
+    space_links: dict = {}
+    for w in written:
+        key = link_key(w)
+        name = space_of(key)
+        if name is not None:
+            space_links[w] = name if name in spaces else None
+        else:
+            links[w] = resolve_link(conn, key) if key else None
     key = conn.execute("SELECT key FROM item_keys WHERE item_id = ?", (row["id"],)).fetchone()
     linked_from: list = []
     if key and key["key"] and resolve_link(conn, key["key"]) == row["id"]:
@@ -32,7 +49,11 @@ def link_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
             " WHERE l.target = ? AND l.source_id != ? ORDER BY i.updated_at DESC LIMIT ?",
             (key["key"], row["id"], LINKED_FROM),
         ).fetchall()
-    return {"links": links, "linked_from": [serialize_item(r) for r in linked_from]}
+    return {
+        "links": links,
+        "space_links": space_links,
+        "linked_from": [serialize_item(r) for r in linked_from],
+    }
 
 
 @router.get("/links/suggest")
@@ -58,6 +79,19 @@ def suggest(
             for r in rows
         ]
     }
+
+
+@router.get("/spaces/{name}/linked")
+def linked_to_space(name: str, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """Items in other spaces whose text links here with `[[space:name]]`. Listed apart from the
+    space's own items and never counted among them: the item still has one space (phase B)."""
+    space = name.strip().lower()
+    rows = conn.execute(
+        "SELECT i.* FROM item_links l JOIN items i ON i.id = l.source_id"
+        " WHERE l.target = ? AND i.space IS NOT ? ORDER BY i.updated_at DESC LIMIT ?",
+        (SPACE_LINK + space, space, LINKED_FROM),
+    ).fetchall()
+    return {"items": [serialize_item(r) for r in rows]}
 
 
 @router.get("/links/resolve")

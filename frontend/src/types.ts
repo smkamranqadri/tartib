@@ -59,6 +59,8 @@ export interface Item {
   /** From GET /api/items/{id} only (slice 33): each `[[…]]` as written, to the id it opens or
    *  null; and the items whose links open this one. */
   links?: Record<string, number | null>;
+  /** Each `[[space:…]]` as written, to the space it names or null when there is none. */
+  space_links?: Record<string, string | null>;
   linked_from?: Item[];
 }
 

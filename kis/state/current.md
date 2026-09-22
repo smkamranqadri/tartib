@@ -10,8 +10,8 @@
   classifying on the pinned `gpt-5.6-luna` at medium reasoning (checks under Proof). The
   database as it was just before is backed up (`private.md`, Backups); that file and `v2.0` are
   the rollback.
-- Task: **slice 33, links, phase B** (`../intent/slice-33-links.md`), next; **phase A built and
-  verified on `main`** (Proof there), not deployed. Phase mode.
+- Task: none in flight. **Slice 33 phases A and B (links) are built and verified on `main`**,
+  not deployed (`../intent/slice-33-links.md`, Proof); phase C waits for Next 4.
   **Slice 32 (Pick for me) is built and verified on `main`, not deployed**
   (`../intent/slice-32-pick-for-me.md`, Proof); the owner chose to start 33 before deploying.
 
@@ -32,9 +32,10 @@
 
 ## Next
 
-1. **Deploy slice 32 as `v2.2`**: bump `SW_VERSION`, back up the database first (`private.md`),
-   `./deploy.sh v2.2`, then check migration 0019 applied and one Pick from the phone.
-2. **Slice 33 phase B** (`../intent/slice-33-links.md`): `[[space:name]]`; C after item 4 below.
+1. **Deploy slices 32 and 33 as `v2.2`**: bump `SW_VERSION`, back up the database first
+   (`private.md`), `./deploy.sh v2.2`, then check migrations 0019 and 0020 applied, one Pick and
+   one link from the phone.
+2. **Slice 33 phase C** (the classifier proposes links) once item 4 is done.
 3. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`).
 4. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
@@ -43,8 +44,8 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **328 passed, 8 deselected** (the eight are the evals) and
-  **17/17** from `npm run ui`. Any red is real.
+  Verification commands. Expect **332 passed, 8 deselected** (the eight are the evals) and
+  **18/18** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
   Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;

@@ -500,6 +500,29 @@ async function main() {
       return "offered with its space, inserted, saved";
     });
 
+    await check("S33 a space link opens the space, which lists the item apart", async () => {
+      const other = spaces.find((s) => s !== space && s !== "Unfiled");
+      if (!other) return "skipped: only one space";
+      const stamp = Date.now();
+      const item = await api(page, "POST", "/api/items", {
+        shape: "task",
+        space,
+        text: `Space link source ${stamp}\n\nalso belongs to [[space:${other}]]`,
+      });
+      made.push(item.id);
+      await page.goto(`${URL}/items/${item.id}`);
+      const link = page.locator(".text-body a.md-space-link");
+      await link.waitFor({ timeout: 8000 });
+      if ((await link.innerText()) !== other) throw new Error(`drawn as ${await link.innerText()}`);
+      await link.tap();
+      await page.waitForURL(`**/spaces/${other}`, { timeout: 8000 });
+      const here = page.locator(".linked-here .rows li", { hasText: `Space link source ${stamp}` });
+      await here.waitFor({ timeout: 8000 });
+      const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (wide > 0) throw new Error(`scrolls sideways by ${wide}px`);
+      return `opened ${other}, listed under Linked here`;
+    });
+
   } finally {
     for (const id of made) await api(page, "DELETE", `/api/items/${id}`).catch(() => {});
     await browser.close();

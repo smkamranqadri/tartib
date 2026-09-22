@@ -166,3 +166,44 @@ def test_the_index_is_rebuilt_from_the_text(auth, settings):
     conn.close()
     assert get(auth, src["id"])["links"] == {"Target": target["id"]}
     assert get(auth, src["id"])["updated_at"] == before  # an index write is not an edit
+
+
+# --- phase B: [[space:name]] ---
+
+
+def test_a_space_link_lists_the_item_under_that_space_not_in_it(auth):
+    item = add(auth, "Console app\n\nalso [[space:Home]] and [[space:nowhere]]", shape="task")
+    got = get(auth, item["id"])
+    assert got["space_links"] == {"space:Home": "home", "space:nowhere": None}
+    assert got["links"] == {}
+    linked = auth.get("/api/spaces/home/linked").json()["items"]
+    assert [i["id"] for i in linked] == [item["id"]]
+    own = auth.get("/api/items", params={"space": "home"}).json()["items"]
+    assert item["id"] not in [i["id"] for i in own]  # it keeps its one space
+    # An item already in the space is its own, not "linked here".
+    add(auth, "Kitchen\n\n[[space:home]]", space="home")
+    assert len(auth.get("/api/spaces/home/linked").json()["items"]) == 1
+
+
+def test_renaming_a_space_rewrites_its_links(auth):
+    auth.post("/api/spaces", json={"name": "coding"})
+    item = add(auth, "Console app\n\nsee [[space:coding]], keep `[[space:coding]]`")
+    assert auth.patch("/api/spaces/coding", json={"name": "code"}).status_code == 200
+    got = get(auth, item["id"])
+    assert got["raw_text"] == "Console app\n\nsee [[space:code]], keep `[[space:coding]]`"
+    assert got["space_links"] == {"space:code": "code"}
+    assert [i["id"] for i in auth.get("/api/spaces/code/linked").json()["items"]] == [item["id"]]
+
+
+def test_deleting_a_space_leaves_its_links_missing(auth):
+    auth.post("/api/spaces", json={"name": "scratch"})
+    item = add(auth, "see [[space:scratch]]")
+    assert auth.delete("/api/spaces/scratch").status_code == 200
+    assert get(auth, item["id"])["space_links"] == {"space:scratch": None}
+
+
+def test_a_space_link_never_opens_an_item(auth):
+    add(auth, "space:home")  # an item whose first line looks like one
+    src = add(auth, "see [[space:home]]")
+    assert get(auth, src["id"])["links"] == {}
+    assert auth.get("/api/links/resolve", params={"title": "space:home"}).status_code == 404

@@ -3,7 +3,7 @@
 Planned 2026-09-22 with the owner, from the backlog entry approved that day ("we definitely need
 links"). Phase mode: A and B each committed and proved on their own; C is direction only and gets
 its own plan later.
-**Phase A built and verified 2026-09-22 (Proof, below); B next. Nothing of 33 is deployed.**
+**Phases A and B built and verified 2026-09-22 (Proof, below); C waits for the duplicate judgment. Nothing of 33 is deployed.**
 
 ## What was reported
 
@@ -134,3 +134,19 @@ Backlog: the links entry leaves; the item graph drops "blocked on links". histor
   hands its links to whichever was touched last; past three levels of nested retitling the rest
   dims, unlogged; a rewritten item's text is trimmed of outer whitespace (`_clean`). On a phone
   the picker can reach the screen's right edge.
+
+## Proof: phase B (2026-09-22, local)
+
+- As built: `[[space:name]]` is the same token, keyed `space:name`; `store.space_of` reads it and
+  `resolve_link` never answers one with an item. `GET /api/items/{id}` adds `space_links`
+  (as written, to the space or null); `GET /api/spaces/{name}/linked` lists items elsewhere that
+  link to the space. `rename_space` calls `store.rewrite_space_links` before its commit. The
+  client draws a space link by the space's name, dimmed when the space is gone; the picker offers
+  spaces after `[[space:`. "Linked here" sits under the space's list.
+- `uv run pytest -q`: **332 passed, 8 deselected** (four more in `test_links.py`: acceptance 6
+  and 7, a missing space, and a space link never opening an item); `ruff` clean.
+- `npm run ui`: **18/18**, one new: S33 space link (drawn by name, opens the space, the item under
+  Linked here, no sideways scroll). `tsc` clean.
+- Looked at on 390px and 1280px: the space link and a dimmed missing one, the space picker, and
+  Linked here on both layouts.
+- No separate review for B: it reuses A's reviewed rewrite path (`relink`, `update_fields`).

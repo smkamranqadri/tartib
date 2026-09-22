@@ -8,7 +8,7 @@ import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import { LinkIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
-import { LinkTargets } from "../components/Markdown";
+import { LinkTargets, SpaceLinkTargets } from "../components/Markdown";
 import Modal, { ConfirmModal } from "../components/Modal";
 import TextEditor, { type SaveResult } from "../components/TextEditor";
 import Thoughts from "../components/Thoughts";
@@ -43,9 +43,13 @@ export default function ItemPage({
   const { data: item, setData, error, loading, cachedAt } = useLoad(() => getItem(itemId), [itemId, version]);
   // Only GET answers with the links; a save answers with the bare item, so the last known view
   // is kept across saves rather than dropped. A link typed since goes through /link instead.
-  const [linkView, setLinkView] = useState<{ links: Record<string, number | null>; from: Item[] }>({ links: {}, from: [] });
+  const [linkView, setLinkView] = useState<{
+    links: Record<string, number | null>;
+    spaces: Record<string, string | null>;
+    from: Item[];
+  }>({ links: {}, spaces: {}, from: [] });
   useEffect(() => {
-    if (item?.links) setLinkView({ links: item.links, from: item.linked_from ?? [] });
+    if (item?.links) setLinkView({ links: item.links, spaces: item.space_links ?? {}, from: item.linked_from ?? [] });
   }, [item]);
   const spaces = useSpaces(version);
   const [capture, setCapture] = useState<CaptureRecord | null>(null);
@@ -222,6 +226,7 @@ export default function ItemPage({
           and drops your edit; Keep mine saves yours over it.
         </Modal>
         <LinkTargets.Provider value={linkView.links}>
+        <SpaceLinkTargets.Provider value={linkView.spaces}>
           <TextEditor
             key={editorKey}
             draftId={String(itemId)}
@@ -232,6 +237,7 @@ export default function ItemPage({
             queued={!!queued && !queued.conflict}
             itemId={item.id}
           />
+        </SpaceLinkTargets.Provider>
         </LinkTargets.Provider>
         <ConfirmModal
           open={confirmDelete}

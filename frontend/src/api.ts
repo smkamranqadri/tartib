@@ -201,6 +201,8 @@ export const suggestLinks = (q: string, exclude?: number) =>
   api<{ items: { id: number; title: string; space: string | null; shape: "task" | "note" }[] }>(
     `/api/links/suggest?q=${encodeURIComponent(q)}${exclude ? `&exclude=${exclude}` : ""}`,
   );
+export const getLinkedHere = (space: string) =>
+  api<{ items: Item[] }>(`/api/spaces/${encodeURIComponent(space)}/linked`);
 export const resolveLink = (title: string) => api<{ id: number }>(`/api/links/resolve?title=${encodeURIComponent(title)}`);
 
 export const addItem = (item: { shape: "task" | "note"; space: string; text: string; due?: string }) =>

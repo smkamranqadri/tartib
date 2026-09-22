@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { deleteSpace, getSpaces, listItems, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
+import { deleteSpace, getLinkedHere, getSpaces, listItems, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
+import Card from "../components/Card";
+import { LinkIcon } from "../components/Icons";
+import ItemRow from "../components/ItemRow";
 import { ConfirmModal } from "../components/Modal";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
@@ -33,6 +36,8 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const count = useLoad(() => listItems({ space, limit: 200 }), [space, version]);
   const cachedAt = count.cachedAt;
   const itemCount = count.data?.items.length ?? null;
+  // Items elsewhere that link here with `[[space:…]]` (slice 33): listed apart, never counted.
+  const linked = useLoad(() => getLinkedHere(space), [space, version]);
 
   useEffect(() => {
     setQ("");
@@ -147,6 +152,21 @@ export default function Space({ version, onChanged }: { version: number; onChang
         />
       )}
       <Panes space={space} version={version} query={q} onQuery={setQ} onChanged={onChanged} />
+      {(linked.data?.items.length ?? 0) > 0 && (
+        <Card className="linked-here" icon={<LinkIcon />} label="Linked here" aside={<span className="muted">from other spaces</span>}>
+          <ul className="rows flat">
+            {linked.data!.items.map((row) => (
+              <ItemRow
+                key={row.id}
+                item={row}
+                onChange={(next) =>
+                  linked.setData({ items: linked.data!.items.map((i) => (i.id === next.id ? next : i)) })
+                }
+              />
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

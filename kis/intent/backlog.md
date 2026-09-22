@@ -20,7 +20,7 @@ Approved, not yet planned. Each gets a plan file when it comes up:
   "that one" can reach. The other half of 14 that did not ship, multiple-choice answers, is not
   carried: a field holds one value and there is nothing like tags for a multi-answer to land in.
 - **An item graph.** Notes and tasks as nodes, the links between them as edges, clustered by
-  space and sized by how often an item is referenced. **Blocked on links**, below. This entry
+  space and sized by how often an item is referenced. **Unblocked since slice 33** (links, `slice-33-links.md`), which gives the edges. This entry
   used to say slice 28 had shipped linking; it had not. Slice 28 added `duplicate_of`, one
   classifier-set pointer used only for the "Looks like #N" warning, and nothing a person can
   write (checked against the migrations, 2026-09-22). With no links there are no edges and the
@@ -45,18 +45,6 @@ Approved, not yet planned. Each gets a plan file when it comes up:
 
 Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
 
-- **Links between items: approved, the owner's words "we definitely need links."** **Planned as slice 33, 2026-09-22** (`slice-33-links.md`), which settles the undecided points below; this entry leaves when it ships. Raised while
-  moving existing notes into Tartib (copied by hand -- no import feature is wanted). Two kinds,
-  both from real notes:
-  (a) note to note -- a CapRover setup note includes the Docker setup note, which includes the
-  server setup note; one note should open the next, and the one linked to should show what links
-  to it;
-  (b) item to another space -- a task to build a console app belongs to its own work but also
-  to `coding`. Today an item has exactly one space, so this is either a link to a space or an
-  item living in more than one, and that is the larger decision.
-  Undecided: how a link is written (`[[Title]]` is the familiar form; since slice 31 every
-  item's title is its first line, so a `[[…]]` names that line), what happens to a link when its target is renamed
-  or deleted, and whether the classifier may propose links. Unblocks the item graph.
 - **A space becomes one long flat list -- being tried with more spaces first.** Same report: the
   notes come from folders (`Documents`, `Feedback` with one note per person, and a `Resource`
   folder of about 27 notes mixing infra, reading, work and personal). Spaces are flat and a
