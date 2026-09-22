@@ -69,8 +69,10 @@ Deferred from a slice rather than never planned:
   silently, caught 3/3 real duplicates with 0/5 false positives and no invented references. Park
   and name the match; do not auto-merge. Build the context server-side, so there is one source of
   truth for what the classifier is shown.
-- **AI usage on record** — **planned as slice 29** (2026-09-22),
-  `slice-29-ai-usage.md`. Count the calls and the tokens, per call and in total, and show them.
+- **AI usage on record** — **built as slice 29** (2026-09-22) and **not closed**:
+  `slice-29-ai-usage.md`. `--json` is on for every AI call and has only run against the fake,
+  so it is unproven that the reply file is still written with the stream on. The entry stays
+  open until that and the token arithmetic are settled. Count the calls and the tokens, per call and in total, and show them.
   **No longer unestablished:** `codex exec --json` emits the turn as JSONL and `turn.completed`
   carries a `usage` object with input, cached input, cache-write input, output, reasoning and
   total tokens. The mechanism and its two traps are in `../knowledge/technical.md`.
