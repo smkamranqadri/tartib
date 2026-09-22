@@ -110,9 +110,9 @@ function ChimeSwitch() {
     void playChime(next); // a tap, so it plays even on iOS, and you hear what you chose
   }
   return (
-    <div className="seg">
+    <div className="pills" role="group" aria-label="Chime sound">
       {SOUNDS.map((s) => (
-        <button key={s.value} type="button" className={sound === s.value ? "on" : ""} onClick={() => choose(s.value)}>
+        <button key={s.value} type="button" className={sound === s.value ? "active" : ""} aria-pressed={sound === s.value} onClick={() => choose(s.value)}>
           {s.label}
         </button>
       ))}

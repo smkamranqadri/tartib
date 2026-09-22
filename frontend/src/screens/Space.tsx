@@ -98,17 +98,17 @@ export default function Space({ version, onChanged }: { version: number; onChang
             <>
               {/* The filing policy is the space's most consequential setting, so it is on the
                   page rather than three taps into a menu. Rename and delete sit beside it. */}
-              <span className="seg policy" role="group" aria-label="Filing policy">
+              <span className="pills policy" role="group" aria-label="Filing policy">
                 {(["auto", "ask", "file"] as SpacePolicy[]).map((p) => (
                   <button
                     key={p}
                     type="button"
-                    className={policy === p ? "on" : ""}
+                    className={policy === p ? "active" : ""}
                     aria-pressed={policy === p}
                     title={p === "auto" ? "Files a proposal when the classifier is confident enough" : undefined}
                     onClick={() => void choosePolicy(p)}
                   >
-                    {p}
+                    {p[0].toUpperCase() + p.slice(1)}
                   </button>
                 ))}
               </span>

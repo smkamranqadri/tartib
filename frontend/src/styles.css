@@ -444,9 +444,6 @@ button:disabled { opacity: .5; cursor: default; }
 .house-rules-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .house-rules-foot .muted { margin-right: auto; }
 .pref-ctl { flex: none; font-size: 14px; text-align: right; }
-.seg { display: inline-flex; padding: 3px; background: var(--pill); border-radius: 8px; }
-.seg button { background: none; border: 0; padding: 5px 12px; border-radius: 6px; cursor: pointer; color: var(--muted); }
-.seg button.on { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 
 /* item page */
 .crumbs { margin: 0; font-size: 14px; }
@@ -779,7 +776,7 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
 
 /* A phone is touched, not clicked: nothing to hit is under 44px. */
 @media (max-width: 640px) {
-  .icon-btn, .pills a, .pills button, .chip-btn, .seg button, .tabs a, .star, .section-toggle, .crumbs a, .item-head a { min-height: 44px; min-width: 44px; }
+  .icon-btn, .pills a, .pills button, .chip-btn, .tabs a, .star, .section-toggle, .crumbs a, .item-head a { min-height: 44px; min-width: 44px; }
   .star, .section-toggle, .crumbs a { display: inline-flex; align-items: center; }
   .row-text { display: flex; align-items: center; min-height: 44px; }
   .view-all a, .view-all button, .item-aside a, .side-note a, .brief-cites a { display: inline-flex; align-items: center; min-height: 44px; }

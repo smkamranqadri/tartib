@@ -28,9 +28,9 @@ export default function AddItemForm({ space, onAdded, onCancel }: { space: strin
   return (
     <form className="card add-item" onSubmit={submit}>
       <div className="add-item-top">
-        <div className="seg" role="group" aria-label="Shape">
+        <div className="pills" role="group" aria-label="Shape">
           {(["task", "note"] as const).map((s) => (
-            <button key={s} type="button" className={shape === s ? "on" : ""} onClick={() => setShape(s)}>
+            <button key={s} type="button" className={shape === s ? "active" : ""} aria-pressed={shape === s} onClick={() => setShape(s)}>
               {s === "task" ? "Task" : "Note"}
             </button>
           ))}
