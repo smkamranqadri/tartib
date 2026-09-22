@@ -1,0 +1,32 @@
+{
+  "context_blind@gpt-5.6-luna/medium#81f5339c": {
+    "measured": "2026-09-22",
+    "value": [
+      1,
+      [
+        "'Chase up the Meridian quote' -> work (want home)",
+        "'Top up the Kalmar card' -> finance (want travel)",
+        "'Ping Sahar about the draft' -> work (want ideas)",
+        "'Order more of the blue ones' -> None (want health)",
+        "'Renew Astra before the 30th' -> finance (want finance)",
+        "'Ask Bilal to come back and look at' -> None (want home)"
+      ]
+    ]
+  },
+  "house_rule_cars_blind@gpt-5.6-luna/medium#c9a56404": {
+    "measured": "2026-09-22",
+    "value": [
+      "finance",
+      "finance",
+      "finance"
+    ]
+  },
+  "house_rule_controls_blind@gpt-5.6-luna/medium#fe158878": {
+    "measured": "2026-09-22",
+    "value": [
+      "work",
+      "health",
+      "travel"
+    ]
+  }
+}

@@ -249,12 +249,33 @@ out by a factor of six: an eval run is not ~155k input tokens, it is **~810k**. 
 the prompt growth across slices 26 to 28, is what has been eating the subscription. The Settings
 copy says so in one line: *most of each call is the CLI's own instructions, not yours.*
 
+## What the consolidated run found (2026-09-22)
+
+It failed on the first attempt, on the house-rule control `"clear the outstanding electricity
+bill"`: `home` in the cached baseline, `finance` with the rule applied. Two problems, both mine.
+
+**The control was another fence-sitter.** A household bill is defensibly `home` or `finance`, and
+it had answered `finance` on the CLI default and `home` on luna. With the rule applied it moved
+to `finance` -- the *correct* space -- so the assertion failed on the rule making filing better.
+Two fence-sitters in three attempts (the exam, then the bill) is a lesson about picking controls:
+it must be a capture with one obvious answer, not merely one unrelated to the rule. It is now
+`"standup moved to 10:30"`, and the three controls answer `work, health, travel` identically with
+and without the rule.
+
+**The baseline cache was keyed on the name alone**, not on what it measured. Editing `CONTROLS`
+would have silently compared fresh answers against a stale baseline for captures that no longer
+existed -- a trap built in the same session as the thing it would have trapped. The key now
+carries a hash of the inputs, so a fixture edit re-measures itself.
+
+**And the drift assertion is gone**, replaced by reporting. Leaking -- a control landing in the
+space the rule is about -- is the claim worth failing on. A control moving between two defensible
+spaces is the model choosing, and asserting on it produced two false alarms out of two.
+
 ## Still open
 
 Nothing blocking. Two things worth knowing rather than doing:
 
 - **The quota readout is dormant** until something emits `token_count`. Built, tested, and
   invisible in exec mode.
-- **A consolidated `pytest -m eval` on the pinned model** has still not been run in one go. It
-  now costs 52 calls at ~15.6k input each, so it is worth doing deliberately, once, before
-  `v1.1` -- not casually.
+- ~~A consolidated `pytest -m eval` on the pinned model.~~ **Run 2026-09-22: 7 passed, 4m38s.**
+  It failed once first, and the failure was worth having -- see below.

@@ -13,6 +13,11 @@
   what eats the subscription: an eval run is ~810k input tokens.
 - The quota readout is **built and dormant** -- `codex exec` emits no `token_count` event, so the
   windows stay unknown and the line does not render. Not a fault to chase.
+- **The whole eval suite is green in one run on the pinned model** (2026-09-22, 7 passed, 4m38s).
+  First time both have been true together: before today the evals ran unpinned. Every headline
+  number holds on `gpt-5.6-luna` -- context 1/6 to 6/6, the house rule 0/3 to 3/3 with controls
+  unmoved, duplicates 3/3 with 0/5 false positives, and the vague captures asking while the
+  placeable ones file.
   `kis/intent/slice-29-ai-usage.md`. Two things in it will bite if missed: `--json` changes
   where error messages come from, and the cost may double-count reasoning tokens -- **no cost
   figure ships until one real call reconciles the arithmetic.**
@@ -22,8 +27,8 @@
   design: the verdict is recorded now so it can be judged on real captures before it is ever
   allowed to hold one back.
 - Small and worth doing before `v1.1`: one consolidated `uv run pytest -m eval`. Every check has
-  passed, but across two runs and **on the CLI's default model** -- the evals did not carry the
-  pin until 2026-09-22. Re-running the suite now measures what ships.
+  passed. Originally measured across two runs on the CLI's default model; **re-measured on the
+  pinned model in one run on 2026-09-22 and unchanged.**
   Park-and-name a duplicate, and proposing a space that does not exist yet. Phase mode.
   `kis/intent/slice-28-what-the-classifier-may-name.md`. It starts from a correction: the
   retrieval slice 26 shipped is about the database, not about the capture in hand, so

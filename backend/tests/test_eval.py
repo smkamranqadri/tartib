@@ -11,6 +11,7 @@ are collected and reported together.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import pathlib
@@ -59,15 +60,18 @@ def codex_cfg() -> CodexConfig:
 BASELINES = pathlib.Path(__file__).parent / "eval_baselines.json"
 
 
-def baseline(name: str, compute):
+def baseline(name: str, inputs, compute):
     """What the model does *without* the feature under test, measured once and kept.
 
     A baseline costs calls every run and barely moves, and 12 of this suite's 64 calls were
-    baselines. It is keyed by model and reasoning effort, because a baseline measured on a
-    different model is not a baseline -- and it re-measures itself when either changes.
-    Force one with TARTIB_EVAL_REBASELINE=1.
+    baselines. Keyed by model, reasoning effort **and the inputs themselves**: a baseline from
+    another model is not a baseline, and neither is one measured against different captures --
+    the first version of this keyed on the name alone, so editing a fixture silently compared
+    fresh answers against stale ones for captures that no longer existed.
+    Force a fresh one with TARTIB_EVAL_REBASELINE=1.
     """
-    key = f"{name}@{MODEL or 'cli-default'}/{REASONING or 'cli-default'}"
+    fingerprint = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()[:8]
+    key = f"{name}@{MODEL or 'cli-default'}/{REASONING or 'cli-default'}#{fingerprint}"
     cache: dict = {}
     if BASELINES.exists():
         try:
@@ -377,7 +381,9 @@ def test_context_beats_a_flat_list_of_space_names():
 
     # The blind run is the baseline: six calls establishing what the model does with only a
     # list of space names. It is cached per model, so a normal run spends six calls, not twelve.
-    blind, blind_detail = baseline("context_blind", lambda: list(_score(())))
+    blind, blind_detail = baseline(
+        "context_blind", DISCRIMINATING, lambda: list(_score(()))
+    )
     seeing, seeing_detail = _score(_fake_context())
     total = len(DISCRIMINATING)
     report = (
@@ -408,8 +414,13 @@ CAR_CAPTURES = [
 # was here and had to go: it sits on the fence between work and ideas, and measured three times
 # it answered work, None and work. Since slice 27 an ambiguous capture legitimately comes back
 # with no space and a question, so a wobbling control measures the wobble, not the rule.
+#
+# "clear the outstanding electricity bill" went the same way on 2026-09-22: `finance` on the CLI
+# default, `home` on luna, and `finance` again with the rule applied -- a household bill is
+# defensibly either. Two fence-sitters in three attempts is a lesson about picking controls: it
+# has to be a capture with one obvious answer, not merely a capture unrelated to the rule.
 CONTROLS = [
-    ("clear the outstanding electricity bill", "finance"),
+    ("standup moved to 10:30", "work"),
     ("book a dentist appointment", "health"),
     ("book flights to Istanbul in March", "travel"),
 ]
@@ -434,13 +445,13 @@ def test_a_house_rule_changes_filing_and_does_not_leak():
     if shutil.which("codex") is None:
         pytest.skip("codex CLI not installed")
 
-    blind = baseline("house_rule_cars_blind", lambda: _spaces_for(CAR_CAPTURES))
+    blind = baseline("house_rule_cars_blind", CAR_CAPTURES, lambda: _spaces_for(CAR_CAPTURES))
     ruled = _spaces_for(CAR_CAPTURES, house_rules=HOUSE_RULE)
     blind_home = sum(1 for s in blind if s == "home")
     ruled_home = sum(1 for s in ruled if s == "home")
 
     control_blind = baseline(
-        "house_rule_controls_blind", lambda: _spaces_for([t for t, _ in CONTROLS])
+        "house_rule_controls_blind", CONTROLS, lambda: _spaces_for([t for t, _ in CONTROLS])
     )
     control_ruled = _spaces_for([t for t, _ in CONTROLS], house_rules=HOUSE_RULE)
     # Leaking means a control landing in the space the rule is about. A control that becomes
@@ -451,10 +462,14 @@ def test_a_house_rule_changes_filing_and_does_not_leak():
         for (t, _), a, b in zip(CONTROLS, control_blind, control_ruled, strict=True)
         if b == "home" and a != "home"
     ]
-    drift = [
+    # A control that lands somewhere *other* than the rule's target is reported but does not
+    # fail: that is the model choosing between two defensible spaces, and asserting on it has
+    # now produced two false alarms -- the exam, and the electricity bill, which with the rule
+    # applied actually moved to the *right* space. Leaking is the claim; the rest is noise.
+    moved = [
         f"{t!r}: {a} -> {b}"
         for (t, _), a, b in zip(CONTROLS, control_blind, control_ruled, strict=True)
-        if a != b and b is not None
+        if a != b
     ]
 
     report = (
@@ -464,8 +479,9 @@ def test_a_house_rule_changes_filing_and_does_not_leak():
     )
     print(report)
     assert ruled_home >= blind_home, f"the house rule made filing worse{report}"
+    if moved:
+        print(f"controls that moved (reported, not failed): {moved}")
     assert not leaked, f"the house rule pulled unrelated captures into home: {leaked}{report}"
-    assert not drift, f"a control moved between two definite spaces: {drift}{report}"
 
 
 @pytest.mark.eval

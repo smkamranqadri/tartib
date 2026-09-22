@@ -308,8 +308,13 @@ cd backend && uv run pytest -m eval        # 7 evals, 52 real calls, ~2m45s
 # The evals read the pin out of .env, so they measure the classifier that ships. They did
 # not until 2026-09-22, and their numbers before that describe the CLI's default model.
 # 12 of what used to be 64 calls were baselines -- what the model does *without* each
-# feature -- now measured once per model into tests/eval_baselines.json and reused.
-# TARTIB_EVAL_REBASELINE=1 forces a fresh one; changing model or reasoning does too.
+# feature -- now measured once into tests/eval_baselines.json and reused. The key carries
+# the model, the reasoning effort AND a hash of the captures measured, so editing a
+# fixture re-measures rather than comparing against a baseline for captures that no
+# longer exist. TARTIB_EVAL_REBASELINE=1 forces a fresh one.
+# An eval control must be a capture with ONE obvious answer. Two fence-sitters slipped in
+# and both produced false alarms: a control that wobbles measures the wobble, and since
+# slice 27 an ambiguous capture legitimately returns no space and a question.
 # An eval run that fails fast is the CLI being rate-limited, not a result: 45s for five
 # failures against 131s for a clean run. Re-run before believing a failure.
 cd frontend && npm run typecheck && npm run build

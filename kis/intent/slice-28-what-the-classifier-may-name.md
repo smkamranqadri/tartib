@@ -209,10 +209,10 @@ measures the pinned model:
 - On glass at 390px: *"Looks like #52 already here. Filing this keeps both."* linking to the
   matched item; the proposed space as a dashed `+ car` button at 46x44 that fills the sentence in.
 
-**Outstanding:** every acceptance check has passed, but on the CLI's default model and across
-two runs. Now that the evals carry the pin, one consolidated `pytest -m eval` is worth doing
-before `v1.1` -- both to have the set green in a single breath and to have it green on the
-classifier that actually ships.
+**Settled 2026-09-22.** The suite was re-run in one go with the evals carrying the pin: **7
+passed**, and this slice's numbers are unchanged on `gpt-5.6-luna` -- 3/3 duplicates named, 0/5
+near misses. The figures above were measured on the CLI's default; these confirm them on the
+classifier that ships.
 
 ## Still open
 
