@@ -22,6 +22,7 @@ from tartib.store import (
     items_by_thoughts,
     list_spaces,
     read_quota,
+    related_info,
     serialize_capture,
     serialize_item,
     set_house_rules,
@@ -103,6 +104,7 @@ def attention(conn: sqlite3.Connection = Depends(get_db)) -> dict:
     ).fetchall()
     items = [serialize_item(r) for r in rows]
     split_info(conn, items)
+    related_info(conn, items)
     return {
         "items": items,
         "stale": [serialize_item(r) for r in stale],

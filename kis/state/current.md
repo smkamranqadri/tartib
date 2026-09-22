@@ -10,8 +10,8 @@
   classifying on the pinned `gpt-5.6-luna` at medium reasoning (checks under Proof). The
   database as it was just before is backed up (`private.md`, Backups); that file and `v2.0` are
   the rollback.
-- Task: **slice 33 phase C** (the classifier proposes links, behind `TARTIB_LINK_PROPOSALS`), in
-  progress, Standard. Phases A and B built and verified, not deployed (`../intent/slice-33-links.md`).
+- Task: none in flight. **Slice 33 (links, A to C) is built and verified on `main`**, not deployed;
+  phase C ships with `TARTIB_LINK_PROPOSALS` off (`../intent/slice-33-links.md`, Proof).
   **Slice 32 (Pick for me) is built and verified on `main`, not deployed**
   (`../intent/slice-32-pick-for-me.md`, Proof); the owner chose to start 33 before deploying.
 
@@ -32,10 +32,11 @@
 
 ## Next
 
-1. **Deploy slices 32 and 33 as `v2.2`** -- rehearsed on a live snapshot 2026-09-22 (Proof): bump `SW_VERSION`, back up the database first
-   (`private.md`), `./deploy.sh v2.2`, then check migrations 0019 and 0020 applied, one Pick and
+1. **Deploy slices 32 and 33 as `v2.2`** -- rehearsed on a live snapshot 2026-09-22 through
+   migration 0020 (Proof; 0021, one added column, came after): bump `SW_VERSION`, back up the database first
+   (`private.md`), `./deploy.sh v2.2`, then check migrations 0019 to 0021 applied, one Pick and
    one link from the phone.
-2. **Slice 33 phase C**, in progress (Task, above); the switch stays off until item 4.
+2. **Switch `TARTIB_LINK_PROPOSALS` on** once item 4 is done, and watch the inbox it fills.
 3. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`).
 4. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
@@ -44,8 +45,8 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **332 passed, 8 deselected** (the eight are the evals) and
-  **18/18** from `npm run ui`. Any red is real.
+  Verification commands. Expect **340 passed, 9 deselected** (the nine are the evals) and
+  **19/19** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
   Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;

@@ -29,6 +29,7 @@ from tartib.store import (
     insert_item,
     keep_whole,
     list_spaces,
+    related_line,
     same_title,
     serialize_item,
     should_file,
@@ -209,10 +210,22 @@ def _require_attention(row: sqlite3.Row) -> None:
         raise HTTPException(status_code=409, detail="item is not awaiting a decision")
 
 
+class ApproveBody(EditBody):
+    """Filing, plus which of the proposed links to keep (slice 33 phase C). Absent keeps them
+    all, as the card's chips start; an empty list keeps none."""
+
+    links: list[int] | None = Field(default=None, max_length=5)
+
+    def provided(self) -> dict:
+        data = super().provided()
+        data.pop("links", None)
+        return data
+
+
 @router.post("/items/{item_id}/approve")
 def approve(
     item_id: int,
-    body: EditBody | None = None,
+    body: ApproveBody | None = None,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> dict:
     """File the item with its stored proposal, overridden by any fields in the body."""
@@ -235,6 +248,16 @@ def approve(
     if chosen and chosen == proposed_new and chosen not in list_spaces(conn):
         chosen = add_space(conn, proposed_new)
     fields["space"] = chosen
+    # Kept links go in the text, as every link does: `Related: [[A]], [[B]]` at the end. Only ids
+    # the classifier proposed count, so the body cannot link to anything else through here.
+    proposed = [int(i) for i in (json.loads(row["proposal_json"] or "{}").get("related") or [])]
+    kept = proposed if body is None or body.links is None else [
+        i for i in body.links if i in proposed
+    ]
+    line = related_line(conn, kept) if kept else None
+    if line:
+        text = str(fields.get("text") or row["raw_text"]).rstrip()
+        fields["text"] = f"{text}\n\n{line}"
 
     def go() -> dict:
         file_item(conn, item_id, fields, list_spaces(conn))
@@ -301,6 +324,7 @@ async def redo(
         house_rules=house_rules(conn),
         examples=classifier_examples(conn, threshold=settings.autofile_confidence)[0],
         candidates=similar_items(conn, row["raw_text"]),
+        links=settings.link_proposals,
     )
     try:
         proposals = await classify(row["raw_text"], context, correction=(earlier, reason))
@@ -318,7 +342,10 @@ async def redo(
     earlier_title = (json.loads(row["proposal_json"] or "{}") or {}).get("title")
     if earlier_title and not same_title(row["raw_text"], earlier_title):
         fields.pop("title", None)
-    proposal_json = proposal.model_dump_json(exclude={"text"})
+    # `related` only when there is some, so with the switch off the stored JSON is as before.
+    proposal_json = proposal.model_dump_json(
+        exclude={"text"} if proposal.related else {"text", "related"}
+    )
     allowed = list_spaces(conn)
     if proposal.clarify is None and should_file(
         proposal.space, proposal.confidence, settings.autofile_confidence, space_policies(conn)

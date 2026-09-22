@@ -46,6 +46,9 @@ export default function ApprovalCard({
   // Tell it why: the reason being written, and whether the classifier is on it.
   const [why, setWhy] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  /* Proposed links, each kept until tapped off (slice 33 phase C). */
+  const related = item.related ?? [];
+  const [dropped, setDropped] = useState<Set<number>>(() => new Set());
   const wide = useWide(641);
   const [, setParams] = useSearchParams();
 
@@ -53,6 +56,7 @@ export default function ApprovalCard({
     setDraft(draftOf(item));
     setEditing(null);
     setMsg(null);
+    setDropped(new Set());
   }, [item.id, item.proposal, item.space]);
 
   /* The classifier asked rather than guessed. One tap answers it and fills the sentence in;
@@ -82,6 +86,7 @@ export default function ApprovalCard({
         space: draft.space,
         title: draft.shape === "task" ? draft.title.trim() || null : null,
         due: draft.shape === "task" && draft.due ? draft.due : null,
+        ...(related.length ? { links: related.map((r) => r.id).filter((id) => !dropped.has(id)) } : {}),
       });
       onApproved(item.id);
     } catch (err) {
@@ -172,6 +177,38 @@ export default function ApprovalCard({
           <Link to={`/items/${dupId}`}>#{dupId}</Link>
           {" "}already here. Filing this keeps both.
         </p>
+      )}
+      {related.length > 0 && (
+        <div className="asked related">
+          <p className="asked-q">Link to</p>
+          <div className="asked-opts">
+            {related.map((r) => {
+              const on = !dropped.has(r.id);
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={`asked-opt ${on ? "on" : ""}`}
+                  aria-pressed={on}
+                  onClick={() =>
+                    setDropped((d) => {
+                      const next = new Set(d);
+                      if (on) next.add(r.id);
+                      else next.delete(r.id);
+                      return next;
+                    })
+                  }
+                >
+                  <span className="asked-label">
+                    {on ? "✓ " : ""}
+                    {r.title}
+                  </span>
+                  {r.space && <span className="asked-detail muted">{r.space}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
       {ask && (
         <div className="asked">

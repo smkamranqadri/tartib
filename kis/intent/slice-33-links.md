@@ -3,7 +3,7 @@
 Planned 2026-09-22 with the owner, from the backlog entry approved that day ("we definitely need
 links"). Phase mode: A and B each committed and proved on their own; C is direction only and gets
 its own plan later.
-**Phases A and B built and verified 2026-09-22 (Proof, below); C in progress. Nothing of 33 is deployed.**
+**Phases A, B and C built and verified 2026-09-22 (Proof, below); C ships switched off. Nothing of 33 is deployed.**
 
 ## What was reported
 
@@ -174,3 +174,28 @@ Backlog: the links entry leaves; the item graph drops "blocked on links". histor
 - Looked at on 390px and 1280px: the space link and a dimmed missing one, the space picker, and
   Linked here on both layouts.
 - No separate review for B: it reuses A's reviewed rewrite path (`relink`, `update_fields`).
+
+## Proof: phase C (2026-09-22, local)
+
+- As built: `TARTIB_LINK_PROPOSALS` (config), `Context.links`, a second schema with `related`,
+  the prompt's `{related}` slot, `_resolve_related`; the runner holds an item that would have
+  filed as `linked` unless its space is FILE; `proposal_json` carries `related` only when there
+  is some (redo too); migration 0021 `ai_calls.links_on`; `/api/attention` adds `related`;
+  approve takes `links` and appends `Related: [[…]]` via `related_line`. The card shows chips,
+  and a chip tapped off is dashed and muted.
+- **Off is unchanged, checked two ways**: the built prompt compared byte for byte with the one
+  the previous commit builds (identical), and `test_off_the_prompt_asks_nothing_and_nothing_waits`.
+- `uv run pytest -q`: **340 passed, 9 deselected** (eight in `test_link_proposals.py`: acceptance
+  8 to 12, a dropped chip, approve ignoring ids never proposed, the duplicate not also related, a
+  low-confidence item keeping its reason with the chip); schema asserts to 21; `ruff` clean.
+- `npm run ui`: **19/19**, one new: the card with the queue and approve stubbed at the network,
+  in its own context with the service worker blocked (the worker answers GETs itself, so
+  `page.route` never sees them) -- two chips, one tapped off, approve sent `links: [11]`, chips
+  44px. `tsc` clean.
+- Looked at on 390px and 1280px: chips under the text, the reason line "Links to check before it
+  files"; the first look had a dropped chip barely distinguishable from a kept one, restyled.
+- **Eval pair, run once on `gpt-5.6-luna` (2 calls, 47.6s)**: passed -- the CapRover capture named
+  the Docker setup note as related and not as a duplicate; the electricity bill named nothing.
+  The test is `test_it_proposes_a_link_and_leaves_an_unrelated_capture_alone` (`-m eval`).
+- Not reviewed by a separate agent: it reuses the ordinal resolution slice 28 built and the link
+  path phase A's review covered.

@@ -14,6 +14,7 @@ from tartib.classify import ClassifyError, Context, Proposal, classify
 from tartib.clock import utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.store import (
+    WAIT_LINKED,
     Example,
     SpaceContext,
     SpaceError,
@@ -118,6 +119,7 @@ class Runner:
             house_rules=rules,
             examples=examples,
             candidates=candidates,
+            links=s.link_proposals,
         )
         seen: list = []
         started = time.monotonic()
@@ -347,7 +349,7 @@ class Runner:
                 # The verdict is recorded either way; only the flag decides whether it holds
                 # anything back. Eight seeded cases are not a false-positive rate.
                 parked = self.settings.duplicate_park and duplicate_of is not None
-                filed = (
+                would_file = (
                     not split
                     and p.clarify is None
                     and not parked
@@ -355,6 +357,17 @@ class Runner:
                         p.space, p.confidence, self.settings.autofile_confidence, policies
                     )
                 )
+                # Proposed links hold back an item that would have filed, so they are answered
+                # before it moves on (slice 33 phase C) -- except in a FILE space, which never
+                # asks; the proposal is kept in proposal_json either way.
+                related = [
+                    i
+                    for i in p.related
+                    if conn.execute("SELECT 1 FROM items WHERE id = ?", (int(i),)).fetchone()
+                ]
+                linked = bool(related) and policies.get(p.space or "", "auto") != "file"
+                filed = would_file and not linked
+                dump_exclude = {"text"} if p.related else {"text", "related"}
                 fields = p.model_dump(include={"shape", "space", "title", "due", "remind_at"})
                 try:
                     insert_item(
@@ -365,11 +378,13 @@ class Runner:
                         fields=fields,
                         stage="filed" if filed else "attention",
                         allowed=list_spaces(conn),
-                        proposal_json=p.model_dump_json(exclude={"text"}),
+                        proposal_json=p.model_dump_json(exclude=dump_exclude),
                         duplicate_of=duplicate_of,
                         wait_reason=(
                             None
                             if filed
+                            else WAIT_LINKED
+                            if would_file
                             else wait_reason_for(
                                 p.space,
                                 duplicate_of,
@@ -388,7 +403,7 @@ class Runner:
                         fields={**fields, "space": None},
                         stage="attention",
                         allowed=list_spaces(conn),
-                        proposal_json=p.model_dump_json(exclude={"text"}),
+                        proposal_json=p.model_dump_json(exclude=dump_exclude),
                         wait_reason=wait_reason_for(None, None, False, split=split),
                     )
             conn.commit()

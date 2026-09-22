@@ -440,6 +440,8 @@ WAIT_ASKED = "asked"
 WAIT_SPLIT = "split"
 # The note "Keep as one" made. It waits too: the pieces may not have agreed on a space.
 WAIT_WHOLE = "whole"
+# It would have filed, but the classifier proposed links to answer first (slice 33 phase C).
+WAIT_LINKED = "linked"
 
 
 def wait_reason_for(
@@ -747,8 +749,8 @@ def record_call(
             "INSERT INTO ai_calls (created_at, kind, model, capture_id, ok, failure, reason,"
             " resets_at, duration_ms, input_tokens, cached_input_tokens,"
             " cache_write_input_tokens, output_tokens, reasoning_output_tokens, total_tokens,"
-            " prompt_chars, candidates_n, examples_n, corrections_n, house_rules)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " prompt_chars, candidates_n, examples_n, corrections_n, house_rules, links_on)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 utcnow_iso(),
                 kind,
@@ -765,6 +767,7 @@ def record_call(
                 int(getattr(shape, "examples", 0) or 0),
                 int(getattr(shape, "corrections", 0) or 0),
                 1 if getattr(shape, "house_rules", False) else 0,
+                1 if getattr(shape, "links", False) else 0,
             ),
         )
         conn.commit()
@@ -973,6 +976,40 @@ def split_info(conn: sqlite3.Connection, items: Sequence[dict]) -> None:
             ).fetchone()[0]
             seen[cid] = {"of": rows, "whole": _untouched_split(conn, cid) is not None}
         item["split"] = seen[cid]
+
+
+def related_info(conn: sqlite3.Connection, items: Sequence[dict]) -> None:
+    """Add `related: [{id, title, space}]` to each waiting item whose proposal names links
+    (slice 33 phase C), the ones still there, so the card can offer each as a chip."""
+    for item in items:
+        proposed = (item.get("proposal") or {}).get("related") or []
+        ids = [int(i) for i in proposed if str(i).isdigit()]
+        if not ids:
+            continue
+        marks = ", ".join("?" * len(ids))
+        rows = {
+            r["id"]: r
+            for r in conn.execute(
+                f"SELECT i.id, i.space, k.title FROM items i JOIN item_keys k ON k.item_id = i.id"
+                f" WHERE i.id IN ({marks}) AND k.title != ''",
+                ids,
+            )
+        }
+        item["related"] = [
+            {"id": i, "title": rows[i]["title"], "space": rows[i]["space"]}
+            for i in ids
+            if i in rows
+        ]
+
+
+def related_line(conn: sqlite3.Connection, ids: Sequence[int]) -> str | None:
+    """`Related: [[A]], [[B]]` for the kept links, by each target's link title, or None."""
+    titles = []
+    for i in ids:
+        row = conn.execute("SELECT title FROM item_keys WHERE item_id = ?", (i,)).fetchone()
+        if row and row["title"] and "[" not in row["title"] and "]" not in row["title"]:
+            titles.append(f"[[{row['title']}]]")
+    return "Related: " + ", ".join(dict.fromkeys(titles)) if titles else None
 
 
 MAX_OPTIONS = 6  # the most answers a question may offer, as for the classifier's own

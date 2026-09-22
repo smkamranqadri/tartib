@@ -303,6 +303,8 @@ button:disabled { opacity: .5; cursor: default; }
 .asked-opt { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-height: 44px; min-width: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--fg); cursor: pointer; text-align: left; }
 .asked-opt:hover { border-color: var(--accent); }
 .asked-opt.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+/* A proposed link tapped off (slice 33 phase C): plainly out, still there to tap back on. */
+.related .asked-opt:not(.on), .related .asked-opt:not(.on):hover { border-style: dashed; border-color: var(--line); color: var(--muted); background: none; }
 .asked-label { font-weight: 600; }
 .asked-detail { font-size: 12px; }
 .more { position: relative; margin-left: auto; }

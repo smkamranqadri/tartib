@@ -101,6 +101,8 @@ export function waitingReason(item: Item, short = false): string {
   }
   if (item.wait_reason === "whole") return short ? "kept as one" : "Kept as one: choose where it goes";
   if (item.wait_reason === "duplicate") return short ? "looks like a duplicate" : "Looks like something already here";
+  /* It would have filed; the classifier proposed links to answer first (slice 33 phase C). */
+  if (item.wait_reason === "linked") return short ? "links to check" : "Links to check before it files";
   /* The classifier asked rather than guessed. Checked before confidence, because an item
      carrying a question is waiting on an answer -- at 0.9 it used to read "Unsure (90%)". */
   if (item.wait_reason === "asked" || item.proposal?.clarify)

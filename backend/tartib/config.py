@@ -24,6 +24,9 @@ class Settings:
     ai_timeout: float
     autofile_confidence: float
     duplicate_park: bool  # off until the verdict has been judged against real captures
+    # The classifier may propose links to the similar items it is shown (slice 33 phase C). Off,
+    # the prompt is exactly what it was before.
+    link_proposals: bool
     vapid_public: str | None
     vapid_private: str | None
     vapid_email: str
@@ -97,6 +100,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ai_timeout=float(env.get("TARTIB_AI_TIMEOUT") or "120"),
         autofile_confidence=float(env.get("TARTIB_AUTOFILE_CONFIDENCE") or "0.85"),
         duplicate_park=(env.get("TARTIB_DUPLICATE_PARK") or "").strip().lower()
+        in ("1", "true", "yes", "on"),
+        link_proposals=(env.get("TARTIB_LINK_PROPOSALS") or "").strip().lower()
         in ("1", "true", "yes", "on"),
         vapid_public=env.get("TARTIB_VAPID_PUBLIC") or None,
         vapid_private=env.get("TARTIB_VAPID_PRIVATE") or None,

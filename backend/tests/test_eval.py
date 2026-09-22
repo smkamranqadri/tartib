@@ -700,3 +700,50 @@ def test_a_heading_stays_one_note():
             failures.append(f"{text[:40]!r}: {len(items)} items, expected {want}")
     if failures:
         pytest.fail("\n".join(failures))
+
+
+# --- slice 33 phase C: a link it should propose, and one it should not ---
+#
+# Run once each with TARTIB_LINK_PROPOSALS on, as the plan allows: two calls, not the suite.
+# The linking case is the owner's own chain in shape -- a CapRover setup that builds on a Docker
+# setup note -- and the other is a capture that shares a subject with nothing shown.
+
+DOCKER = _candidate(
+    5, "note", None, "Docker setup on the VPS\n\napt install docker, add ubuntu to it", "work"
+)
+LINK_CANDIDATES = (*CANDIDATES, ("i5", DOCKER))
+LINK_FIXTURES = [
+    ("CapRover setup on the VPS, once docker is installed there", [str(DOCKER["id"])]),
+    ("pay the electricity bill", []),
+]
+
+
+@pytest.mark.eval
+def test_it_proposes_a_link_and_leaves_an_unrelated_capture_alone():
+    if shutil.which("codex") is None:
+        pytest.skip("codex CLI not installed")
+    context = Context(
+        now=NOW,
+        zone=ZONE,
+        spaces=SPACES,
+        codex=codex_cfg(),
+        candidates=LINK_CANDIDATES,
+        links=True,
+    )
+
+    async def run_all():
+        return await asyncio.gather(*(classify(t, context) for t, _ in LINK_FIXTURES))
+
+    results = asyncio.run(run_all())
+    got = {}
+    for (text, _), proposals in zip(LINK_FIXTURES, results, strict=True):
+        p = next((x for x in proposals if x.shape != "question"), None)
+        got[text] = (p.related, p.duplicate_of) if p else ([], None)
+    report = "\n".join(
+        f"  {t[:50]!r:52} -> related {r}, duplicate {d}" for t, (r, d) in got.items()
+    )
+    print(f"\n{report}")
+    linking, unrelated = LINK_FIXTURES
+    assert got[linking[0]][0] == linking[1], f"missed or wrong link\n{report}"
+    assert got[linking[0]][1] is None, f"a related item read as a duplicate\n{report}"
+    assert got[unrelated[0]][0] == [], f"linked something unrelated\n{report}"

@@ -51,6 +51,9 @@ export interface Item {
    *  pieces the capture has, and whether "Keep as one" is still on offer -- it is not once any
    *  piece has been started on. */
   split?: { of: number; whole: boolean } | null;
+  /** On a waiting item from /api/attention only: the links the classifier proposed, still there
+   *  (slice 33 phase C). Each is a chip on the card, kept unless you tap it off. */
+  related?: { id: number; title: string; space: string | null }[];
   proposal_error: string | null;
   classified_at: string | null;
   updated_at: string | null;

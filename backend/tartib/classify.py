@@ -76,6 +76,9 @@ class Proposal(BaseModel):
     # A space that does not exist yet. A proposal only: naming it does nothing, and accepting it
     # is what creates it (slice 28, narrowing rule 7).
     new_space: str | None = None
+    # Ordinals of candidates this capture should link to (slice 33 phase C), resolved to ids as
+    # strings like `duplicate_of`. Only asked for with the switch on; empty otherwise.
+    related: list[str] = Field(default_factory=list)
 
     @field_validator("space", "title", "text", mode="before")
     @classmethod
@@ -145,6 +148,21 @@ OUTPUT_SCHEMA = {
     "required": ["proposals"],
     "properties": {"proposals": {"type": "array", "items": _PROPOSAL_SCHEMA}},
 }
+# With link proposals on: the same, plus `related`. A second schema rather than an optional
+# field, because a strict schema requires every property it names.
+_PROPOSAL_SCHEMA_LINKS = {
+    **_PROPOSAL_SCHEMA,
+    "required": [*_PROPOSAL_SCHEMA["required"], "related"],
+    "properties": {
+        **_PROPOSAL_SCHEMA["properties"],
+        "related": {"type": "array", "items": {"type": "string"}},
+    },
+}
+OUTPUT_SCHEMA_LINKS = {
+    **OUTPUT_SCHEMA,
+    "properties": {"proposals": {"type": "array", "items": _PROPOSAL_SCHEMA_LINKS}},
+}
+MAX_RELATED = 2
 
 
 @dataclass(frozen=True)
@@ -157,6 +175,7 @@ class PromptShape:
     examples: int = 0
     corrections: int = 0
     house_rules: bool = False
+    links: bool = False
 
 
 @dataclass(frozen=True)
@@ -175,6 +194,8 @@ class Context:
     examples: tuple[Example, ...] = ()
     # (ordinal, row) pairs from store.similar_items. The map stays here and on the server.
     candidates: tuple[tuple[str, object], ...] = ()
+    # TARTIB_LINK_PROPOSALS. Off, the prompt and schema are byte-identical to before phase C.
+    links: bool = False
 
 
 PROMPT = """You file short personal captures for one person. Reply with one JSON object only:
@@ -227,7 +248,7 @@ Each proposal has:
 - "duplicate_of": normally null. When this capture is the *same thing* as one of the items
   listed below -- not merely the same subject -- give that item's label, like "i2". Same
   subject with a different action is not a duplicate: a note about a car and a task to service
-  the car are two things. Never invent a label that is not in the list.
+  the car are two things. Never invent a label that is not in the list.{related}
 - "new_space": normally null. When a capture clearly belongs somewhere that does not exist yet,
   name it: lowercase, digits and dashes, at most 24 characters. It is only a proposal -- naming
   it files nothing and creates nothing. Do not use it to avoid choosing an existing space.
@@ -239,6 +260,13 @@ Existing spaces: {spaces}
 {existing}{house_rules}{examples}{candidates}
 Text:
 {text}"""
+
+
+RELATED = """
+- "related": normally []. Labels of up to 2 items listed below that this capture is *about the
+  same thing as* without being that thing -- the setup note it builds on, the project it is a
+  step of -- so the person would want to jump from one to the other. Not the item you named in
+  "duplicate_of", not items that merely share a word, and never a label that is not in the list."""
 
 
 CANDIDATES = """
@@ -344,6 +372,7 @@ def build_prompt(text: str, context: Context, correction: tuple[str, str] | None
         house_rules=HOUSE_RULES.format(rules=context.house_rules) if context.house_rules else "",
         examples=render_examples(context.examples),
         candidates=render_candidates(context.candidates),
+        related=RELATED if context.links else "",
         text=text,
     )
     if correction is not None:
@@ -365,6 +394,19 @@ def _resolve_duplicate(ref: str | None, context: Context) -> str | None:
     """
     item_id = resolve_ref(context.candidates, ref)
     return str(item_id) if item_id is not None else None
+
+
+def _resolve_related(refs: list[str], duplicate_of: str | None, context: Context) -> list[str]:
+    """Ordinals to ids, like `duplicate_of`: invented ones dropped, the duplicate itself dropped,
+    repeats dropped, at most MAX_RELATED. Nothing at all while the switch is off."""
+    if not context.links:
+        return []
+    out: list[str] = []
+    for ref in refs or []:
+        item_id = _resolve_duplicate(ref, context)
+        if item_id is not None and item_id != duplicate_of and item_id not in out:
+            out.append(item_id)
+    return out[:MAX_RELATED]
 
 
 def _clean_new_space(name: str | None, context: Context) -> str | None:
@@ -407,11 +449,13 @@ def _normalize(p: Proposal, context: Context) -> Proposal:
 
     Questions carry nothing. Notes carry no task fields. Unknown spaces become null and cap
     confidence. Naive reminder times are in the user's zone; store UTC."""
+    duplicate_of = _resolve_duplicate(p.duplicate_of, context)
     update: dict = {
         "clarify": _clean_clarify(p.clarify, context),
         # Resolved to a real id here, or dropped. The model's label never reaches storage.
-        "duplicate_of": _resolve_duplicate(p.duplicate_of, context),
+        "duplicate_of": duplicate_of,
         "new_space": _clean_new_space(p.new_space, context),
+        "related": _resolve_related(p.related, duplicate_of, context),
     }
     if p.shape == "question":
         update.update(
@@ -422,6 +466,7 @@ def _normalize(p: Proposal, context: Context) -> Proposal:
             clarify=None,
             duplicate_of=None,
             new_space=None,
+            related=[],
         )
         return p.model_copy(update=update)
     space = p.space.lower() if p.space else None
@@ -457,9 +502,11 @@ async def classify(
         examples=len(context.examples),
         corrections=sum(1 for e in context.examples if e.corrected),
         house_rules=bool(context.house_rules),
+        links=context.links,
     )
+    schema = OUTPUT_SCHEMA_LINKS if context.links else OUTPUT_SCHEMA
     try:
-        reply = await run_json(prompt, OUTPUT_SCHEMA, context.codex)
+        reply = await run_json(prompt, schema, context.codex)
     except CodexError as e:
         raise ClassifyError(str(e), quota=getattr(e, "quota", None)) from e
     if on_usage is not None:

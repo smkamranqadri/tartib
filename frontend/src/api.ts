@@ -211,7 +211,8 @@ export const addItem = (item: { shape: "task" | "note"; space: string; text: str
  *  closes or a phone backgrounds would otherwise be cancelled mid-flight (slice 24). */
 export const editItem = (id: number, edit: Edit, keepalive = false) =>
   send<Item>("PATCH", `/api/items/${id}`, edit, keepalive ? { keepalive: true } : undefined);
-export const approveItem = (id: number, edit?: Edit) =>
+/** `links`: which of the classifier's proposed links to keep (slice 33 phase C). */
+export const approveItem = (id: number, edit?: Edit & { links?: number[] }) =>
   send<Item>("POST", `/api/items/${id}/approve`, edit);
 export const getThoughts = (id: number) => api<{ thoughts: Thought[] }>(`/api/items/${id}/thoughts`);
 export const addThought = (id: number, body: string) =>

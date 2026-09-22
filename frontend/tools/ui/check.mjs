@@ -523,6 +523,61 @@ async function main() {
       return `opened ${other}, listed under Linked here`;
     });
 
+    // --- slice 33 phase C: links the classifier proposes ---
+    // A waiting item carrying proposed links needs the classifier to exist, and a UI run must not
+    // spend quota, so the queue and the approve are stubbed at the network. This checks the card:
+    // the chips, dropping one, and what approve is sent. The server side has its own tests.
+    await check("S33 proposed links are chips on the card; a dropped one is not sent", async () => {
+      const fake = {
+        id: 987654, capture_id: 987654, raw_text: "UI check CapRover setup", space, shape: "note",
+        stage: "attention", created_at: new Date().toISOString(), title: null, due: null,
+        remind_at: null, starred: false, status: "open", proposal_error: null, classified_at: null,
+        updated_at: new Date().toISOString(), thought_count: 0, wait_reason: "linked",
+        duplicate_of: null,
+        proposal: { shape: "note", space, title: null, due: null, remind_at: null, confidence: 0.95,
+          clarify: null, duplicate_of: null, new_space: null, related: ["11", "12"] },
+        related: [
+          { id: 11, title: "Docker setup", space },
+          { id: 12, title: "Server setup", space },
+        ],
+      };
+      let sent = null;
+      // Its own context with the service worker blocked: the worker answers GETs itself, and
+      // a request it serves never reaches page.route.
+      const ctx = await browser.newContext({ viewport: PHONE, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+      const page = await ctx.newPage();
+      await page.route("**/api/attention*", (route) =>
+        route.fulfill({ json: { items: [fake], stale: [], stale_days: 14 } }),
+      );
+      await page.route("**/api/items/987654/approve", async (route) => {
+        sent = JSON.parse(route.request().postData() || "{}");
+        await route.fulfill({ json: { ...fake, stage: "filed" } });
+      });
+      try {
+        await page.goto(URL);
+        await page.fill('input[type="password"]', PASSWORD);
+        await page.click('button[type="submit"]');
+        await page.waitForSelector(".app", { timeout: 15000 });
+        await page.goto(`${URL}/inbox`);
+        const chips = page.locator(".asked.related .asked-opt");
+        await chips.first().waitFor({ timeout: 8000 });
+        if ((await chips.count()) !== 2) throw new Error(`${await chips.count()} chips`);
+        const reason = await page.locator(".reason").first().innerText();
+        if (!/links to check/i.test(reason)) throw new Error(`reason: ${reason}`);
+        await chips.nth(1).tap();
+        if ((await chips.nth(1).getAttribute("aria-pressed")) !== "false") throw new Error("the tap did not drop it");
+        const small = await chips.evaluateAll((bs) => bs.filter((b) => b.getBoundingClientRect().height < 44).length);
+        if (small) throw new Error(`${small} chip(s) under 44px`);
+        const file = page.locator(".decisions button.primary").first();
+        await file.tap();
+        for (let i = 0; i < 20 && !sent; i++) await page.waitForTimeout(100);
+        if (JSON.stringify(sent?.links) !== "[11]") throw new Error(`sent ${JSON.stringify(sent)}`);
+        return "two chips, one dropped, approve sent [11]";
+      } finally {
+        await ctx.close();
+      }
+    });
+
   } finally {
     for (const id of made) await api(page, "DELETE", `/api/items/${id}`).catch(() => {});
     await browser.close();
