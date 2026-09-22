@@ -245,7 +245,7 @@ button:disabled { opacity: .5; cursor: default; }
 .row-main { display: flex; align-items: flex-start; gap: 12px; }
 .check { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--accent); flex: none; }
 .row-icon { display: inline-flex; margin-top: 3px; flex: none; width: 18px; justify-content: center; }
-.row-icon svg { width: 16px; height: 16px; }
+.row-icon svg { width: 18px; height: 18px; transform: scale(1.333); } /* as .line-lead svg: the .check's height */
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; display: inline-block; }
 .dot.task { background: var(--accent); }
 .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -710,7 +710,9 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .line-row { display: flex; align-items: center; gap: 8px; }
 .line-row .line { flex: 1; min-width: 0; }
 .line-lead { flex: none; display: inline-flex; width: 16px; height: 16px; margin-left: 10px; }
-.line-lead svg { width: 16px; height: 16px; }
+/* The glyphs are drawn 18 of their 24 units tall, so at the box's size they read a quarter
+   smaller than the checkbox beside them. Scaled up, the drawing is the checkbox's height. */
+.line-lead svg { width: 100%; height: 100%; transform: scale(1.333); }
 .line.static .line-lead { margin-left: 0; }
 input.line-lead { accent-color: var(--accent); cursor: pointer; }
 
@@ -792,7 +794,12 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   a.raw.big, button.raw.big { min-height: 44px; display: flex; align-items: center; }
   .line-row { gap: 12px; }
   .line-lead { width: 22px; height: 22px; }
-  .line-lead svg { width: 20px; height: 20px; }
+  /* The checkbox sits centred in its 44px .tap-box; a glyph has no tap target, so it is placed
+     on the same centre by hand (measured, 2026-09-22). */
+  span.line-lead { margin-left: 13px; }
+  /* The same for a row: its glyph takes the checkbox's 44px column and its size. */
+  .row-icon { width: 44px; }
+  .row-icon svg { width: 22px; height: 22px; }
   button.ghost, button.primary { min-height: 44px; }
   /* The floating session card is one line while it runs; the outcome question may take two. */
   .session-bar.floating { padding: 8px 12px; }
