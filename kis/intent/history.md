@@ -5,8 +5,8 @@ as `v1.0`, and **slices 18 to 29 as `v2.0`** on 2026-09-22 (State has the deploy
 
 Deployed is not the same as accepted. **Slices 18 to 22 were seen and accepted on a device**
 before `v2.0`. **Slices 23 to 29 first reached a device with `v2.0` and are not accepted yet**:
-four questions only a phone can settle are still open, and the first day's use turned up two
-problems -- both in State's Known gaps and the backlog. Until they are answered, 23 to 29 are
+four questions only a phone can settle are still open, and the first day's use turned up
+problems: the title is still in the backlog, and the rest are fixed on `main` (State, Open). Until they are answered, 23 to 29 are
 built, tested and live, and no more than that. Current truth lives in
 `SPEC.md` (product), `../knowledge/technical.md` (how it is built), and `../knowledge/rules.md`
 (hard rules). Where a slice below disagrees with those, they win; the full plans are in git.

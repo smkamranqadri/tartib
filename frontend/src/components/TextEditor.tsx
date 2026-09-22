@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
-import { spotFromPoint, type Spot } from "../markdown";
+import { spotFromPoint, toggleTask, type Spot } from "../markdown";
 import Markdown from "./Markdown";
 
 /** The editor is a chunk of its own and `sw.js` does not precache it -- it only caches what
@@ -235,8 +235,19 @@ export default function TextEditor({
     if (window.getSelection()?.toString()) return;
     const target = e.target as HTMLElement;
     if (target.closest("a")) return; // following a link is not editing
+    if (target.closest("input")) return; // nor is ticking a box
     setSpot(rendered.current ? spotFromPoint(rendered.current, e.clientX, e.clientY) : null);
     setEditing(true);
+  }
+
+  /** A tick is an edit like any other, and it saves at once: there is no more typing to wait
+   *  for. While a conflict is open it only joins the draft, as a keystroke would. */
+  function tick(box: number) {
+    const next = toggleTask(draftRef.current, box);
+    if (next === null) return;
+    change(next);
+    draftRef.current = next;
+    if (!blocked) void flush();
   }
 
   function change(next: string) {
@@ -256,7 +267,7 @@ export default function TextEditor({
         </Suspense>
       ) : (
         <div className="raw big" ref={rendered} onClick={enter} role="presentation" title="Click to edit">
-          <Markdown text={draft} query={query} />
+          <Markdown text={draft} query={query} onTick={tick} />
         </div>
       )}
       <SaveState status={status} offline={offline} onRetry={() => void flush()} />

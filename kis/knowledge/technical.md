@@ -222,11 +222,22 @@ there, slice 20's search `<mark>` is a branch in that renderer rather than a pas
 `safeHref` refuses any scheme but http, https, mailto and in-app paths, so a `javascript:` link
 keeps its words and loses its href. The lexer runs with **`breaks: true`**: notes here are typed
 rather than authored, and with marked's default a single newline is a space, which would reflow
-every note written before that slice. Rendered on the item body, thought entries, Ask answers and
+every note written before that slice. `lex` in `markdown.ts` is the **one** lexer call, shared by
+the renderer and `toggleTask`, so the boxes drawn and the boxes ticked are counted the same way.
+A continued line keeps its typed indent: marked leaves the whitespace after the newline in the
+`br` token's `raw`, and the renderer draws it with `white-space: pre`. An indent on a paragraph's
+*first* line is still dropped -- marked strips it before the renderer sees it.
+**Checklist boxes are tickable in an item's own text only** (2026-09-22). Only the `- [ ]` /
+`- [x]` GFM form is a box. `Markdown` takes an optional `onTick`, and only `TextEditor` passes it;
+the brief, Ask answers and thoughts draw boxes disabled. `toggleTask(text, n)` flips the `n`th box
+in pre-order (a parent before its nested list). It finds each item by its first line, searching
+forward from the offset its top-level block starts at -- top-level `raw`s concatenate back to the
+source exactly -- so a box inside a code block is never counted. If it cannot place a box for
+certain it returns null, and the tap does nothing. A tick saves at once, not after the debounce. Rendered on the item body, thought entries, Ask answers and
 the space brief. Deliberately not rendered where the point is the captured bytes: the original
-capture on the item page and `ApprovalCard`. `markdown.ts` holds the parser-free helpers --
-`flattenFirstLine` strips syntax from a row's first line, and all five places that compute a row
-headline call it.
+capture on the item page and `ApprovalCard`. `markdown.ts` holds the helpers that are not React:
+`lex`, `toggleTask`, and `flattenFirstLine`, which strips syntax from a row's first line and is
+called by all five places that compute a row headline.
 The item's text is an editor you tap into, not a mode you enter (slice 24): `TextEditor.tsx`
 shows rendered markdown until a tap, then lazy-loads `MarkdownEditor.tsx` -- the only module that
 imports CodeMirror, so it is its own **213.86 kB gzip** chunk that a note you merely read never
@@ -249,6 +260,11 @@ A stale save (slice 19's 409) shows a **non-modal strip** above the text rather 
 keeps the local words, keeps saying Unsaved, and pauses the debounce until it is answered --
 otherwise it retries into the same refusal every two seconds. Resolving it remounts the editor,
 and the outgoing instance must not flush, or it sends the held draft again and the strip returns.
+**A save must not unmount the editor.** In a space's split view every save bumps `version`, which
+refetches the open item, so `ItemPage` shows its skeleton only when it has no item *for this id*;
+a refetch of the item already on screen keeps it there. Until 2026-09-22 it showed the skeleton
+for any refetch: the editor closed mid-sentence, "Saved" never appeared, and text typed during the
+refetch was lost (measured in Chrome).
 One primary button class (`.primary`), one ghost, one icon button. The space page is one list with filter pills, so it keeps no collapse state (the old `tartib-space-<name>` key is dead since slice 21).
 Tests can steer the fake classifier at runtime through `FAKE_CODEX_REPLY_FILE` (`{"classify": ..., "ask": ...}`); the UI proof injects a fake `SpeechRecognition` to exercise the mic path.
 

@@ -1,6 +1,5 @@
-import { Fragment, useMemo, type ReactNode } from "react";
-import { marked } from "marked";
-import { decodeEntities, safeHref } from "../markdown";
+import { Fragment, createContext, useContext, useMemo, type ReactNode } from "react";
+import { decodeEntities, eachTask, lex, safeHref } from "../markdown";
 import Highlight from "./Highlight";
 
 /** Markdown rendered from marked's token stream straight into React elements.
@@ -25,6 +24,8 @@ type Loose = {
   items?: Loose[];
   task?: boolean;
   checked?: boolean;
+  /** Which box this is, counted the way `toggleTask` counts them. */
+  box?: number;
   href?: string;
   title?: string | null;
   header?: { tokens?: Loose[] }[];
@@ -32,23 +33,35 @@ type Loose = {
   align?: ("center" | "left" | "right" | null)[];
 };
 
+/** Set only where the text is the person's to change. Everywhere else -- the brief, an Ask
+ *  answer, a thought -- a box is drawn and cannot be ticked. */
+const Tick = createContext<((box: number) => void) | null>(null);
+
 export default function Markdown({
   text,
   query = null,
   className,
+  onTick,
 }: {
   text: string;
   /** The search that brought you here, so the match is marked where it sits. */
   query?: string | null;
   className?: string;
+  /** Tapping the `n`th checklist box. */
+  onTick?: (box: number) => void;
 }) {
   const tokens = useMemo(() => {
     try {
-      // `breaks: true` deliberately. Notes here are typed, not authored: people end a line and
+      // `breaks: true`, set in `lex`, deliberately. Notes here are typed, not authored: people end a line and
       // start another, and every note written before this slice looked that way because the old
       // `.raw` was `white-space: pre-wrap`. With marked's default a single newline is a space,
       // so every existing note would quietly reflow into one block on the day this shipped.
-      return marked.lexer(text, { gfm: true, breaks: true }) as unknown as Loose[];
+      const out = lex(text) as unknown as Loose[];
+      let n = 0;
+      eachTask(out, (item) => {
+        (item as Loose).box = n++;
+      });
+      return out;
     } catch {
       return null;
     }
@@ -66,7 +79,27 @@ export default function Markdown({
     );
   }
 
-  return <div className={`md ${className ?? ""}`}>{blocks(tokens, query)}</div>;
+  return (
+    <Tick.Provider value={onTick ?? null}>
+      <div className={`md ${className ?? ""}`}>{blocks(tokens, query)}</div>
+    </Tick.Provider>
+  );
+}
+
+function TaskBox({ item }: { item: Loose }) {
+  const tick = useContext(Tick);
+  if (!tick || item.box === undefined) {
+    return <input type="checkbox" checked={!!item.checked} readOnly disabled tabIndex={-1} />;
+  }
+  const box = item.box;
+  return (
+    <input
+      type="checkbox"
+      checked={!!item.checked}
+      aria-label={item.checked ? "Untick" : "Tick"}
+      onChange={() => tick(box)}
+    />
+  );
 }
 
 function blocks(tokens: Loose[] | undefined, query: string | null): ReactNode {
@@ -100,7 +133,7 @@ function block(token: Loose, query: string | null): ReactNode {
     case "list": {
       const items = (token.items ?? []).map((item, i) => (
         <li key={i} className={item.task ? "md-task" : undefined}>
-          {item.task && <input type="checkbox" checked={!!item.checked} readOnly disabled tabIndex={-1} />}
+          {item.task && <TaskBox item={item} />}
           {itemContent(item.tokens, query)}
         </li>
       ));

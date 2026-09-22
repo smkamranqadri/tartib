@@ -1,6 +1,63 @@
 /** Markdown is presentation only: the stored bytes are never rewritten (rule 1). This module
- *  holds the two pieces that are not React -- decoding entities for a text node, and flattening
- *  a first line for a row. */
+ *  holds the pieces that are not React -- decoding entities for a text node, flattening a first
+ *  line for a row, and finding a checklist box in the source so a tap can tick it. A tick is the
+ *  one write here, and it is yours: the same edit as typing the `x`. */
+
+import { marked } from "marked";
+
+/** The one way item text is lexed. The renderer and `toggleTask` must count boxes the same way,
+ *  so they share this rather than each passing their own options. `breaks: true` is explained
+ *  where the renderer uses it. */
+export function lex(text: string) {
+  return marked.lexer(text, { gfm: true, breaks: true });
+}
+
+type Tok = { type: string; raw?: string; task?: boolean; tokens?: Tok[]; items?: Tok[] };
+
+/** Every task item, in the order the renderer draws them: depth first, a parent before the list
+ *  nested in it. A box inside a code block is not a token, so it is not counted. */
+export function eachTask(tokens: Tok[] | undefined, visit: (item: Tok) => void): void {
+  for (const t of tokens ?? []) {
+    if (t.type === "list") {
+      for (const item of t.items ?? []) {
+        if (item.task) visit(item);
+        eachTask(item.tokens, visit);
+      }
+    } else eachTask(t.tokens, visit);
+  }
+}
+
+/** The text with its `n`th box flipped, or null if it cannot be found for certain.
+ *
+ *  Top-level tokens' `raw`s concatenate back to the source exactly, which gives each block its
+ *  offset. Inside a block an item is found by its first line, searched forward from the one
+ *  before -- the first line because a quoted item's `raw` has lost its `> `. Anything that
+ *  does not line up returns null: a tick that lands on the wrong box is worse than none. */
+export function toggleTask(text: string, n: number): string | null {
+  const blocks = lex(text) as unknown as Tok[];
+  let offset = 0;
+  let seen = 0;
+  let at: number | null = null;
+  for (const block of blocks) {
+    let cursor = offset;
+    eachTask([block], (item) => {
+      if (at !== null || cursor < 0) return;
+      const first = (item.raw ?? "").split("\n")[0];
+      const pos = text.indexOf(first, cursor);
+      const box = /\[[ xX]\]/.exec(first);
+      if (pos < 0 || !box) {
+        cursor = -1;
+        return;
+      }
+      if (seen++ === n) at = pos + box.index + 1;
+      cursor = pos + first.length;
+    });
+    if (at !== null || cursor < 0) break;
+    offset += (block.raw ?? "").length;
+  }
+  if (at === null) return null;
+  return text.slice(0, at) + (text[at] === " " ? "x" : " ") + text.slice(at + 1);
+}
 
 const NAMED: Record<string, string> = {
   amp: "&",

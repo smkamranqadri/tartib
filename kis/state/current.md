@@ -17,8 +17,10 @@
 
 - **On `main` and not deployed, shipping with the next version:** the service-worker cache fix,
   a duplicate of an item deleted mid-classification no longer crashing the capture (`d19dd9d`),
-  and saving no longer reloading the note, with indented lines keeping their indent (`c91fbf9`).
-  Until the cache fix is out, a new
+  saving no longer reloading the note, with indented lines keeping their indent (`c91fbf9`), a
+  note's icon the size of the checkbox beside it (`1d3383e`), and **checklist boxes tickable** in
+  an item's text (`b420ed3`; the first-day checklist report was a missing `- `, not a bug). Each
+  was proved in Chrome against local; none has been on a phone. Until the cache fix is out, a new
   version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
   and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
   `sw.js` from Cloudflare once**, or the copy cached under the old headers lingers.
@@ -39,8 +41,8 @@
 ## Next
 
 1. **The next cycle's backlog** (`kis/intent/backlog.md`): first-day feedback on `v2.0` (the
-   title, checklists, delete in a modal), then links between items, approved 2026-09-22. The
-   fixes above ship with it.
+   title, delete in a modal), then links between items, approved 2026-09-22. The fixes above
+   ship with it.
 2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
 3. **Answer the four questions** under Known gaps, now that `v2.0` is on a device.
