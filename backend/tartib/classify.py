@@ -181,8 +181,13 @@ PROMPT = """You file short personal captures for one person. Reply with one JSON
 {{"proposals": [ ... ]}}
 
 One capture may contain several independent items. Split it into one proposal per item when
-the text lists distinct actions or facts ("A, B, and C", bullets, separate lines). Never merge
-distinct actions into one title. A single-item capture returns a list of one.
+the text lists separate things to do, or facts that have nothing to do with each other ("call
+Ali, buy milk"; a bare bulleted list of errands). Never merge distinct actions into one title.
+A single-item capture returns a list of one.
+**A heading followed by lines that belong under it is one note, not one per line**: a pasted
+list of preferences, a prompt, a recipe, meeting notes. When the first line names what the rest
+is, or the lines only make sense together, return one proposal with the whole text. Splitting
+such a note loses its heading and scatters one thing across many.
 
 Each proposal has:
 - "text": the verbatim slice of the capture this proposal comes from. For a single-item

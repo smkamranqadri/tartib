@@ -81,7 +81,10 @@ def test_multi_item_capture_splits_into_items(ai_client, monkeypatch):
         "call the dentist",
         "buy milk",
     ]
-    assert [i["stage"] for i in cap["items"]] == ["filed", "filed", "attention"]
+    # A split files nothing, however confident (slice 30): whether it was really three things
+    # is the owner's call.
+    assert [i["stage"] for i in cap["items"]] == ["attention"] * 3
+    assert [i["wait_reason"] for i in cap["items"]] == ["split"] * 3
     assert all(i["capture_id"] == cap["id"] for i in cap["items"])
     assert cap["items"][2]["space"] is None
     # search finds the specific item, not all three

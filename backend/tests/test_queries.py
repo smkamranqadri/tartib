@@ -76,7 +76,9 @@ def test_recent_page_leaves_out_what_is_waiting(ai_client, monkeypatch):
     """Needs Attention sits above Recent in the Inbox; the same item should not be in both."""
     set_classify_reply(monkeypatch, proposal(space="work"), proposal(confidence=0.3))
     mixed = capture(ai_client, "one filed, one unsure")
-    filed, waiting = sorted(mixed["items"], key=lambda i: i["stage"] != "filed")
+    # A split files nothing itself (slice 30), so one piece is filed by hand.
+    first, waiting = mixed["items"]
+    filed = ai_client.post(f"/api/items/{first['id']}/approve").json()
     assert (filed["stage"], waiting["stage"]) == ("filed", "attention")
     set_classify_reply(monkeypatch, proposal(confidence=0.3))
     parked = capture(ai_client, "only unsure")

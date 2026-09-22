@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { approveItem, redoItem } from "../api";
+import { approveItem, keepWhole, redoItem } from "../api";
 import { formatDue, waitingReason } from "../format";
 import type { Item, Shape } from "../types";
 import { useWide } from "../useWide";
@@ -28,6 +28,7 @@ export default function ApprovalCard({
   onApproved,
   onNotNow,
   onRetried,
+  onKept,
 }: {
   item: Item;
   spaces: string[];
@@ -36,6 +37,8 @@ export default function ApprovalCard({
   onNotNow?: (id: number) => void;
   /** The classifier tried again and the item is still waiting, with a new proposal. */
   onRetried: (next: Item) => void;
+  /** Keep as one replaced every piece of this capture with `note`. */
+  onKept?: (captureId: number, note: Item) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() => draftOf(item));
   const [editing, setEditing] = useState<"title" | "due" | null>(null);
@@ -81,6 +84,17 @@ export default function ApprovalCard({
         due: draft.shape === "task" && draft.due ? draft.due : null,
       });
       onApproved(item.id);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "failed");
+    }
+  }
+
+  /* Only while no piece has been started on; the server says so if another tab got there. */
+  const canKeep = Boolean(onKept && item.split?.whole);
+  async function keep() {
+    setMsg(null);
+    try {
+      onKept?.(item.capture_id, await keepWhole(item.capture_id));
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "failed");
     }
@@ -253,6 +267,16 @@ export default function ApprovalCard({
         <button type="button" className="primary" onClick={() => void approve()}>
           Approve {hotkey && <kbd>↵</kbd>}
         </button>
+        {canKeep && (
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => void keep()}
+            title={`Replace the ${item.split?.of ?? ""} pieces with one note holding the original text, whole`}
+          >
+            Keep as one
+          </button>
+        )}
         {onNotNow && (
           <button type="button" className="ghost" onClick={() => onNotNow(item.id)}>
             Not now

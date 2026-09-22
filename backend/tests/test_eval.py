@@ -649,3 +649,54 @@ def test_it_names_a_duplicate_and_refuses_a_near_miss():
     assert not false_positives, f"near misses read as duplicates: {false_positives}\n{report}"
     assert not wrong, f"pointed at the wrong item: {wrong}\n{report}"
     assert len(caught) >= 2, f"only caught {len(caught)}/{len(DUPLICATES)}\n{report}"
+
+
+# --- slice 30: a heading over lines is one note, a list of errands is still a list ---
+#
+# The two captures that went wrong on 2026-09-22 must stay whole; the two that should split
+# must still split. The preferences note is a reconstruction of capture #92's shape -- a
+# heading, seven preference lines, a palette and a tagline -- not its words, which are the
+# owner's. #91 is verbatim.
+
+PREFERENCES = """Personal Preferences For AI Agent
+Prefer concise, direct communication.
+Explain trade-offs before recommending one option.
+Limit active projects to 2-3 at a time.
+Batch small questions instead of asking one at a time.
+Default to plain language over jargon.
+Keep plans short enough to read on a phone.
+Say when something is unverified.
+Brand palette: bronze #A0703C, ink #1C1B19, paper #F4EFE6
+Tagline: Quiet tools for focused work."""
+
+SPLIT_FIXTURES = [
+    (PREFERENCES, 1),
+    (
+        "prompts\n❯ add smooth scrolling, subtle hover effects on links, and a nice fade in"
+        " animation when the page load",
+        1,
+    ),
+    ("call Ali, buy milk", 2),
+    ("- pay the electricity bill\n- book the car service\n- send the invoice to Ahmed", 3),
+]
+
+
+@pytest.mark.eval
+def test_a_heading_stays_one_note():
+    if shutil.which("codex") is None:
+        pytest.skip("codex CLI not installed")
+    context = Context(
+        now=NOW, zone=ZONE, spaces=[*SPACES, "personal", "coding"], codex=codex_cfg()
+    )
+
+    async def run_all():
+        return await asyncio.gather(*(classify(t, context) for t, _ in SPLIT_FIXTURES))
+
+    failures = []
+    for (text, want), proposals in zip(SPLIT_FIXTURES, asyncio.run(run_all()), strict=True):
+        items = [p for p in proposals if p.shape != "question"]
+        print(f"\n{text[:40]!r}: {[(p.shape, p.space, (p.text or '')[:30]) for p in items]}")
+        if len(items) != want:
+            failures.append(f"{text[:40]!r}: {len(items)} items, expected {want}")
+    if failures:
+        pytest.fail("\n".join(failures))

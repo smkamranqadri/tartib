@@ -240,10 +240,19 @@ WAIT_NO_SPACE = "no_space"
 WAIT_LOW_CONFIDENCE = "low_confidence"
 WAIT_DUPLICATE = "duplicate"
 WAIT_ASKED = "asked"
+# One capture became several items. None of them files itself: the owner decides whether it was
+# really several things or one, and "Keep as one" puts it back together (slice 30).
+WAIT_SPLIT = "split"
+# The note "Keep as one" made. It waits too: the pieces may not have agreed on a space.
+WAIT_WHOLE = "whole"
 
 
 def wait_reason_for(
-    space: str | None, duplicate_of: int | None, parked: bool, asked: bool = False
+    space: str | None,
+    duplicate_of: int | None,
+    parked: bool,
+    asked: bool = False,
+    split: bool = False,
 ) -> str | None:
     """The code a waiting row carries. Short, not display text: the client has the matched
     item and writes the sentence itself.
@@ -252,7 +261,12 @@ def wait_reason_for(
     waiting on an answer and not on a judgement about confidence. It used to fall through to
     `low_confidence`, so the classifier asking "which space?" at 0.9 rendered as "Unsure (90%)"
     -- which is both wrong and the opposite of what it is doing.
+
+    `split` comes before all of them: it is a question about the whole capture, and keeping it
+    as one makes the others moot. A piece's question still shows, from its proposal.
     """
+    if split:
+        return WAIT_SPLIT
     if parked and duplicate_of is not None:
         return WAIT_DUPLICATE
     if asked:
@@ -688,10 +702,16 @@ def insert_item(
         "proposal_json",
         "proposal_error",
         "classified_at",
+        "updated_at",
         "duplicate_of",
         "wait_reason",
         *values.keys(),
     ]
+    # One timestamp for both, so "never touched since it was written" is `updated_at =
+    # classified_at`: any later edit moves `updated_at` through the touch trigger. Keep as one
+    # depends on it. Milliseconds, as the trigger writes them: `updated_at` is compared as a
+    # string, and "…:00Z" sorts after "…:00.100Z" from the same second.
+    now = utcnow_ms_iso()
     params = [
         capture_id,
         raw_text,
@@ -699,7 +719,8 @@ def insert_item(
         stage,
         proposal_json,
         proposal_error,
-        utcnow_iso(),
+        now,
+        now,
         duplicate_of,
         wait_reason,
         *values.values(),
@@ -708,6 +729,107 @@ def insert_item(
         f"INSERT INTO items ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})", params
     )
     return int(cur.lastrowid or 0)
+
+
+class NotWhole(Exception):
+    """Keep as one refused: the capture did not split, or someone has started on a piece."""
+
+
+def _untouched_split(conn: sqlite3.Connection, capture_id: int) -> list[sqlite3.Row] | None:
+    """The capture's pieces, if Keep as one may still replace them; else None.
+
+    Every item the capture has must still be a waiting `split` piece nobody has started on: not
+    approved, edited, answered, redone, thought about or worked on in a session -- the same
+    spirit as the retry rule. A deleted piece does not count against it: Keep as one brings
+    back the whole text anyway."""
+    rows = conn.execute(
+        "SELECT *, EXISTS (SELECT 1 FROM sessions s WHERE s.item_id = items.id) AS worked"
+        " FROM items WHERE capture_id = ? ORDER BY id",
+        (capture_id,),
+    ).fetchall()
+    ok = bool(rows) and all(
+        r["stage"] == "attention"
+        and r["wait_reason"] == WAIT_SPLIT
+        and r["updated_at"] == r["classified_at"]
+        and r["thought_count"] == 0
+        and r["feedback"] is None
+        and not r["worked"]
+        for r in rows
+    )
+    return rows if ok else None
+
+
+def split_info(conn: sqlite3.Connection, items: Sequence[dict]) -> None:
+    """Add `split: {of, whole}` to each waiting split piece: how many pieces its capture has,
+    and whether Keep as one is still on offer."""
+    seen: dict[int, dict] = {}
+    for item in items:
+        if item.get("wait_reason") != WAIT_SPLIT:
+            continue
+        cid = item["capture_id"]
+        if cid not in seen:
+            rows = conn.execute(
+                "SELECT COUNT(*) FROM items WHERE capture_id = ?", (cid,)
+            ).fetchone()[0]
+            seen[cid] = {"of": rows, "whole": _untouched_split(conn, cid) is not None}
+        item["split"] = seen[cid]
+
+
+MAX_OPTIONS = 6  # the most answers a question may offer, as for the classifier's own
+
+
+def keep_whole(conn: sqlite3.Connection, capture_id: int) -> int:
+    """Replace a split capture's pieces with one waiting note holding the capture's whole text.
+
+    Its space is the one every piece proposed; if they disagreed, it asks which, with their
+    spaces as the answers. Always a note: tasks cannot be merged, and one tap makes it a task.
+    Raises NotWhole when the pieces are not all untouched."""
+    cap = conn.execute(
+        "SELECT raw_text, created_at FROM captures WHERE id = ?", (capture_id,)
+    ).fetchone()
+    if cap is None:
+        raise NotWhole("no such capture")
+    rows = _untouched_split(conn, capture_id)
+    if rows is None:
+        raise NotWhole("Only while every piece is still waiting and untouched.")
+    allowed = list_spaces(conn)
+    spaces = list(dict.fromkeys(r["space"] for r in rows if r["space"] in allowed))
+    confidences = [
+        json.loads(r["proposal_json"]).get("confidence", 0) for r in rows if r["proposal_json"]
+    ]
+    proposal: dict = {
+        "shape": "note",
+        "space": spaces[0] if len(spaces) == 1 else None,
+        "title": None,
+        "due": None,
+        "remind_at": None,
+        "confidence": min(confidences, default=0),
+        "clarify": None,
+        "duplicate_of": None,
+        "new_space": None,
+    }
+    if len(spaces) > 1:
+        proposal["clarify"] = {
+            "field": "space",
+            "question": "Where does this go?",
+            "options": [
+                {"value": s, "label": s, "detail": None} for s in spaces[:MAX_OPTIONS]
+            ],
+        }
+    item_id = insert_item(
+        conn,
+        capture_id=capture_id,
+        raw_text=cap["raw_text"],
+        created_at=cap["created_at"],
+        fields={"shape": "note", "space": proposal["space"]},
+        stage="attention",
+        allowed=allowed,
+        proposal_json=json.dumps(proposal),
+        wait_reason=WAIT_WHOLE,
+    )
+    marks = ", ".join("?" * len(rows))
+    conn.execute(f"DELETE FROM items WHERE id IN ({marks})", [r["id"] for r in rows])
+    return item_id
 
 
 def update_fields(

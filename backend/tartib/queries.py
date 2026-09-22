@@ -25,6 +25,7 @@ from tartib.store import (
     serialize_capture,
     serialize_item,
     set_house_rules,
+    split_info,
     stale_cutoff,
     usage_totals,
 )
@@ -87,8 +88,10 @@ def attention(conn: sqlite3.Connection = Depends(get_db)) -> dict:
         " AND updated_at < ? ORDER BY updated_at, id",
         (cutoff,),
     ).fetchall()
+    items = [serialize_item(r) for r in rows]
+    split_info(conn, items)
     return {
-        "items": [serialize_item(r) for r in rows],
+        "items": items,
         "stale": [serialize_item(r) for r in stale],
         "stale_days": STALE_DAYS,
     }

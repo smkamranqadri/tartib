@@ -41,9 +41,14 @@ export interface Item {
   proposal: Proposal | null;
   /** The item this one looks like. Recorded whether or not parking is switched on. */
   duplicate_of?: number | null;
-  /** Why it is waiting: "no_space" | "low_confidence" | "duplicate". A short code, not text --
-   *  the client has the matched item and writes the sentence itself (slice 28). */
+  /** Why it is waiting: "no_space" | "low_confidence" | "duplicate" | "asked" | "split" |
+   *  "whole". A short code, not text -- the client has the matched item and writes the sentence
+   *  itself (slice 28). */
   wait_reason?: string | null;
+  /** On a waiting piece of a capture that split (slice 30), from /api/attention only: how many
+   *  pieces the capture has, and whether "Keep as one" is still on offer -- it is not once any
+   *  piece has been started on. */
+  split?: { of: number; whole: boolean } | null;
   proposal_error: string | null;
   classified_at: string | null;
   updated_at: string | null;

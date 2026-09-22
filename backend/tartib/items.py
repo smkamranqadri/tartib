@@ -17,6 +17,7 @@ from tartib.config import Settings
 from tartib.deps import get_db, get_settings
 from tartib.spaces import add_space
 from tartib.store import (
+    NotWhole,
     SpaceError,
     capture_by_client_id,
     classifier_examples,
@@ -25,6 +26,7 @@ from tartib.store import (
     file_item,
     house_rules,
     insert_item,
+    keep_whole,
     list_spaces,
     serialize_item,
     should_file,
@@ -236,6 +238,21 @@ def approve(
         return serialize_item(fetch_item(conn, item_id))
 
     return _write(go)
+
+
+@router.post("/captures/{capture_id}/whole")
+def keep_as_one(capture_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
+    """A capture that split, put back together: its pieces become one waiting note holding the
+    capture's whole text. Only while no piece has been started on (store.keep_whole)."""
+    if not conn.execute("SELECT 1 FROM captures WHERE id = ?", (capture_id,)).fetchone():
+        raise HTTPException(status_code=404, detail="capture not found")
+    try:
+        item_id = keep_whole(conn, capture_id)
+    except NotWhole as e:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    conn.commit()
+    return serialize_item(fetch_item(conn, item_id))
 
 
 class RedoBody(BaseModel):

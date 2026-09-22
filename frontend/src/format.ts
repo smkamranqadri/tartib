@@ -94,6 +94,12 @@ export function waitingReason(item: Item, short = false): string {
   const pct = item.proposal ? Math.round(item.proposal.confidence * 100) : 0;
   if (item.proposal_error) return short ? "AI failed" : `AI failed: ${item.proposal_error}`;
   if (!item.proposal) return short ? "proposal rejected" : "Proposal rejected";
+  /* One capture read as several things files none of them: the owner says whether it was. */
+  if (item.wait_reason === "split") {
+    const n = item.split?.of;
+    return short ? "split from one capture" : `Split from one capture${n ? ` into ${n}` : ""}`;
+  }
+  if (item.wait_reason === "whole") return short ? "kept as one" : "Kept as one: choose where it goes";
   if (item.wait_reason === "duplicate") return short ? "looks like a duplicate" : "Looks like something already here";
   /* The classifier asked rather than guessed. Checked before confidence, because an item
      carrying a question is waiting on an answer -- at 0.9 it used to read "Unsure (90%)". */

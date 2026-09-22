@@ -46,7 +46,22 @@ export default function Inbox({
 
   function replace(id: number, next: Item | null) {
     if (!data) return;
-    setData({ ...data, items: next ? data.items.map((i) => (i.id === id ? next : i)) : data.items.filter((i) => i.id !== id) });
+    /* A piece of a split that was decided on means the rest can no longer be kept as one. */
+    const gone = data.items.find((i) => i.id === id);
+    const items = next ? data.items.map((i) => (i.id === id ? next : i)) : data.items.filter((i) => i.id !== id);
+    setData({
+      ...data,
+      items: items.map((i) =>
+        i.split && gone && i.capture_id === gone.capture_id ? { ...i, split: { ...i.split, whole: false } } : i,
+      ),
+    });
+    onDecided();
+  }
+
+  /* Keep as one: the capture's pieces go, and the one note that replaces them takes their place. */
+  function kept(captureId: number, note: Item) {
+    if (!data) return;
+    setData({ ...data, items: [...data.items.filter((i) => i.capture_id !== captureId), note] });
     onDecided();
   }
 
@@ -91,6 +106,7 @@ export default function Inbox({
                 onApproved={(id) => replace(id, null)}
                 onNotNow={(id) => setDeferred((d) => [...d.filter((x) => x !== id), id])}
                 onRetried={(next) => replace(next.id, next)}
+                onKept={kept}
               />
             ))}
           </div>

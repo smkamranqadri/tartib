@@ -203,6 +203,8 @@ export const approveItem = (id: number, edit?: Edit) =>
 export const getThoughts = (id: number) => api<{ thoughts: Thought[] }>(`/api/items/${id}/thoughts`);
 export const addThought = (id: number, body: string) =>
   send<{ thought: Thought; thought_count: number }>("POST", `/api/items/${id}/thoughts`, { body });
+/** Keep as one (slice 30): a split capture's pieces become one waiting note with its whole text. */
+export const keepWhole = (captureId: number) => send<Item>("POST", `/api/captures/${captureId}/whole`);
 export const redoItem = (id: number, reason: string) => send<Item>("POST", `/api/items/${id}/redo`, { reason });
 export const deleteItem = (id: number) => send<{ ok: true; id: number }>("DELETE", `/api/items/${id}`);
 export const getRecent = (limit = 50, before?: number) =>

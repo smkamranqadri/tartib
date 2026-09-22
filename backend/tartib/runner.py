@@ -329,6 +329,9 @@ class Runner:
         conn = self._connect()
         try:
             policies = space_policies(conn)
+            # One capture read as several things files none of them: whether it really was
+            # several is the owner's call, whatever the confidence and the space's policy.
+            split = sum(p.shape != "question" for p in proposals) > 1
             for p in proposals:
                 if p.shape == "question":
                     continue
@@ -345,7 +348,8 @@ class Runner:
                 # anything back. Eight seeded cases are not a false-positive rate.
                 parked = self.settings.duplicate_park and duplicate_of is not None
                 filed = (
-                    p.clarify is None
+                    not split
+                    and p.clarify is None
                     and not parked
                     and should_file(
                         p.space, p.confidence, self.settings.autofile_confidence, policies
@@ -367,7 +371,11 @@ class Runner:
                             None
                             if filed
                             else wait_reason_for(
-                                p.space, duplicate_of, parked, asked=p.clarify is not None
+                                p.space,
+                                duplicate_of,
+                                parked,
+                                asked=p.clarify is not None,
+                                split=split,
                             )
                         ),
                     )
@@ -381,6 +389,7 @@ class Runner:
                         stage="attention",
                         allowed=list_spaces(conn),
                         proposal_json=p.model_dump_json(exclude={"text"}),
+                        wait_reason=wait_reason_for(None, None, False, split=split),
                     )
             conn.commit()
         finally:
