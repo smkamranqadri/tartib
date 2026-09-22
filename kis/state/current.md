@@ -10,7 +10,8 @@
   the pinned `gpt-5.6-luna` at medium reasoning (confirmed in the container over SSH,
   2026-09-22). What each slice changed: `kis/intent/history.md`; decisions and proof:
   `kis/intent/slice-*.md`.
-- Task: none in flight.
+- Task: **slice 31** (`kis/intent/slice-31-titles-and-modals.md`), phase 0 of three: the `.seg`
+  switches become the pills, then the first line as the title, then every question in a modal.
 
 ## Open
 
