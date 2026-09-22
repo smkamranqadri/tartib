@@ -10,8 +10,9 @@
   classifying on the pinned `gpt-5.6-luna` at medium reasoning (checks under Proof). The
   database as it was just before is backed up (`private.md`, Backups); that file and `v2.0` are
   the rollback.
-- Task: none in flight. **Slice 32, Pick for me, is built and verified on `main`, not deployed**
-  (`../intent/slice-32-pick-for-me.md`, Proof).
+- Task: **slice 33, links, phase A** (`../intent/slice-33-links.md`), in progress, Phase mode.
+  **Slice 32 (Pick for me) is built and verified on `main`, not deployed**
+  (`../intent/slice-32-pick-for-me.md`, Proof); the owner chose to start 33 before deploying.
 
 ## Open
 
@@ -32,11 +33,11 @@
 
 1. **Deploy slice 32 as `v2.2`**: bump `SW_VERSION`, back up the database first (`private.md`),
    `./deploy.sh v2.2`, then check migration 0019 applied and one Pick from the phone.
-2. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`): links
-   between items, approved 2026-09-22.
-3. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+2. **Slice 33 phase A, then B** (`../intent/slice-33-links.md`); phase C after item 4 below.
+3. **Try `v2.1` on the phone** (Open, above), then the backlog (`kis/intent/backlog.md`).
+4. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-4. **Answer the four questions** under Known gaps, on `v2.1`.
+5. **Answer the four questions** under Known gaps, on `v2.1`.
 
 ## Commands
 

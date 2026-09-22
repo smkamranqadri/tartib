@@ -45,7 +45,7 @@ Approved, not yet planned. Each gets a plan file when it comes up:
 
 Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
 
-- **Links between items: approved, the owner's words "we definitely need links."** Raised while
+- **Links between items: approved, the owner's words "we definitely need links."** **Planned as slice 33, 2026-09-22** (`slice-33-links.md`), which settles the undecided points below; this entry leaves when it ships. Raised while
   moving existing notes into Tartib (copied by hand -- no import feature is wanted). Two kinds,
   both from real notes:
   (a) note to note -- a CapRover setup note includes the Docker setup note, which includes the
