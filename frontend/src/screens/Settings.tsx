@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { describe, getConfig, logout, setHouseRules } from "../api";
+import { describe, getConfig, getUsage, logout, setHouseRules } from "../api";
 import { speechSupported } from "../Capture";
 import { type ChimeSound, chimeSound, playChime, SOUNDS, setChimeSound } from "../chime";
 import Card from "../components/Card";
@@ -42,6 +42,13 @@ export default function Settings({ onSignedOut }: { onSignedOut: () => void }) {
         </Row>
         <Row title="Auto-file threshold" desc="Proposals at or above this confidence file without asking.">
           <span className="muted">{config ? `${Math.round(config.autofile_confidence * 100)}%` : "…"}</span>
+        </Row>
+        <Row
+          stack
+          title="What it has done"
+          desc="Every classifier and Ask call, since this started being recorded. Calls and tokens disagree when a call times out: it is killed before the CLI reports anything, so it spends the quota and reports nothing."
+        >
+          <AiUsageBlock />
         </Row>
         <Row
           title="Learning from"
@@ -219,6 +226,47 @@ function Reminders({ vapidPublic, failed }: { vapidPublic: string | null | undef
 
 /** `stack` puts the control under the text at full width, for anything wider than a value or a
  *  switch -- the theme list is the only one so far. */
+/** What the AI has done. No money figure yet: the cost arithmetic turns on whether reasoning
+ *  tokens are already inside the output count, and that has not been reconciled against a real
+ *  call, so showing a number would be showing a guess. */
+function AiUsageBlock() {
+  const { data, error, loading } = useLoad(getUsage, []);
+  if (loading && !data) return <span className="muted">…</span>;
+  if (error || !data) return <ErrorLine>{error ?? "No usage recorded."}</ErrorLine>;
+  if (!data.calls) return <span className="muted">Nothing recorded yet.</span>;
+  const seconds = Math.round(data.duration_ms / 1000);
+  const perCapture = data.captures ? Math.round(data.total_tokens / data.captures) : 0;
+  return (
+    <div className="usage">
+      <p>
+        <b>{data.calls}</b> calls · <b>{data.total_tokens.toLocaleString()}</b> tokens ·{" "}
+        <b>{seconds}s</b> of waiting
+      </p>
+      {!!data.captures && (
+        <p className="muted small">
+          About {perCapture.toLocaleString()} tokens per capture, across {data.captures}.
+        </p>
+      )}
+      {!!data.failed && (
+        <p className="muted small">
+          {data.failed} failed.
+          {data.usage_limit.count > 0 && (
+            <>
+              {" "}
+              {data.usage_limit.count} of them hit the subscription limit
+              {data.usage_limit.resets_at ? `, last reporting a reset at ${data.usage_limit.resets_at}` : ""}.
+            </>
+          )}
+        </p>
+      )}
+      <p className="muted small">
+        {data.model ? `Model ${data.model}.` : "No model pinned; the CLI chooses."} A cost estimate
+        is not shown yet — the arithmetic has not been checked against a real call.
+      </p>
+    </div>
+  );
+}
+
 /** The house-rules editor. Saves on demand, not on every keystroke: this text is sent to the
  *  classifier on every capture, and a half-typed rule is worse than none. */
 function HouseRules({ initial, max, onSaved }: { initial: string; max: number; onSaved: () => void }) {

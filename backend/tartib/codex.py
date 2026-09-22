@@ -20,6 +20,42 @@ class CodexError(Exception):
 
 
 @dataclass(frozen=True)
+class Usage:
+    """What one turn consumed, as `turn.completed` reports it.
+
+    `reasoning_output_tokens` is reported separately but is **already counted inside**
+    `output_tokens` -- adding them would bill reasoning twice, which on a reasoning model is
+    most of the bill. `billable()` is the only thing that should be priced.
+    """
+
+    input_tokens: int = 0
+    cached_input_tokens: int = 0
+    cache_write_input_tokens: int = 0
+    output_tokens: int = 0
+    reasoning_output_tokens: int = 0
+    total_tokens: int = 0
+
+    @property
+    def empty(self) -> bool:
+        return self.total_tokens == 0 and self.input_tokens == 0 and self.output_tokens == 0
+
+    def billable(self) -> tuple[int, int, int, int]:
+        """(fresh input, cached input, cache writes, output). Fresh input excludes what was
+        read from cache, because the two are priced differently and the CLI reports the cached
+        part inside the input count."""
+        fresh = max(self.input_tokens - self.cached_input_tokens, 0)
+        return fresh, self.cached_input_tokens, self.cache_write_input_tokens, self.output_tokens
+
+
+@dataclass(frozen=True)
+class Reply:
+    """A parsed reply and what it cost. `usage` is empty when the CLI reported none."""
+
+    data: dict
+    usage: Usage
+
+
+@dataclass(frozen=True)
 class CodexConfig:
     command: str  # e.g. "codex"; split with shlex
     model: str | None = None
@@ -55,6 +91,10 @@ def _codex_args(
         "read-only",
         "--color",
         "never",
+        # The turn as JSONL on stdout. It does not replace --output-last-message; the reply
+        # still goes to the file. This is where the token counts and, importantly, the real
+        # error text come from (slice 29).
+        "--json",
         "--cd",
         str(workdir),
         "--output-schema",
@@ -70,7 +110,47 @@ def _codex_args(
     return args
 
 
-async def _run(args: list[str], workdir: Path, timeout: float) -> None:
+def parse_events(stdout: bytes) -> tuple[Usage, str | None]:
+    """Pull the usage and the failure message out of the JSONL stream.
+
+    The message matters as much as the counts: before `--json`, CodexError took the last line
+    of stderr-or-stdout, and with the stream on that line is a JSON blob. "You've hit your usage
+    limit ... try again at 11:46 AM" is the text that makes a stalled run diagnosable, and it
+    arrives here as an `error` event.
+    """
+    usage, message = Usage(), None
+    for line in stdout.decode(errors="replace").splitlines():
+        line = line.strip()
+        if not line or not line.startswith("{"):
+            continue
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        kind = event.get("type")
+        if kind == "turn.completed" and isinstance(event.get("usage"), dict):
+            u = event["usage"]
+            usage = Usage(
+                **{
+                    f: int(u.get(f) or 0)
+                    for f in (
+                        "input_tokens",
+                        "cached_input_tokens",
+                        "cache_write_input_tokens",
+                        "output_tokens",
+                        "reasoning_output_tokens",
+                        "total_tokens",
+                    )
+                }
+            )
+        elif kind == "error" and event.get("message"):
+            message = str(event["message"])
+        elif kind == "turn.failed" and not message:
+            message = str((event.get("error") or {}).get("message") or "") or None
+    return usage, message
+
+
+async def _run(args: list[str], workdir: Path, timeout: float) -> Usage:
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -87,10 +167,15 @@ async def _run(args: list[str], workdir: Path, timeout: float) -> None:
         proc.kill()
         await proc.wait()
         raise CodexError(f"timed out after {timeout:.0f}s") from e
+    usage, message = parse_events(stdout)
     if proc.returncode != 0:
-        text = (stderr or stdout).decode(errors="replace").strip()
-        tail = text.splitlines()[-1:] or ["no output"]
-        raise CodexError(f"exit {proc.returncode}: {tail[0][:300]}")
+        if not message:
+            # Nothing usable in the stream: fall back to what the process said, as before.
+            text = (stderr or stdout).decode(errors="replace").strip()
+            lines = [ln for ln in text.splitlines() if not ln.strip().startswith("{")]
+            message = lines[-1] if lines else "no output"
+        raise CodexError(f"exit {proc.returncode}: {message[:300]}")
+    return usage
 
 
 def _parse_object(raw: str) -> dict:
@@ -110,23 +195,23 @@ async def _run_codex(
     prompt: str,
     schema: dict,
     timeout: float,
-) -> dict:
+) -> Reply:
     with tempfile.TemporaryDirectory(prefix="tartib-codex-") as tmp:
         workdir = Path(tmp)
         schema_path = workdir / "schema.json"
         output = workdir / "reply.json"
         schema_path.write_text(json.dumps(schema))
         args = _codex_args(command, model, reasoning, workdir, schema_path, output, prompt)
-        await _run(args, workdir, timeout)
+        usage = await _run(args, workdir, timeout)
         try:
             raw = output.read_text()
         except FileNotFoundError as e:
             raise CodexError("no reply written") from e
-    return _parse_object(raw)
+    return Reply(data=_parse_object(raw), usage=usage)
 
 
-async def run_json(prompt: str, schema: dict, cfg: CodexConfig) -> dict:
-    """Run the CLI with `prompt`, constrained to `schema`."""
+async def run_json(prompt: str, schema: dict, cfg: CodexConfig) -> Reply:
+    """Run the CLI with `prompt`, constrained to `schema`. Returns the reply and what it cost."""
     return await _run_codex(
         cfg.command, cfg.model, cfg.reasoning, prompt, schema, cfg.timeout
     )

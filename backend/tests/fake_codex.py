@@ -5,6 +5,9 @@ FAKE_CODEX_REPLY_ASK       reply for ask prompts (prompt starts with "You answer
 FAKE_CODEX_REPLY_TERMS     reply for the search-term expansion call ("You propose search terms")
 FAKE_CODEX_REPLY           fallback for either
 FAKE_CODEX_EXIT            exit code (default 0)
+FAKE_CODEX_ERROR           the failure message, delivered as an error event under --json
+FAKE_CODEX_USAGE           JSON usage object for turn.completed
+FAKE_CODEX_NO_USAGE        emit turn.completed with no usage at all
 FAKE_CODEX_SLEEP           seconds to sleep before replying
 FAKE_CODEX_RECORD          path; one JSON line per invocation with argv and stdin tty state
 FAKE_CODEX_REPLY_FILE      path to a JSON file {"classify": ..., "ask": ...}; wins over the env
@@ -37,7 +40,14 @@ if os.environ.get("FAKE_CODEX_SLEEP"):
     time.sleep(float(os.environ["FAKE_CODEX_SLEEP"]))
 code = int(os.environ.get("FAKE_CODEX_EXIT", "0"))
 if code:
-    print("fake codex: simulated failure", file=sys.stderr)
+    message = os.environ.get("FAKE_CODEX_ERROR") or "fake codex: simulated failure"
+    if "--json" in argv:
+        # The real CLI puts the useful text here, not on stderr. Losing it is the regression
+        # this slice has to avoid.
+        print(json.dumps({"type": "error", "message": message}))
+        print(json.dumps({"type": "turn.failed", "error": {"message": message}}))
+    else:
+        print(message, file=sys.stderr)
     sys.exit(code)
 if is_terms:
     key = "FAKE_CODEX_REPLY_TERMS"
@@ -56,4 +66,21 @@ if "--output-last-message" in argv:
     out = argv[argv.index("--output-last-message") + 1]
     with open(out, "w") as f:
         f.write(reply)
+
+# With --json the real CLI prints the turn as events on stdout, and `turn.completed` is where
+# the token counts live. FAKE_CODEX_USAGE overrides the counts; FAKE_CODEX_NO_USAGE drops the
+# usage object entirely, which is the case where a row must record zeroes and say so.
+if "--json" in argv:
+    print(json.dumps({"type": "thread.started", "thread_id": "fake"}))
+    print(json.dumps({"type": "turn.started"}))
+    if os.environ.get("FAKE_CODEX_NO_USAGE"):
+        print(json.dumps({"type": "turn.completed"}))
+    else:
+        usage = json.loads(
+            os.environ.get("FAKE_CODEX_USAGE")
+            or '{"input_tokens": 1200, "cached_input_tokens": 400,'
+            ' "cache_write_input_tokens": 100, "output_tokens": 90,'
+            ' "reasoning_output_tokens": 30, "total_tokens": 1390}'
+        )
+        print(json.dumps({"type": "turn.completed", "usage": usage}))
 sys.exit(0)

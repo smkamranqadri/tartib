@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Literal
@@ -10,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from tartib.codex import CodexConfig, CodexError, run_json
+from tartib.codex import CodexConfig, CodexError, Usage, run_json
 from tartib.store import Example, SpaceContext, context_line, resolve_ref
 
 NULL_SPACE_CONFIDENCE_CAP = 0.6
@@ -415,14 +416,24 @@ def _normalize(p: Proposal, context: Context) -> Proposal:
 
 
 async def classify(
-    text: str, context: Context, correction: tuple[str, str] | None = None
+    text: str,
+    context: Context,
+    correction: tuple[str, str] | None = None,
+    on_usage: Callable[[Usage], None] | None = None,
 ) -> list[Proposal]:
+    """`on_usage` is handed what the call consumed, when a caller wants it recorded (slice 29).
+    A parameter rather than a return value, so the callers that do not care -- the evals, chiefly
+    -- are untouched, and so nothing has to reach for global state to find it."""
     try:
-        data = await run_json(build_prompt(text, context, correction), OUTPUT_SCHEMA, context.codex)
+        reply = await run_json(
+            build_prompt(text, context, correction), OUTPUT_SCHEMA, context.codex
+        )
     except CodexError as e:
         raise ClassifyError(str(e)) from e
+    if on_usage is not None:
+        on_usage(reply.usage)
     try:
-        parsed = Proposals.model_validate(data)
+        parsed = Proposals.model_validate(reply.data)
     except ValidationError as e:
         first = e.errors()[0]
         raise ClassifyError(f"invalid proposal: {first['loc']}: {first['msg']}") from e

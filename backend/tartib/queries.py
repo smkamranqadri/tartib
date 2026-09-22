@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tartib.auth import require_auth
 from tartib.clock import today_in, utcnow, utcnow_iso
+from tartib.codex import Usage
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings, push_ready
 from tartib.sessions import counts_today
@@ -24,7 +25,9 @@ from tartib.store import (
     serialize_item,
     set_house_rules,
     stale_cutoff,
+    usage_totals,
 )
+from tartib.usage import rates_for, refresh
 
 RECENT = 3
 RECENT_PAGE = 50
@@ -130,6 +133,42 @@ def put_house_rules(
     substituted into the part that defines the reply format.
     """
     return {"house_rules": set_house_rules(conn, body.text)}
+
+
+@router.get("/usage")
+def ai_usage(
+    conn: sqlite3.Connection = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    """What the AI has cost. The money figure is an estimate twice over -- the subscription
+    reports no cost at all, and a catalogue price is list price -- and the UI says so."""
+    totals = usage_totals(conn)
+    refresh(settings.ai_model, settings.db_path)  # at most once a day; failure keeps the cache
+    rates = rates_for(settings.ai_model, settings.db_path)
+    spent = Usage(
+        input_tokens=totals["input_tokens"],
+        cached_input_tokens=totals["cached_input_tokens"],
+        cache_write_input_tokens=totals["cache_write_input_tokens"],
+        output_tokens=totals["output_tokens"],
+        reasoning_output_tokens=totals["reasoning_output_tokens"],
+        total_tokens=totals["total_tokens"],
+    )
+    return {
+        **totals,
+        "cost": round(rates.cost(spent), 6),
+        # The arithmetic behind `cost` -- specifically whether reasoning tokens are already
+        # inside output_tokens -- has not yet been reconciled against a real call, so the UI
+        # does not show it. Slice 29, Still open.
+        "cost_verified": False,
+        "model": settings.ai_model,
+        "rates": {
+            "input": rates.input,
+            "output": rates.output,
+            "cache_read": rates.cache_read,
+            "cache_write": rates.cache_write,
+            "source": rates.source,
+        },
+    }
 
 
 @router.get("/recent")

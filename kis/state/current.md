@@ -5,7 +5,14 @@
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
-- Task: **slice 29, what the AI costs** -- planned 2026-09-22, not started. Phase mode.
+- Task: **slice 29, what the AI costs** -- built, **not closed**, committed on `main`.
+  `kis/intent/slice-29-ai-usage.md`.
+- **BLOCKER, and it is deploy-blocking.** `--json` is now on for **every** AI call in the app and
+  has only ever been exercised against the fake CLI. The one real attempt failed on quota before
+  the turn completed, so it has **never been confirmed that the reply file is still written when
+  the stream is on**. If it is not, every capture fails. One real capture, classified end to end,
+  settles it. Then reconcile the token arithmetic and flip `cost_verified`. Quota returns
+  **11:46**. **`v1.1` must not carry slice 29 until both are done.**
   `kis/intent/slice-29-ai-usage.md`. Two things in it will bite if missed: `--json` changes
   where error messages come from, and the cost may double-count reasoning tokens -- **no cost
   figure ships until one real call reconciles the arithmetic.**

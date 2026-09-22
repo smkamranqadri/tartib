@@ -425,6 +425,10 @@ button:disabled { opacity: .5; cursor: default; }
 .pref-desc { font-size: 13px; }
 
 /* The house-rules editor (slice 27): a field you type prose into, in a card of one-line prefs. */
+/* Slice 29: what the AI has done. */
+.usage p { margin: 0 0 4px; }
+.usage p:last-child { margin-bottom: 0; }
+
 .house-rules textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; min-height: 92px; }
 .house-rules textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .house-rules textarea::placeholder { color: var(--muted); opacity: .8; }

@@ -6,7 +6,8 @@ from __future__ import annotations
 import asyncio
 import re
 import sqlite3
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from tartib.auth import require_auth
 from tartib.clock import utcnow
-from tartib.codex import CodexError, run_json
+from tartib.codex import CodexError, Usage, run_json
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
 from tartib.store import (
@@ -22,6 +23,7 @@ from tartib.store import (
     _fts_term,
     _space_clause,
     item_header,
+    record_call,
     retrieval_query,
     search,
     serialize_item,
@@ -214,7 +216,9 @@ def build_prompt(
     )
 
 
-async def expand_terms(question: str, settings: Settings) -> list[str]:
+async def expand_terms(
+    question: str, settings: Settings, on_usage: Callable[[Usage], None] | None = None
+) -> list[str]:
     """Words to search for when the question's own words found nothing.
 
     A failure here is not a failed question -- the caller keeps whatever the cheap path
@@ -225,10 +229,12 @@ async def expand_terms(question: str, settings: Settings) -> list[str]:
         now=now.isoformat(), zone=settings.tz, question=question.strip()
     )
     try:
-        data = await run_json(prompt, TERMS_SCHEMA, settings.codex())
+        reply = await run_json(prompt, TERMS_SCHEMA, settings.codex())
     except CodexError:
         return []
-    terms = data.get("terms") or []
+    if on_usage is not None:
+        on_usage(reply.usage)
+    terms = reply.data.get("terms") or []
     return [str(t).strip() for t in terms if str(t).strip()][:MAX_TERMS]
 
 
@@ -247,17 +253,21 @@ async def answer_from_rows(
     settings: Settings,
     thoughts: dict | None = None,
     prior: Prior | None = None,
+    on_usage: Callable[[Usage], None] | None = None,
 ) -> dict:
     """Ask Codex about exactly these rows (and their thoughts) and shape the reply. Raises
     AskError on failure."""
     try:
-        data = await run_json(
+        reply = await run_json(
             build_prompt(question, rows, settings, thoughts, prior),
             ANSWER_SCHEMA,
             settings.codex(),
         )
     except CodexError as e:
         raise AskError(str(e)) from e
+    if on_usage is not None:
+        on_usage(reply.usage)
+    data = reply.data
     by_id = {r["id"]: r for r in rows}
     raw_ids = data.get("item_ids") or []
     item_ids = [i for i in dict.fromkeys(raw_ids) if isinstance(i, int) and i in by_id]
@@ -285,8 +295,22 @@ async def answer_question(
     expanded = False
     thin = not matched or len(rows) < MIN_ROWS
     matched_rows = len(rows) if matched else 0
+
+    def record(kind: str, started: float, usage, failure: str | None = None) -> None:
+        record_call(
+            conn,
+            kind=kind,
+            model=settings.ai_model,
+            usage=usage,
+            duration_ms=int((time.monotonic() - started) * 1000),
+            failure=failure,
+        )
+
     if thin and await asyncio.to_thread(more_to_find, conn, space, matched_rows):
-        terms = await expand_terms(question, settings)
+        started = time.monotonic()
+        seen: list = []
+        terms = await expand_terms(question, settings, on_usage=seen.append)
+        record("terms", started, seen[0] if seen else None)
         match = terms_query(terms) if terms else ""
         found = await asyncio.to_thread(search, conn, match, space) if match else []
         if found:
@@ -298,7 +322,16 @@ async def answer_question(
     if not rows:
         return dict(EMPTY)
     thoughts = await asyncio.to_thread(thoughts_for, conn, [r["id"] for r in rows])
-    result = await answer_from_rows(question, rows, settings, thoughts, prior)
+    started = time.monotonic()
+    seen_answer: list = []
+    try:
+        result = await answer_from_rows(
+            question, rows, settings, thoughts, prior, on_usage=seen_answer.append
+        )
+    except AskError as e:
+        record("ask", started, None, str(e))
+        raise
+    record("ask", started, seen_answer[0] if seen_answer else None)
     return {**result, "matched": matched, "expanded": expanded}
 
 

@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import sqlite3
+import time
 
 from tartib import db
 from tartib.ask import AskError, answer_question
@@ -21,6 +22,7 @@ from tartib.store import (
     house_rules,
     insert_item,
     list_spaces,
+    record_call,
     should_file,
     similar_items,
     space_policies,
@@ -116,11 +118,19 @@ class Runner:
             examples=examples,
             candidates=candidates,
         )
+        seen: list = []
+        started = time.monotonic()
         try:
-            proposals = await classify(text, context)
+            proposals = await classify(text, context, on_usage=seen.append)
         except ClassifyError as e:
+            await asyncio.to_thread(
+                self._record, "classify", capture_id, started, None, str(e)
+            )
             await asyncio.to_thread(self._fallback, capture_id, str(e))
             return
+        await asyncio.to_thread(
+            self._record, "classify", capture_id, started, seen[0] if seen else None, None
+        )
         await asyncio.to_thread(self._apply, capture_id, text, created_at, proposals)
         questions = [p for p in proposals if p.shape == "question"]
         if questions:
@@ -230,6 +240,29 @@ class Runner:
                 house_rules(conn),
                 classifier_examples(conn, threshold=self.settings.autofile_confidence)[0],
                 similar_items(conn, row["raw_text"]),
+            )
+        finally:
+            conn.close()
+
+    def _record(
+        self,
+        kind: str,
+        capture_id: int | None,
+        started: float,
+        usage,
+        failure: str | None,
+    ) -> None:
+        """One row per call, on its own connection. record_call never raises."""
+        conn = self._connect()
+        try:
+            record_call(
+                conn,
+                kind=kind,
+                model=self.settings.ai_model,
+                usage=usage,
+                capture_id=capture_id,
+                duration_ms=int((time.monotonic() - started) * 1000),
+                failure=failure,
             )
         finally:
             conn.close()

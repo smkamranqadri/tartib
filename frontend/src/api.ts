@@ -107,6 +107,28 @@ export const getConfig = () =>
     vapid_public: string | null;
   }>("/api/config");
 
+export interface AiUsage {
+  calls: number;
+  failed: number;
+  captures: number;
+  duration_ms: number;
+  input_tokens: number;
+  cached_input_tokens: number;
+  cache_write_input_tokens: number;
+  output_tokens: number;
+  reasoning_output_tokens: number;
+  total_tokens: number;
+  cost: number;
+  /** The cost arithmetic is not shown until it has been reconciled against a real call. */
+  cost_verified: boolean;
+  model: string | null;
+  rates: { input: number; output: number; cache_read: number; cache_write: number; source: string };
+  usage_limit: { count: number; last: string | null; resets_at: string | null };
+}
+
+/** What the AI has done and what it cost (slice 29). */
+export const getUsage = () => api<AiUsage>("/api/usage");
+
 /** Your own filing rules, appended to the shipped classifier prompt. Empty clears them.
  *  They cannot reach the part of the prompt that defines the reply format (slice 27). */
 export const setHouseRules = (text: string) =>

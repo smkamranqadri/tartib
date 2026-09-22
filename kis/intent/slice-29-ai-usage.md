@@ -112,3 +112,80 @@ records zero and says so rather than guessing.
 
 **Outbound network is new surface on the VPS.** Once a day, one host, and the app works with it
 blocked -- which the acceptance checks require.
+
+## What was built (2026-09-22) -- built, two things unproven
+
+Steps 1 to 6, all of it. **The slice is not closed**, and for a sharper reason than the plan
+anticipated: see Still open.
+
+### The regression the plan predicted, caught by an existing test
+
+Adding `--json` broke `test_bad_cli_falls_back_to_one_note` on the first run, exactly as written:
+stdout became JSONL, so the last line -- which is where `CodexError` got its message -- became a
+JSON blob. `parse_events` now takes the message from the `error` event, with the old
+stderr-or-stdout path kept as a fallback for anything that never reaches the stream. The test
+went green again without being touched, which is the proof that the message is no worse than
+before.
+
+### Reasoning tokens, and why the cost is still hidden
+
+`Usage.billable()` returns fresh input, cached input, cache writes and output -- and
+**deliberately not reasoning tokens**, on the reading that the CLI already counts them inside
+`output_tokens`. Pricing both would bill reasoning twice, and on a reasoning model at medium
+effort that is most of the bill. *That reading is not yet confirmed.* `/api/usage` computes a
+cost and returns it with `cost_verified: false`; the UI shows tokens, calls and time, and says in
+as many words that a cost estimate is not shown yet because the arithmetic has not been checked.
+The committed UI suite asserts that no currency symbol appears while `cost_verified` is false.
+
+An attempt to settle it without the quota failed: the earlier build's 324 stored AI jobs record
+no token counts at all, so there was nothing to reconcile against.
+
+### The rest
+
+- **Migration 0016, `ai_calls`**, one row per call: kind, model, the six counts, duration, ok,
+  the CLI's own failure text, a reason, the reported reset time, and a nullable `capture_id`.
+  Not a foreign key on purpose -- deleting a capture must not erase the record that the work was
+  paid for.
+- **`store.record_call` never raises.** A bookkeeping failure must not cost a capture, and there
+  is a test that calls it against a database with no table at all.
+- **The usage limit is its own failure**, with the reset time parsed out of the CLI's message.
+  Four stalls in two days and the app knew nothing about any of them; now it does.
+- **`usage.py`** holds the pinned rates as a shipped default and refreshes at most daily,
+  writing only this model's four numbers -- the catalogue is 5.17MB to read four figures. Cached
+  beats shipped; a corrupt cache falls back rather than failing; an unknown model costs nothing
+  rather than guessing.
+- **Usage reaches the recorder through an `on_usage` callback** rather than a changed return
+  type, so the six eval call sites that do not care were left alone.
+
+## Verification -- what actually ran
+
+- `uv run pytest -q` -- **264 passed, 7 deselected** (was 244; +20, in a new `test_usage.py`).
+- `uv run ruff check .` clean; `npm run typecheck` and `npm run build` clean.
+- `npm run ui` -- **10/10**, including a new check that the readout renders and that **no money
+  appears while the arithmetic is unverified**.
+- Migration 0016 applied to the real local database (schema version 16).
+- On glass at 390px, empty and populated:
+
+```
+3 calls · 11,350 tokens · 21s of waiting
+About 5,675 tokens per capture, across 2.
+1 failed. 1 of them hit the subscription limit, last reporting a reset at 11:46 AM.
+Model gpt-5.6-luna. A cost estimate is not shown yet — the arithmetic has not been
+checked against a real call.
+```
+
+## Still open -- and one of these is deploy-blocking
+
+Both need the same quota window (**11:46**), and they should be done in this order:
+
+1. **Confirm `--json` does not break a real successful call.** This is the serious one. `--json`
+   is on for *every* AI call in the app now, and it has only been exercised against the fake. The
+   one real attempt made while establishing the event format failed on quota before the turn
+   completed, so **it has never been confirmed that the reply file is still written when the
+   stream is on**. If it is not, every capture fails. Nothing deploys until one real capture
+   classifies end to end.
+2. **Reconcile the token arithmetic.** Compare `total_tokens` against the sum of the parts on a
+   real call and confirm reasoning tokens sit inside `output_tokens`. Then flip
+   `cost_verified` and show the figure.
+
+Until (1) passes, this slice is a liability rather than a feature, and `v1.1` must not carry it.

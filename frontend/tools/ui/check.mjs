@@ -260,6 +260,28 @@ async function main() {
       }
     });
 
+    // --- slice 29: what the AI has done ---
+    await check("S29 the usage readout renders and stays honest", async () => {
+      await page.goto(`${URL}/settings`);
+      await page.waitForSelector(".pref", { timeout: 10000 });
+      await page.waitForTimeout(900);
+      const row = await page.evaluate(() => {
+        const r = [...document.querySelectorAll(".pref")].find((x) =>
+          x.textContent.includes("What it has done"),
+        );
+        return r ? r.querySelector(".pref-ctl").innerText.replace(/\s+/g, " ").trim() : null;
+      });
+      if (!row) throw new Error("no usage row on Settings");
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      if (overflow > 1) throw new Error(`settings overflows by ${overflow}px`);
+      // Until the token arithmetic is reconciled against a real call, no money may appear.
+      const { cost_verified } = await api(page, "GET", "/api/usage");
+      if (!cost_verified && /[$£€]/.test(row)) throw new Error("showed an unverified cost");
+      return row.slice(0, 60);
+    });
+
   } finally {
     for (const id of made) await api(page, "DELETE", `/api/items/${id}`).catch(() => {});
     await browser.close();

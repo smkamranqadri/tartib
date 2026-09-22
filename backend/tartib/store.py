@@ -444,6 +444,118 @@ def set_house_rules(conn: sqlite3.Connection, text: str) -> str:
     return cleaned
 
 
+USAGE_LIMIT = re.compile(r"try again at ([0-9]{1,2}:[0-9]{2}\s*(?:[AP]M)?)", re.I)
+
+
+def failure_reason(message: str) -> tuple[str, str | None]:
+    """(reason, resets_at). The subscription limit is its own kind of failure: it is the scarce
+    resource here -- a subscription reports no money cost at all -- and it has stopped work more
+    than once. The CLI names the time it will come back; that is worth keeping."""
+    text = message or ""
+    if "usage limit" in text.lower():
+        found = USAGE_LIMIT.search(text)
+        return "usage_limit", (found.group(1).strip() if found else None)
+    if "timed out" in text.lower():
+        return "timeout", None
+    return "other", None
+
+
+def record_call(
+    conn: sqlite3.Connection,
+    *,
+    kind: str,
+    model: str | None,
+    usage=None,
+    capture_id: int | None = None,
+    duration_ms: int = 0,
+    failure: str | None = None,
+) -> None:
+    """Write down one AI call. **Never raises**: a bookkeeping failure must not cost a capture."""
+    try:
+        reason, resets_at = failure_reason(failure) if failure else (None, None)
+        counts = {
+            f: int(getattr(usage, f, 0) or 0)
+            for f in (
+                "input_tokens",
+                "cached_input_tokens",
+                "cache_write_input_tokens",
+                "output_tokens",
+                "reasoning_output_tokens",
+                "total_tokens",
+            )
+        }
+        conn.execute(
+            "INSERT INTO ai_calls (created_at, kind, model, capture_id, ok, failure, reason,"
+            " resets_at, duration_ms, input_tokens, cached_input_tokens,"
+            " cache_write_input_tokens, output_tokens, reasoning_output_tokens, total_tokens)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                utcnow_iso(),
+                kind,
+                model,
+                capture_id,
+                0 if failure else 1,
+                failure,
+                reason,
+                resets_at,
+                duration_ms,
+                *counts.values(),
+            ),
+        )
+        conn.commit()
+    except sqlite3.Error:
+        pass  # deliberately silent: see the docstring
+
+
+def usage_totals(conn: sqlite3.Connection) -> dict:
+    """What the AI has done, in total. Calls and tokens disagree on purpose: a timed-out call
+    is killed before the CLI reports anything, so it costs quota and records no tokens."""
+    row = conn.execute(
+        "SELECT COUNT(*) AS calls, SUM(ok) AS ok,"
+        " COALESCE(SUM(input_tokens), 0) AS input_tokens,"
+        " COALESCE(SUM(cached_input_tokens), 0) AS cached_input_tokens,"
+        " COALESCE(SUM(cache_write_input_tokens), 0) AS cache_write_input_tokens,"
+        " COALESCE(SUM(output_tokens), 0) AS output_tokens,"
+        " COALESCE(SUM(reasoning_output_tokens), 0) AS reasoning_output_tokens,"
+        " COALESCE(SUM(total_tokens), 0) AS total_tokens,"
+        " COALESCE(SUM(duration_ms), 0) AS duration_ms FROM ai_calls"
+    ).fetchone()
+    limits = conn.execute(
+        "SELECT COUNT(*) AS n, MAX(created_at) AS last, MAX(resets_at) AS resets"
+        " FROM ai_calls WHERE reason = 'usage_limit'"
+    ).fetchone()
+    captures = conn.execute(
+        "SELECT COUNT(DISTINCT capture_id) AS n FROM ai_calls WHERE capture_id IS NOT NULL"
+    ).fetchone()["n"]
+    out = {k: int(row[k] or 0) for k in row.keys() if k != "ok"}
+    out["failed"] = int(row["calls"] or 0) - int(row["ok"] or 0)
+    out["captures"] = int(captures or 0)
+    out["usage_limit"] = {
+        "count": int(limits["n"] or 0),
+        "last": limits["last"],
+        "resets_at": limits["resets"],
+    }
+    return out
+
+
+def usage_for_capture(conn: sqlite3.Connection, capture_id: int) -> dict | None:
+    """What one capture's classification consumed, or None when nothing was recorded -- every
+    item filed before slice 29 has no row and never will."""
+    row = conn.execute(
+        "SELECT COALESCE(SUM(input_tokens), 0) AS input_tokens,"
+        " COALESCE(SUM(cached_input_tokens), 0) AS cached_input_tokens,"
+        " COALESCE(SUM(cache_write_input_tokens), 0) AS cache_write_input_tokens,"
+        " COALESCE(SUM(output_tokens), 0) AS output_tokens,"
+        " COALESCE(SUM(total_tokens), 0) AS total_tokens,"
+        " COALESCE(SUM(duration_ms), 0) AS duration_ms, COUNT(*) AS calls"
+        " FROM ai_calls WHERE capture_id = ?",
+        (capture_id,),
+    ).fetchone()
+    if not row or not int(row["calls"] or 0):
+        return None
+    return {k: int(row[k] or 0) for k in row.keys()}
+
+
 def get_state(conn: sqlite3.Connection, key: str) -> str | None:
     """`app_state` is the small key/value table migration 0005 added. It holds whatever has to
     outlive a restart and does not belong to an item: the digest's date, the login counters."""
