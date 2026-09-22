@@ -55,6 +55,13 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   first line becomes the title"*, which is only true of a task. Worth settling what a title *is*
   before changing where it shows: one editable thing in one place, shown the same way for a task
   and a note. Screenshot on file: a task "Post on social media" whose title sits over a checklist.
+- **The Task / Note switch should look like the filter pills.** Reported with two screenshots: the
+  switch in a space's "+ Add" form beside the All / Tasks / Notes and Done / Sessions pills. The
+  switch is `.seg` (`AddItemForm.tsx`; 8px radius, 6px buttons, a raised `--panel` highlight),
+  the pills are `.pills.tabs` (fully rounded). `.seg` has two more users with the same mismatch:
+  the space page's AUTO / ASK / FILE policy (`Space.tsx`) and the chime sound picker
+  (`Settings.tsx`). One control shape was slice 23's rule ("controls reduced to one shape"), so
+  this is the rule not yet applied here, and the three likely go together.
 - **Deleting a note or task should ask in a modal, not inside the note's body.** The owner's
   words: *"should ask to delete note or task in modal not in note's body."* What the code does:
   Delete in the item page's header sets `confirmDelete`, and `Confirm` renders inline **below the
