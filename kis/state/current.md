@@ -6,10 +6,13 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   **`v2.0` is deployed and live** (2026-09-22), and the phone reports `SW_VERSION`
   `2026-09-22.2`. It took deleting and re-adding the home-screen app, because Cloudflare was
-  serving the old service worker -- fixed on `main` for the next version; see Open. Reinstalling
-  removed the phone's push subscription, so **reminders must be switched back on in Settings on
-  the phone**. Desktop push works in Safari (subscribed 2026-09-22); it never worked in Helix,
-  which cannot reach Google's push service -- the browser, not Tartib.
+  serving the old service worker -- fixed on `main` for the next version; see Open. Push is on
+  for both devices: the phone, re-enabled after the reinstall, and desktop Safari. Helix on the
+  desktop cannot subscribe at all -- the browser, not Tartib. Every reminder and digest now
+  buzzes twice, by choice.
+- **First-day feedback on v2.0 is in the backlog** for the next cycle: the title is shown in
+  several places and editable in only one, and a checklist typed as `[x]` / `[]` does not become
+  a checklist -- nor could it be ticked if it did.
 - Task: none in flight. **Slice 29 (what the AI costs) is done and committed on `main`**, not
   deployed, no blockers: `kis/intent/slice-29-ai-usage.md`. How any of it works -- the event
   stream, the cost, the prompt instrumentation, the dormant quota readout -- is

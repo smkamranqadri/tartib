@@ -111,6 +111,27 @@ Deferred from a slice rather than never planned:
   2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so it is
   not a backup, and everything in that database exists exactly once.
 
+Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
+
+- **The title is confusing, and it cannot be edited where it is shown.** The owner's words: *"don't
+  know title where note or task render, it duplicate and i can't edit it."* What the code does:
+  a task's title is drawn as a heading **above** the text only when it differs from the whole
+  body (`ItemPage.tsx`, the `item-title` line), so it appears in up to three places -- that
+  heading, the list row, and the Title field in the Edit section -- and **only the last is
+  editable**. Tapping the heading does nothing; tap-to-edit covers the body, not the title. A
+  note has no title at all: its row shows its first line. And the capture box promises *"The
+  first line becomes the title"*, which is only true of a task. Worth settling what a title *is*
+  before changing where it shows: one editable thing in one place, shown the same way for a task
+  and a note. Screenshot on file: a task "Post on social media" whose title sits over a checklist.
+- **A checklist typed naturally does not become a checklist.** The owner typed `[x] post on
+  linkedin` and `[] post on facebook`. The renderer *does* support task lists -- it draws a box
+  from marked's `task` and `checked` fields -- but marked only recognises the GFM form, `- [x]` and
+  `- [ ]`: without the leading `- `, and with `[]` instead of `[ ]`, those lines are a plain
+  paragraph and render as literal brackets. Checked by feeding both forms to marked's lexer. Two
+  things to decide: whether to accept the looser form people actually type, and whether the boxes
+  should be **tickable** -- today they are drawn `readOnly disabled`, so even a correct checklist
+  cannot be ticked, which is half a feature for a to-do list.
+
 Unscheduled candidates:
 
 - Image was 1.62GB (Node runtime + Codex CLI + Claude CLI + uvicorn extras, plus cryptography and aiohttp via pywebpush since slice 11). Not a stated constraint (memory is, and runtime is 42MiB). Slice 18 dropped the Claude CLI (1.07GB built locally on arm64, 2026-09-19; not measured on the x86_64 deploy build). A slimmer route: download the Codex release binary instead of npm. Worth more after slice 17: every deploy cross-builds this image under QEMU, where size is time.
