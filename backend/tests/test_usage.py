@@ -321,3 +321,30 @@ def test_a_failed_call_still_reports_the_quota(ai_client, monkeypatch):
     body = ai_client.get("/api/usage").json()
     assert body["quota"]["primary"]["used_percent"] == 100.0
     assert body["usage_limit"]["count"] >= 1
+
+
+def test_the_total_is_computed_because_the_cli_does_not_report_one():
+    """A real turn on 2026-09-22 carried the five counts and no total at all. Without this,
+    every recorded call stores zero and the readout says "0 tokens"."""
+    real = {
+        "input_tokens": 11238,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 15,
+        "reasoning_output_tokens": 0,
+    }
+    usage, _, _ = parse_events(json.dumps({"type": "turn.completed", "usage": real}).encode())
+    assert usage.total_tokens == 11253
+    assert not usage.empty
+
+
+def test_a_reported_total_is_trusted_over_the_computed_one():
+    usage, _, _ = parse_events(
+        json.dumps(
+            {
+                "type": "turn.completed",
+                "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 99},
+            }
+        ).encode()
+    )
+    assert usage.total_tokens == 99

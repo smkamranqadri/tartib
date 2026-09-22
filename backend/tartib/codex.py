@@ -41,6 +41,9 @@ class Usage:
     cache_write_input_tokens: int = 0
     output_tokens: int = 0
     reasoning_output_tokens: int = 0
+    # **The CLI does not report this.** Observed on a real turn 2026-09-22: `usage` carries the
+    # five counts above and no total at all. It is computed as input + output when absent, or
+    # every recorded call would store a zero and the readout would say "0 tokens".
     total_tokens: int = 0
 
     @property
@@ -181,19 +184,20 @@ def parse_events(stdout: bytes) -> tuple[Usage, str | None, tuple[Quota, Quota]]
         kind = event.get("type")
         if kind == "turn.completed" and isinstance(event.get("usage"), dict):
             u = event["usage"]
-            usage = Usage(
-                **{
-                    f: int(u.get(f) or 0)
-                    for f in (
-                        "input_tokens",
-                        "cached_input_tokens",
-                        "cache_write_input_tokens",
-                        "output_tokens",
-                        "reasoning_output_tokens",
-                        "total_tokens",
-                    )
-                }
-            )
+            counts = {
+                f: int(u.get(f) or 0)
+                for f in (
+                    "input_tokens",
+                    "cached_input_tokens",
+                    "cache_write_input_tokens",
+                    "output_tokens",
+                    "reasoning_output_tokens",
+                    "total_tokens",
+                )
+            }
+            if not counts["total_tokens"]:
+                counts["total_tokens"] = counts["input_tokens"] + counts["output_tokens"]
+            usage = Usage(**counts)
         elif kind == "error" and event.get("message"):
             message = str(event["message"])
         elif kind == "turn.failed" and not message:

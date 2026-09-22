@@ -206,20 +206,55 @@ left". A test pins that.
 Quota 92% used of the 5 hour window, resets 11:46 AM.
 ```
 
-## Still open -- and one of these is deploy-blocking
+## The three open items, settled by one call (2026-09-22)
 
-Both need the same quota window (**11:46**), and they should be done in this order:
+Deliberately one call, not an eval run. It answered all three, and two of the answers were
+corrections.
 
-1. **Confirm `--json` does not break a real successful call.** This is the serious one. `--json`
-   is on for *every* AI call in the app now, and it has only been exercised against the fake. The
-   one real attempt made while establishing the event format failed on quota before the turn
-   completed, so **it has never been confirmed that the reply file is still written when the
-   stream is on**. If it is not, every capture fails. Nothing deploys until one real capture
-   classifies end to end.
-2. **Reconcile the token arithmetic.** Compare `total_tokens` against the sum of the parts on a
-   real call and confirm reasoning tokens sit inside `output_tokens`. Then flip
-   `cost_verified` and show the figure.
-3. **Confirm the `token_count` shape** against a real event. The field names came from the
-   binary; the parser tolerates them being wrong, but nobody has seen one.
+**1. `--json` does not break a real call. The deploy blocker is cleared.** Exit 0, and the reply
+file was written with the stream on -- `{"shape":"note"}`. Then the real test: one capture
+through the running container classified end to end, filed as a task in `home`, no error. It
+went to `home` because of the house rule saved during slice 27's UI pass, which is slice 27
+working in the real app as a bonus.
 
-Until (1) passes, this slice is a liability rather than a feature, and `v1.1` must not carry it.
+**2. The CLI does not report a total at all.** The real `usage` object is five fields:
+
+```json
+{"input_tokens": 11238, "cached_input_tokens": 0, "cache_write_input_tokens": 0,
+ "output_tokens": 15, "reasoning_output_tokens": 0}
+```
+
+No `total_tokens`. The parser was defaulting it to 0, so **every recorded call would have stored
+a zero and the readout would have said "0 tokens"** -- a bug that only a real call could show,
+since the fake was written from the field list and dutifully reported a total. It is computed as
+input + output when absent, and a reported total still wins.
+
+**The cost arithmetic reconciles exactly.** 15,579 input and 145 output at $0.20/M and $1.20/M
+give 0.0032898; the API returned 0.00329. And `reasoning_output_tokens` came back **0 on both
+real calls**, so the double-count risk this slice held the figure back for does not arise in
+exec mode at all -- `billable()` would still be right if it did. `cost_verified` is now true and
+the figure shows.
+
+**3. There is no `token_count` event in exec mode.** The field names were read off the binary and
+are presumably right for wherever that event is emitted, but `codex exec` did not produce one.
+The defensive parsing did its job -- the windows stay unknown rather than becoming a confident
+zero -- so the quota line simply does not render. **The readout is built and dormant.** If it
+never appears, that is the CLI not telling us, not the app failing to ask.
+
+### What the call revealed about the quota question
+
+**15,579 input tokens for one capture**, of which Tartib's own prompt is about 2,435. The other
+**~13,100 is the CLI's own instructions, on every single call.** So the earlier arithmetic was
+out by a factor of six: an eval run is not ~155k input tokens, it is **~810k**. That, and not
+the prompt growth across slices 26 to 28, is what has been eating the subscription. The Settings
+copy says so in one line: *most of each call is the CLI's own instructions, not yours.*
+
+## Still open
+
+Nothing blocking. Two things worth knowing rather than doing:
+
+- **The quota readout is dormant** until something emits `token_count`. Built, tested, and
+  invisible in exec mode.
+- **A consolidated `pytest -m eval` on the pinned model** has still not been run in one go. It
+  now costs 52 calls at ~15.6k input each, so it is worth doing deliberately, once, before
+  `v1.1` -- not casually.

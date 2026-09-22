@@ -249,6 +249,7 @@ function AiUsageBlock() {
   const fullest = windows.sort((a, b) => (b.used_percent ?? 0) - (a.used_percent ?? 0))[0];
   const quota = fullest ? { ...fullest, used_percent: fullest.used_percent ?? 0 } : null;
   const perCapture = data.captures ? Math.round(data.total_tokens / data.captures) : 0;
+  const perCaptureCost = data.captures ? (data.cost / data.captures).toFixed(4) : "0.0000";
   return (
     <div className="usage">
       <p>
@@ -280,9 +281,15 @@ function AiUsageBlock() {
           {quota.resets_at ? `, resets ${quota.resets_at}` : ""}.
         </p>
       )}
+      {data.cost_verified && (
+        <p className="muted small">
+          About <b>${data.cost.toFixed(4)}</b> at list price, or ${perCaptureCost} a capture. An
+          estimate twice over: the subscription reports no cost at all, and these are list rates.
+        </p>
+      )}
       <p className="muted small">
-        {data.model ? `Model ${data.model}.` : "No model pinned; the CLI chooses."} A cost estimate
-        is not shown yet — the arithmetic has not been checked against a real call.
+        {data.model ? `Model ${data.model}.` : "No model pinned; the CLI chooses."}{" "}
+        Most of each call is the CLI's own instructions, not yours.
       </p>
     </div>
   );

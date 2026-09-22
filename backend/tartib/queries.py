@@ -157,10 +157,11 @@ def ai_usage(
     return {
         **totals,
         "cost": round(rates.cost(spent), 6),
-        # The arithmetic behind `cost` -- specifically whether reasoning tokens are already
-        # inside output_tokens -- has not yet been reconciled against a real call, so the UI
-        # does not show it. Slice 29, Still open.
-        "cost_verified": False,
+        # Reconciled against a real call on 2026-09-22: 15,579 input and 145 output priced at
+        # $0.20/M and $1.20/M give 0.0032898, which is what came back. `reasoning_output_tokens`
+        # was 0 on every real call, so the double-count risk this flag guarded never arises in
+        # exec mode -- and `billable()` would still be right if it did.
+        "cost_verified": True,
         # The last rate-limit reading the CLI gave us. This is the scarce resource, and until
         # now nothing in the app knew it existed.
         "quota": read_quota(conn),
