@@ -6,27 +6,18 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
   `v1.0` is tagged and released; `main` is ahead of it, unpushed.
 - Task: none in flight. **Slice 29 (what the AI costs) is done and committed on `main`**, not
-  deployed. `kis/intent/slice-29-ai-usage.md`. No blockers: one real capture classified end to
-  end with `--json` on, and the cost arithmetic reconciles to the penny.
-- **One capture costs 13k-15.6k input tokens, and only ~1.9k-2.4k of that is Tartib's prompt.** The
-  rest is the CLI's own instructions, on every call. That, not slice 26-28's prompt growth, is
-  what eats the subscription: an eval run is ~810k input tokens.
-- **`ai_calls` now records what was in each prompt** (migration 0017): its size, how many
-  candidates, examples and real corrections it carried, and whether house rules were on. Added
-  2026-09-22 before a capture session, because none of it can be backfilled. It is what will
-  answer whether slices 26-28 earn their tokens once there is real usage.
-- **`TARTIB_DUPLICATE_PARK` stays off during that session on purpose**: the duplicate verdict
-  records on every capture while nothing is held back, which is the dark run the flag exists for.
-- The quota readout is **built and dormant** -- `codex exec` emits no `token_count` event, so the
-  windows stay unknown and the line does not render. Not a fault to chase.
-- **The whole eval suite is green in one run on the pinned model** (2026-09-22, 7 passed, 4m38s).
-  First time both have been true together: before today the evals ran unpinned. Every headline
-  number holds on `gpt-5.6-luna` -- context 1/6 to 6/6, the house rule 0/3 to 3/3 with controls
-  unmoved, duplicates 3/3 with 0/5 false positives, and the vague captures asking while the
-  placeable ones file.
-  `kis/intent/slice-29-ai-usage.md`. Two things in it will bite if missed: `--json` changes
-  where error messages come from, and the cost may double-count reasoning tokens -- **no cost
-  figure ships until one real call reconciles the arithmetic.**
+  deployed, no blockers: `kis/intent/slice-29-ai-usage.md`. How any of it works -- the event
+  stream, the cost, the prompt instrumentation, the dormant quota readout -- is
+  `../knowledge/technical.md`.
+- **A capture session is about to start on the local app**, and two things are set up for it.
+  `ai_calls` records what was in each prompt from migration 0017 onward, which cannot be
+  backfilled, so the data starts from the first note. And `TARTIB_DUPLICATE_PARK` **stays off**:
+  the duplicate verdict records on every capture while nothing is held back, which is the dark
+  run the flag exists for. What it should answer afterwards: whether the prompt grows with the
+  database, whether the examples are ever real corrections rather than padding, and a
+  false-positive rate for duplicates on real notes rather than eight seeded cases.
+- **The whole eval suite is green in one run on the pinned model** (2026-09-22, 7 passed, 4m38s)
+  -- the first time both have been true together, since the evals ran unpinned until that day.
 - **Slice 28 (what the classifier may name) is done and committed on
   `main`**, not deployed. Park-and-name a duplicate, and proposing a space that does not exist.
   `kis/intent/slice-28-what-the-classifier-may-name.md`. `TARTIB_DUPLICATE_PARK` is **off** by
@@ -57,7 +48,7 @@
 - **Slices 18 to 22 are closed and accepted on a device.** Plans: `kis/intent/slice-1{8,9}-*.md`,
   `kis/intent/slice-2{0,1,2}-*.md`; what each one changed, in a line: `kis/intent/history.md`.
 - **Nothing since `v1.0` is pushed or deployed.** Slices 18 to 29 are local commits on `main`
-  (unpushed). On the next deploy: migrations 0010-0016 run,
+  (unpushed). On the next deploy: migrations 0010-0017 run,
   `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
   out of the CapRover app config, **`TARTIB_AI_MODEL=gpt-5.6-luna` and
   `TARTIB_AI_REASONING=medium` go in** (pinned 2026-09-21; without them the server keeps
@@ -96,7 +87,7 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. As of 2026-09-22 the numbers to expect are **264 passed, 7 deselected**
+  Verification commands. As of 2026-09-22 the numbers to expect are **274 passed, 7 deselected**
   (the seven are the evals) and **10/10** from the UI suite. Any red is real.
 - Deploy: `./deploy.sh v1.1`, then CapRover's Deployment tab, "Deploy via ImageName".
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
