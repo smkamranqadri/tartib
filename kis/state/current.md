@@ -5,10 +5,10 @@
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
 - **Live: `v2.0`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
-  `smkamranqadri/tartib:v2.0`. It carries slices 18 to 29 and the fixes from three reviews run
-  before release, classifying on the pinned `gpt-5.6-luna` at medium reasoning (confirmed in
-  the container over SSH, 2026-09-22). What each slice changed, in a line: `kis/intent/history.md`; the decisions and
-  proof: `kis/intent/slice-*.md`.
+  `smkamranqadri/tartib:v2.0`: slices 18 to 29 and the pre-release review fixes, classifying on
+  the pinned `gpt-5.6-luna` at medium reasoning (confirmed in the container over SSH,
+  2026-09-22). What each slice changed: `kis/intent/history.md`; decisions and proof:
+  `kis/intent/slice-*.md`.
 - Task: none in flight.
 
 ## Open
@@ -66,11 +66,6 @@ served -- which is v2.0 backend code, so the new image is running and not only t
 phone and in desktop Safari. **Re-checked 2026-09-22:** `http://` answers 302 to `https://`, and
 the login cookie is `HttpOnly; Secure; SameSite=lax`.
 
-Before release, three reviews -- code, security, and SPEC against the build -- found two things
-that must not ship (the retry probe deleted thought logs; model-written markdown could make the
-browser fetch a remote URL) and five real bugs. All seven are fixed, each with a test or a
-browser reproduction. The whole eval suite passed in one run on the pinned model.
-
 ## Known gaps
 
 Offline behaviour that is designed rather than missing -- counts lagging, and text editing
@@ -83,9 +78,13 @@ needing one moment online first -- is product truth: `../intent/SPEC.md`, Offlin
   3. whether tapping a word is a discoverable way into editing when no button says so. The
      first-day report that the title "can't be edited" bears on this, though it is about the
      title, which tap-to-edit does not cover, rather than the body;
-  4. whether a debounced autosave feels safe without a Save button to press.
+  4. whether a debounced autosave feels safe without a Save button to press -- answerable only
+     after the next deploy: until `c91fbf9` every save reloaded the note in a space's split
+     view, and "Saved" never showed.
 - The committed UI suite (`npm run ui`, 10 checks) guards slices 22 to 25, 27 and 29. It cannot
-  judge how anything reads, and slices 26 and 28 are outside it for a stated reason.
+  judge how anything reads, and slices 26 and 28 are outside it for a stated reason. The reload
+  fix (`c91fbf9`) and tickable boxes (`b420ed3`) were proved by scratch scripts and are not in
+  it, so nothing guards them against regression.
 
 Browser and device behaviour that will not change by deploying -- iOS `notificationclick`,
 Chromium browsers that cannot reach Google's push service, `pushsubscriptionchange`, the silent
