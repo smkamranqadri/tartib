@@ -366,6 +366,10 @@ button:disabled { opacity: .5; cursor: default; }
 .md li::marker { color: var(--muted); }
 .md li.md-task { list-style: none; margin-left: -1.4em; display: flex; gap: .55em; align-items: baseline; }
 .md li.md-task input { accent-color: var(--accent); flex: none; }
+.md li.md-task input:not(:disabled) { cursor: pointer; }
+/* The box and its words share a row; a list nested in the item goes under them, not beside. */
+.md li.md-task { flex-wrap: wrap; }
+.md li.md-task > ul, .md li.md-task > ol { flex-basis: 100%; margin: .15em 0 0; padding-left: calc(1.4em + 1em + .55em); }
 .md blockquote {
   margin: 0 0 .7em; padding: .1em 0 .1em .9em;
   border-left: 2px solid var(--line); color: var(--muted);
@@ -800,6 +804,9 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   /* The same for a row: its glyph takes the checkbox's 44px column and its size. */
   .row-icon { width: 44px; }
   .row-icon svg { width: 22px; height: 22px; }
+  /* A box you can tick is a control, so on a phone it is the size of every other checkbox. */
+  .md li.md-task input:not(:disabled) { width: 22px; height: 22px; }
+  .md li.md-task > ul, .md li.md-task > ol { padding-left: calc(1.4em + 22px + .55em); }
   button.ghost, button.primary { min-height: 44px; }
   /* The floating session card is one line while it runs; the outcome question may take two. */
   .session-bar.floating { padding: 8px 12px; }
