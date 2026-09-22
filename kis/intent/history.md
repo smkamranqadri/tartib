@@ -1,7 +1,7 @@
 # Slice history
 
-What each slice changed, newest first. All are done; **slices 18 and after are not deployed** --
-the server still runs `v1.0` (State has the deploy truth). Current truth lives in
+What each slice changed, newest first. All are done and all are deployed: slices 1 to 17 went out
+as `v1.0`, and **slices 18 to 29 as `v2.0`** on 2026-09-22 (State has the deploy truth). Current truth lives in
 `SPEC.md` (product), `../knowledge/technical.md` (how it is built), and `../knowledge/rules.md`
 (hard rules). Where a slice below disagrees with those, they win; the full plans are in git.
 

@@ -1,146 +1,91 @@
 # Current
 
-- Local operational detail -- the domain, the backup paths, which device is subscribed, how HTTPS
-  reached the phone before the move -- lives in `kis/state/private.md`, gitignored and never
-  published. This file carries the substance without the specifics and points there.
+- Local operational detail -- the domain, the backup paths, which devices are subscribed -- lives
+  in `kis/state/private.md`, gitignored and never published. This file carries the substance and
+  points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  **`v2.0` is deployed and live** (2026-09-22), and the phone reports `SW_VERSION`
-  `2026-09-22.2`. It took deleting and re-adding the home-screen app, because Cloudflare was
-  serving the old service worker -- fixed on `main` for the next version; see Open. Push is on
-  for both devices: the phone, re-enabled after the reinstall, and desktop Safari. Helix on the
-  desktop cannot subscribe at all -- the browser, not Tartib. Every reminder and digest now
-  buzzes twice, by choice.
-- **First-day feedback on v2.0 is in the backlog** for the next cycle: the title is shown in
-  several places and editable in only one, and a checklist typed as `[x]` / `[]` does not become
-  a checklist -- nor could it be ticked if it did.
-- Task: none in flight. **Slice 29 (what the AI costs) is done and committed on `main`**, not
-  deployed, no blockers: `kis/intent/slice-29-ai-usage.md`. How any of it works -- the event
-  stream, the cost, the prompt instrumentation, the dormant quota readout -- is
-  `../knowledge/technical.md`.
-- **A capture session is about to start on the local app**, and two things are set up for it.
-  `ai_calls` records what was in each prompt from migration 0017 onward, which cannot be
-  backfilled, so the data starts from the first note. And `TARTIB_DUPLICATE_PARK` **stays off**:
-  the duplicate verdict records on every capture while nothing is held back, which is the dark
-  run the flag exists for. What it should answer afterwards: whether the prompt grows with the
-  database, whether the examples are ever real corrections rather than padding, and a
-  false-positive rate for duplicates on real notes rather than eight seeded cases.
-- **Three reviews ran before v2.0** (2026-09-22): code, security, and SPEC against the build.
-  They found two things that must not ship -- the retry probe deleted thought logs, and
-  model-written markdown could make the browser fetch a remote URL -- and five real bugs. All
-  seven are fixed, each with a test or a browser reproduction, and SPEC and the rules now match
-  what was built. The security review found no command injection, no SQL or FTS injection, no
-  auth bypass and no secret leakage, verified against hostile input rather than by reading.
-- **The whole eval suite is green in one run on the pinned model** (2026-09-22, 7 passed, 4m38s)
-  -- the first time both have been true together, since the evals ran unpinned until that day.
-- **Slice 28 (what the classifier may name) is done and committed on
-  `main`**, not deployed. Park-and-name a duplicate, and proposing a space that does not exist.
-  `kis/intent/slice-28-what-the-classifier-may-name.md`. `TARTIB_DUPLICATE_PARK` is **off** by
-  design: the verdict is recorded now so it can be judged on real captures before it is ever
-  allowed to hold one back.
-- Small and worth doing before `v2.0`: one consolidated `uv run pytest -m eval`. Every check has
-  passed. Originally measured across two runs on the CLI's default model; **re-measured on the
-  pinned model in one run on 2026-09-22 and unchanged.**
-  Park-and-name a duplicate, and proposing a space that does not exist yet. Phase mode.
-  `kis/intent/slice-28-what-the-classifier-may-name.md`. It starts from a correction: the
-  retrieval slice 26 shipped is about the database, not about the capture in hand, so
-  per-capture retrieval is part of this slice.
-- **Slice 27 (the AI contract) is done and committed on `main`**, not deployed. House rules, the classifier asking which space instead of guessing, and corrections
-  as examples. The measurement that closed it caught a regression first -- asking had become a
-  way to avoid deciding -- and the fix is recorded with it:
-  `kis/intent/slice-27-ai-contract.md`. No blockers.
-- The digest stale-count gap is **fixed and committed** (2026-09-21): `store.waiting_counts`
-  now owns what "waiting" means and the digest counts both halves.
-- Decided 2026-09-21: **nothing goes out yet.** `main` stays unpushed and no image is published
-  until you are at the phone; `v2.0` is the next thing, and it now carries this fix too.
-- **Slice 26 (retrieval) is done and committed on `main`**, not deployed. The plan, the three
-  things it did not foresee, and the proof: `kis/intent/slice-26-retrieval.md`.
-- **Slices 23 to 29 are committed on `main`, not deployed, and have never been seen on a
-  device.** Slice 29 is also **not proven against the real CLI** -- see the blocker. What each changed,
-  in a line: `kis/intent/history.md`; the decisions and the proof:
-  `kis/intent/slice-2{3,4,5,6,7,8,9}-*.md`.
-  What being unseen leaves unsettled is under Known gaps.
-- **Slices 18 to 22 are closed and accepted on a device.** Plans: `kis/intent/slice-1{8,9}-*.md`,
-  `kis/intent/slice-2{0,1,2}-*.md`; what each one changed, in a line: `kis/intent/history.md`.
-- **Everything since `v1.0` is pushed but not deployed.** Slices 18 to 29 are on `origin/main`
-  and in `v2.0`. On the deploy: migrations 0010-0017 run,
-  `TARTIB_AI_FALLBACK_COMMAND`, `TARTIB_AI_FALLBACK_MODEL` and `CLAUDE_CODE_OAUTH_TOKEN` come
-  out of the CapRover app config, **`TARTIB_AI_MODEL=gpt-5.6-luna` and
-  `TARTIB_AI_REASONING=medium` go in** (pinned 2026-09-21; without them the server keeps
-  using whatever default the CLI picks, which can move on its own), and **`SW_VERSION` in `sw.js` is bumped by hand**. It is at
-  `2026-09-22.2`, bumped for v2.0 after the review fixes changed the bundle again --
-  including the markdown image fix, which a phone on a stale worker would never receive. Nothing outstanding unless another
-  bundle-only change lands before `v2.0`. The rule and its
-  reason are in `../knowledge/technical.md`, Frontend shell.
-- Next, in no fixed order:
-  1. **Backups for the deployed database** (`kis/intent/backlog.md`). Deferred by decision on
-     2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so
-     everything on that server exists exactly once. This is the one open item whose cost is
-     unbounded.
-  2. **`v2.0`, and look at slices 23 to 26 on a device.** Now the next thing: slice 26 was the
-     work `v2.0` was waiting for. This is the only thing that can settle what Known gaps lists
-     against 23, 24 and 25.
-  3. Then slice 14 (AI contract), which is now prompt work only -- slice 26 took its retrieval
-     half out and closed two backlog entries doing it. Then the rest of `kis/intent/backlog.md`.
-
-## The deployment
-
-- Running: `smkamranqadri/tartib:v1.0` on the CapRover VPS (`x86_64`), with the Codex login made
-  on the server and classifying from there. The next deploy is `v2.0`. How the deploy is
-  configured and why is Knowledge: `kis/knowledge/technical.md`, Deploy.
-- Local development runs `docker compose up -d --build` against http://localhost:8000.
+- **Live: `v2.0`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
+  `smkamranqadri/tartib:v2.0`. It carries slices 18 to 29 and the fixes from three reviews run
+  before release. What each slice changed, in a line: `kis/intent/history.md`; the decisions and
+  proof: `kis/intent/slice-*.md`.
+- Task: none in flight.
 
 ## Open
 
-- **The service-worker cache fix is on `main` and ships with the next version** -- decided
-  2026-09-22 not to cut a `v2.0.1` for it, since reinstalling the app already got the phone onto
-  v2.0. Until it deploys, a new version reaches a phone only when Cloudflare's four-hour cache
-  turns over, or after deleting and re-adding the app. **When it does deploy, purge `sw.js` from
-  Cloudflare once**, so the copy cached under the old headers does not linger.
+- **Unconfirmed: whether the model pin reached the server.** `TARTIB_AI_MODEL=gpt-5.6-luna` and
+  `TARTIB_AI_REASONING=medium` had to be set in CapRover's app config before deploying. Nothing
+  reachable without signing in shows the model, so this cannot be checked from here. If they
+  were not set, the server classifies on whatever the CLI defaults to and every measurement in
+  `kis/` describes a different model. Settings -> "What it has done" names the model once a
+  capture has been classified.
+- **The service-worker cache fix is on `main` and ships with the next version.** Until then a new
+  version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
+  and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
+  `sw.js` from Cloudflare once**, or the copy cached under the old headers lingers.
+- **Real data is now accumulating on the deployed database**, and two things are set up to read
+  it later. `ai_calls` records what was in each prompt (migration 0017), which cannot be
+  backfilled; and `TARTIB_DUPLICATE_PARK` is **off**, so duplicate verdicts are recorded while
+  nothing is held back. What it should answer: whether the prompt grows with the database,
+  whether the examples are ever real corrections rather than padding, and a real false-positive
+  rate for duplicates instead of eight seeded cases.
+- No backups of the deployed database. Deferred by decision on 2026-09-18 and not reopened.
 
-- **The deployed `v1.0` still carries the Claude fallback**, which hangs for the full 120s
-  timeout on that host, so a Codex failure there costs 120s per capture and fails anyway. Removed
-  from the code in slice 18 step 1; gone from the server at `v2.0`. Until then, unsetting
-  `TARTIB_AI_FALLBACK_COMMAND` in the dashboard makes those failures instant. Why it hung was
-  never found and no longer matters.
-- No backups of the deployed database. See Next.
+## Next
+
+1. **The next cycle's backlog** (`kis/intent/backlog.md`), led by the first-day feedback on `v2.0`:
+   the title shows in several places and is editable in only one, and a checklist typed as
+   `[x]` / `[]` does not become one -- and could not be ticked if it did. The cache fix above goes
+   out with it.
+2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+   switch parking on.
+3. **Answer the four questions** under Known gaps, now that `v2.0` is on a device.
 
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. As of 2026-09-22 the numbers to expect are **274 passed, 7 deselected**
-  (the seven are the evals) and **10/10** from the UI suite. Any red is real.
-- Deploy: `./deploy.sh v2.0`, then CapRover's Deployment tab, "Deploy via ImageName".
+  Verification commands. Expect **285 passed, 7 deselected** (the seven are the evals) and
+  **10/10** from `npm run ui`. Any red is real.
+- Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
+  number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
+  Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
+  it is at `2026-09-22.2`.
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
+- Local development: `docker compose up -d --build` against http://localhost:8000.
 
 ## Proof
 
-Each slice keeps its proof in its plan file and its commits; `../intent/history.md` says what
-each one changed in a line. Slices 24, 25 and 28 are the fullest, if an example is wanted.
+Each slice keeps its proof in its plan file and its commits.
 
-Proved on the deployed app rather than only in tests: a capture classifies and files itself, the
-session cookie carries `Secure` behind the proxy, a session ending pushes and the phone buzzes
-with a desktop tab open on the same countdown (the migration 0008 case), and `http://` redirects.
-**Everything since is proved locally only.**
+**Checked from outside on 2026-09-22, against the live domain:** `/api/health` answers
+`{"ok":true,"ai":true}`, the service worker is `2026-09-22.2`, and the content security policy is
+served -- which is v2.0 backend code, so the new image is running and not only the new bundle.
+**Reported by the owner the same day:** the phone runs `2026-09-22.2`, and push subscribes on the
+phone and in desktop Safari. Carried from `v1.0` and not re-checked: the session cookie carries
+`Secure` behind the proxy, and `http://` redirects.
+
+Before release, three reviews -- code, security, and SPEC against the build -- found two things
+that must not ship (the retry probe deleted thought logs; model-written markdown could make the
+browser fetch a remote URL) and five real bugs. All seven are fixed, each with a test or a
+browser reproduction. The whole eval suite passed in one run on the pinned model.
 
 ## Known gaps
 
 Offline behaviour that is designed rather than missing -- counts lagging, and text editing
 needing one moment online first -- is product truth: `../intent/SPEC.md`, Offline.
 
-- **Slices 23 to 29 were proved in headless Chrome only.** Since slice 26 the harness is
-  committed (`npm run ui`, 10 checks, 10/10), so what it covers will not silently regress -- but
-  it cannot judge how anything *reads*. Unseen on a device, by slice: 26 the Note/Task buttons at
-  44px and the ask bar's follow-up carry; 27 the house-rules editor and the classifier's question
-  as option buttons; 28 the "Looks like #N" line and the dashed `+ space` button; 29 the usage
-  readout in Settings. Four things only glass can answer:
+- **`v2.0` is on a device, and four questions it can now answer are still open:**
   1. whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
-     against readability, and slice 24's markdown is the best answer to it available without a
-     device;
+     against readability;
   2. whether `background-attachment: fixed` survives iOS;
-  3. whether tapping a word is a discoverable way into editing when no button says so;
+  3. whether tapping a word is a discoverable way into editing when no button says so. The
+     first-day report that the title "can't be edited" bears on this, though it is about the
+     title, which tap-to-edit does not cover, rather than the body;
   4. whether a debounced autosave feels safe without a Save button to press.
+- The committed UI suite (`npm run ui`, 10 checks) guards slices 22 to 25, 27 and 29. It cannot
+  judge how anything reads, and slices 26 and 28 are outside it for a stated reason.
 
-Browser and device behaviour that will not change by deploying -- iOS `notificationclick`, the
-desktop Chrome FCM refusal, `pushsubscriptionchange`, the silent worker at session end, voice
-capture -- is Knowledge: `../knowledge/technical.md`, "What browsers do to this app".
+Browser and device behaviour that will not change by deploying -- iOS `notificationclick`,
+Chromium browsers that cannot reach Google's push service, `pushsubscriptionchange`, the silent
+worker at session end, voice capture -- is Knowledge: `../knowledge/technical.md`, "What browsers
+do to this app".
