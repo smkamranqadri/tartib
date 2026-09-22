@@ -233,9 +233,9 @@ function describeWindow(minutes: number): string {
   return `${minutes} minute`;
 }
 
-/** What the AI has done. No money figure yet: the cost arithmetic turns on whether reasoning
- *  tokens are already inside the output count, and that has not been reconciled against a real
- *  call, so showing a number would be showing a guess. */
+/** What the AI has done. The cost is shown only once `cost_verified` says the arithmetic has
+ *  been reconciled against a real call -- it was, on 2026-09-22 -- and it always says it is an
+ *  estimate, because the subscription reports no cost at all and the rates are list prices. */
 function AiUsageBlock() {
   const { data, error, loading } = useLoad(getUsage, []);
   if (loading && !data) return <span className="muted">…</span>;

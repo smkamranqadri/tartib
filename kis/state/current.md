@@ -16,6 +16,12 @@
   run the flag exists for. What it should answer afterwards: whether the prompt grows with the
   database, whether the examples are ever real corrections rather than padding, and a
   false-positive rate for duplicates on real notes rather than eight seeded cases.
+- **Three reviews ran before v2.0** (2026-09-22): code, security, and SPEC against the build.
+  They found two things that must not ship -- the retry probe deleted thought logs, and
+  model-written markdown could make the browser fetch a remote URL -- and five real bugs. All
+  seven are fixed, each with a test or a browser reproduction, and SPEC and the rules now match
+  what was built. The security review found no command injection, no SQL or FTS injection, no
+  auth bypass and no secret leakage, verified against hostile input rather than by reading.
 - **The whole eval suite is green in one run on the pinned model** (2026-09-22, 7 passed, 4m38s)
   -- the first time both have been true together, since the evals ran unpinned until that day.
 - **Slice 28 (what the classifier may name) is done and committed on

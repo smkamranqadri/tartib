@@ -93,7 +93,7 @@ Deferred from a slice rather than never planned:
   where an unknown space leaves it today, at null with confidence capped. Decided 2026-09-19. Rule
   7 says the classifier never invents a space, and it says that because a classifier free to
   invent sprays one-off spaces across the database; this narrows the rule rather than dropping it,
-  and the wording needs updating when it ships.
+  and the wording was updated on 2026-09-22, one day after it shipped -- the review caught it.
 - **Photo and voice on the capture box.** The mic already dictates into the text field with the
   browser's speech recognition, so speech-to-text is not the ask; keeping the audio itself is, and
   it raises the same question a photo does. Neither has anywhere to go today: captures are text,
