@@ -97,6 +97,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
+        # The files that decide which version runs must never be cached by anything in between.
+        # Tartib used to send no Cache-Control on them, so Cloudflare applied its own default --
+        # cache at the edge for four hours -- and after a deploy a phone's update check fetched
+        # the *old* service worker from the edge, saw nothing new, and never offered the reload.
+        # Found 2026-09-22 when v2.0 had to be deleted and re-added to take. `no-cache` still
+        # allows a conditional request, so an unchanged file costs a 304, not a download.
+        # Vite's hashed assets under /assets/ are left alone: their names change with their
+        # contents, so caching them forever is correct.
+        if request.url.path in ("/", "/index.html", "/sw.js", "/manifest.webmanifest"):
+            response.headers["Cache-Control"] = "no-cache"
         return response
 
     @app.get("/api/health")

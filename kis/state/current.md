@@ -4,10 +4,12 @@
   reached the phone before the move -- lives in `kis/state/private.md`, gitignored and never
   published. This file carries the substance without the specifics and points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  **`v2.0` is pushed, tagged and its image published** (2026-09-22, `93bff99`):
-  `smkamranqadri/tartib:v2.0` on Docker Hub, `linux/amd64`, confirmed by manifest rather than by
-  the script's word. **The server still runs `v1.0`** until it is deployed in CapRover -- that
-  step, and the env vars below, are the owner's.
+  **`v2.0` is deployed and live** (2026-09-22), and the phone reports `SW_VERSION`
+  `2026-09-22.2`. It took deleting and re-adding the home-screen app, because Cloudflare was
+  serving the old service worker -- fixed on `main`, not yet deployed; see Open. That also removed
+  the phone's push subscription, so **reminders must be switched back on in Settings on the
+  phone**. Desktop push still fails, as it always has: `../knowledge/technical.md`, "What browsers
+  do to this app".
 - Task: none in flight. **Slice 29 (what the AI costs) is done and committed on `main`**, not
   deployed, no blockers: `kis/intent/slice-29-ai-usage.md`. How any of it works -- the event
   stream, the cost, the prompt instrumentation, the dormant quota readout -- is
@@ -85,6 +87,11 @@
 - Local development runs `docker compose up -d --build` against http://localhost:8000.
 
 ## Open
+
+- **The service-worker cache fix is on `main` but not deployed** -- it needs a `v2.0.1`. Until
+  then every future deploy reaches phones only when Cloudflare's four-hour cache turns over,
+  or after deleting and re-adding the app. After it deploys, purge `sw.js` from Cloudflare once,
+  so the copy cached under the old headers does not linger.
 
 - **The deployed `v1.0` still carries the Claude fallback**, which hangs for the full 120s
   timeout on that host, so a Codex failure there costs 120s per capture and fails anyway. Removed

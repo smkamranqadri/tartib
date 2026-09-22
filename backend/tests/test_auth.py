@@ -168,3 +168,25 @@ def test_every_response_carries_a_content_security_policy(client):
         assert "frame-ancestors 'none'" in csp, path
         assert headers.get("x-content-type-options") == "nosniff", path
         assert headers.get("referrer-policy") == "no-referrer", path
+
+
+def test_the_files_that_decide_the_version_are_never_cached(tmp_path):
+    """Tartib sent no Cache-Control on sw.js, so Cloudflare cached it at the edge for four hours
+    and a phone's update check fetched the old worker after every deploy. v2.0 had to be deleted
+    and re-added from the home screen to take."""
+    from fastapi.testclient import TestClient
+
+    from tartib.main import create_app
+    from tests.conftest import make_settings
+
+    static = tmp_path / "static"
+    (static / "assets").mkdir(parents=True)
+    for name in ("index.html", "sw.js", "manifest.webmanifest"):
+        (static / name).write_text("x")
+    (static / "assets" / "index-abc123.js").write_text("x")
+
+    with TestClient(create_app(make_settings(tmp_path, TARTIB_STATIC_DIR=str(static)))) as c:
+        for path in ("/", "/index.html", "/sw.js", "/manifest.webmanifest"):
+            assert c.get(path).headers.get("cache-control") == "no-cache", path
+        # hashed assets change name with their contents, so they may be cached
+        assert c.get("/assets/index-abc123.js").headers.get("cache-control") != "no-cache"
