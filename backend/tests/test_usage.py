@@ -393,3 +393,75 @@ def test_a_real_capture_records_what_was_in_its_prompt(ai_client, monkeypatch):
     prompt = ai_client.get("/api/usage").json()["prompt"]
     assert prompt["prompt_chars"] > 0  # the real prompt, measured where it was built
     assert prompt["with_house_rules"] == 0  # none set in the test client
+
+
+def test_a_failed_refresh_does_not_retry_on_every_request(tmp_path, monkeypatch):
+    """`_stale` read the mtime of a file only a *successful* fetch wrote, so an unlisted model
+    or a blocked network re-downloaded the 5MB catalogue on every /api/usage -- and offline,
+    blocked for the full timeout each time."""
+    from tartib import usage
+
+    calls = []
+
+    def boom(*a, **kw):
+        calls.append(1)
+        raise OSError("network unreachable")
+
+    monkeypatch.setattr(usage.urllib.request, "urlopen", boom)
+    db_path = str(tmp_path / "t.db")
+
+    assert usage.refresh("gpt-5.6-luna", db_path) is None
+    assert usage.refresh("gpt-5.6-luna", db_path) is None
+    assert usage.refresh("gpt-5.6-luna", db_path) is None
+    assert len(calls) == 1, f"tried the network {len(calls)} times, not once"
+
+    # and the shipped rates still answer, so a failed refresh costs nothing
+    assert usage.rates_for("gpt-5.6-luna", db_path).source == "shipped"
+
+
+def test_a_model_the_catalogue_does_not_list_also_waits(tmp_path, monkeypatch):
+    """The other silent path: a 200 response that simply has no entry for this model."""
+    import io
+    import json as _json
+
+    from tartib import usage
+
+    calls = []
+
+    class Fake(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def ok(*a, **kw):
+        calls.append(1)
+        return Fake(_json.dumps({"openai": {"models": {}}}).encode())
+
+    monkeypatch.setattr(usage.urllib.request, "urlopen", ok)
+    db_path = str(tmp_path / "t.db")
+    assert usage.refresh("model-not-listed", db_path) is None
+    assert usage.refresh("model-not-listed", db_path) is None
+    assert len(calls) == 1
+
+
+def test_the_reset_time_is_the_latest_one_not_the_biggest_string(settings):
+    """These are clock strings, so MAX() ranked "9:30 PM" above "11:46 AM" and the UI showed a
+    time from an older row while saying "last reporting a reset at ..."."""
+    conn = _conn(settings)
+    for created, resets in (
+        ("2026-09-21T21:30:00Z", "9:30 PM"),  # older, but lexicographically larger
+        ("2026-09-22T09:15:00Z", "11:46 AM"),  # the most recent
+    ):
+        conn.execute(
+            "INSERT INTO ai_calls (created_at, kind, ok, failure, reason, resets_at)"
+            " VALUES (?, 'classify', 0, 'usage limit', 'usage_limit', ?)",
+            (created, resets),
+        )
+    conn.commit()
+
+    limit = usage_totals(conn)["usage_limit"]
+    assert limit["count"] == 2
+    assert limit["resets_at"] == "11:46 AM"  # not "9:30 PM"
+    conn.close()

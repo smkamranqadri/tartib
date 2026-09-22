@@ -111,8 +111,13 @@ export default function ApprovalCard({
       if (t?.closest(".why")) return; // Enter there sends the reason, not an approval
       const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
       if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-        if (typing && t.tagName === "TEXTAREA") return;
-        if (typing && t.tagName === "INPUT" && (t as HTMLInputElement).type === "search") return;
+        /* Never while focus is in a field -- any field, on any card. This listener is on the
+           window and belongs to the first card only, so it used to fire when you pressed Enter
+           to commit a title you were typing on the *second* card: that card's edit was lost and
+           the first card filed with a draft you had not looked at. It excluded fields by name,
+           and the title and date editors were added after the list was written. An allowlist of
+           "not typing" cannot go stale the way a denylist of inputs did. */
+        if (typing) return;
         e.preventDefault();
         void approve();
       } else if (e.key === "Escape") {
@@ -180,7 +185,7 @@ export default function ApprovalCard({
           <>
             {" "}
             {editing === "title" ? (
-              <input className="word-input" autoFocus value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} onBlur={() => setEditing(null)} placeholder="title" aria-label="Title" />
+              <input className="word-input" autoFocus value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} onBlur={() => setEditing(null)} onKeyDown={(e) => e.key === "Enter" && setEditing(null)} placeholder="title" aria-label="Title" />
             ) : (
               <button type="button" className="word quoted" onClick={() => setEditing("title")}>
                 {draft.title || "untitled"}
@@ -205,7 +210,7 @@ export default function ApprovalCard({
           <>
             , due{" "}
             {editing === "due" ? (
-              <input type="date" className="word-input" autoFocus value={draft.due} onChange={(e) => setDraft({ ...draft, due: e.target.value })} onBlur={() => setEditing(null)} aria-label="Due" />
+              <input type="date" className="word-input" autoFocus value={draft.due} onChange={(e) => setDraft({ ...draft, due: e.target.value })} onBlur={() => setEditing(null)} onKeyDown={(e) => e.key === "Enter" && setEditing(null)} aria-label="Due" />
             ) : (
               <button type="button" className="word" onClick={() => setEditing("due")}>
                 {draft.due ? formatDue(draft.due) : "never"}

@@ -87,12 +87,32 @@ def rates_for(model: str | None, db_path: str) -> Rates:
 
 
 def _stale(db_path: str) -> bool:
+    """Whether a refresh is due. Measured from the last *attempt*, not the last success.
+
+    It used to read the cache file's mtime, which only a successful fetch wrote. So an
+    unlisted model or an unreachable network meant every single `/api/usage` downloaded the
+    whole catalogue again -- and offline, blocked for the full timeout each time, on every page
+    load. "At most once a day" was only true when it worked.
+    """
     path = _cache_path(db_path)
     try:
         age = utcnow().timestamp() - path.stat().st_mtime
     except OSError:
         return True
     return age > REFRESH_SECONDS
+
+
+def _mark_attempt(db_path: str) -> None:
+    """Touch the cache so a failed fetch also waits a day before trying again. Creates the file
+    if it is not there yet, so a first attempt that fails does not retry on every request."""
+    path = _cache_path(db_path)
+    try:
+        if not path.exists():
+            path.write_text("{}")
+        else:
+            path.touch()
+    except OSError:
+        pass
 
 
 def refresh(model: str | None, db_path: str) -> Rates | None:
@@ -104,6 +124,9 @@ def refresh(model: str | None, db_path: str) -> Rates | None:
     """
     if not model or not _stale(db_path):
         return None
+    # Recorded before the attempt, so every path out of here -- unreachable, unlisted model,
+    # malformed block -- waits a day before the next one.
+    _mark_attempt(db_path)
     try:
         with urllib.request.urlopen(CATALOGUE, timeout=FETCH_TIMEOUT) as response:  # noqa: S310
             catalogue = json.loads(response.read().decode())

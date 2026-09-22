@@ -872,3 +872,15 @@ def test_approving_into_a_real_space_ignores_the_proposal(ai_client, monkeypatch
     filed = ai_client.post(f"/api/items/{item['id']}/approve", json={"space": "home"}).json()
     assert filed["space"] == "home"
     assert "car" not in ai_client.get("/api/spaces").json()["spaces"]  # never created
+
+
+def test_an_item_that_asked_you_something_says_so_not_unsure(ai_client, monkeypatch):
+    """A confident proposal carrying a question waits on an answer, not on a judgement about
+    confidence. It used to fall through to `low_confidence` and render as "Unsure (90%)"."""
+    p = proposal(shape="note", text="ping sara", space="work", confidence=0.9)
+    p["clarify"] = clarify()
+    set_classify_reply(monkeypatch, p)
+    item = capture(ai_client, "ping sara")["items"][0]
+
+    assert item["stage"] == "attention"
+    assert item["wait_reason"] == "asked"

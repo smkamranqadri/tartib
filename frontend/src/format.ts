@@ -95,6 +95,10 @@ export function waitingReason(item: Item, short = false): string {
   if (item.proposal_error) return short ? "AI failed" : `AI failed: ${item.proposal_error}`;
   if (!item.proposal) return short ? "proposal rejected" : "Proposal rejected";
   if (item.wait_reason === "duplicate") return short ? "looks like a duplicate" : "Looks like something already here";
+  /* The classifier asked rather than guessed. Checked before confidence, because an item
+     carrying a question is waiting on an answer -- at 0.9 it used to read "Unsure (90%)". */
+  if (item.wait_reason === "asked" || item.proposal?.clarify)
+    return short ? "has a question for you" : "Has a question for you";
   if (!item.space) return short ? "no space matched" : "No space matched";
   return short ? `unsure, ${pct}%` : `Unsure (${pct}%)`;
 }

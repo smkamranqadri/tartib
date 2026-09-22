@@ -360,7 +360,9 @@ class Runner:
                         wait_reason=(
                             None
                             if filed
-                            else wait_reason_for(p.space, duplicate_of, parked)
+                            else wait_reason_for(
+                                p.space, duplicate_of, parked, asked=p.clarify is not None
+                            )
                         ),
                     )
                 except SpaceError:  # cannot happen after _normalize, but never lose a capture

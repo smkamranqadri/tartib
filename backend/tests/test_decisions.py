@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from tests.conftest import one_item
+from tests.conftest import capture, one_item, proposal, set_classify_reply
 
 
 def test_approve_requires_a_space(auth):
@@ -104,3 +104,21 @@ def test_a_toggle_without_a_timestamp_is_never_refused(auth):
     auth.patch(f"/api/items/{item['id']}", json={"title": "changed elsewhere"})
     r = auth.patch(f"/api/items/{item['id']}", json={"starred": True})
     assert r.status_code == 200 and r.json()["starred"] is True
+
+
+def test_approving_with_an_edited_text_keeps_the_edit(ai_client, monkeypatch):
+    """`file_item` cleaned the fields, then handed the cleaned dict to `update_fields`, which
+    cleaned them again -- and `raw_text` is not an editable field name, so the second pass threw
+    the edit away. The endpoint answered 200 and discarded the write; PATCH did not."""
+    set_classify_reply(
+        monkeypatch, proposal(shape="note", text="origial typo here", space=None, confidence=0.4)
+    )
+    item = capture(ai_client, "origial typo here")["items"][0]
+    assert item["stage"] == "attention"
+
+    filed = ai_client.post(
+        f"/api/items/{item['id']}/approve",
+        json={"space": "work", "text": "original, typo fixed"},
+    ).json()
+    assert filed["stage"] == "filed"
+    assert filed["raw_text"] == "original, typo fixed"

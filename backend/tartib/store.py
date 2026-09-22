@@ -239,13 +239,24 @@ CANDIDATES = 8  # similar items shown to the classifier for one capture
 WAIT_NO_SPACE = "no_space"
 WAIT_LOW_CONFIDENCE = "low_confidence"
 WAIT_DUPLICATE = "duplicate"
+WAIT_ASKED = "asked"
 
 
-def wait_reason_for(space: str | None, duplicate_of: int | None, parked: bool) -> str | None:
+def wait_reason_for(
+    space: str | None, duplicate_of: int | None, parked: bool, asked: bool = False
+) -> str | None:
     """The code a waiting row carries. Short, not display text: the client has the matched
-    item and writes the sentence itself."""
+    item and writes the sentence itself.
+
+    `asked` comes first among the confident cases, because an item carrying a question is
+    waiting on an answer and not on a judgement about confidence. It used to fall through to
+    `low_confidence`, so the classifier asking "which space?" at 0.9 rendered as "Unsure (90%)"
+    -- which is both wrong and the opposite of what it is doing.
+    """
     if parked and duplicate_of is not None:
         return WAIT_DUPLICATE
+    if asked:
+        return WAIT_ASKED
     if not space:
         return WAIT_NO_SPACE
     return WAIT_LOW_CONFIDENCE
@@ -565,8 +576,13 @@ def usage_totals(conn: sqlite3.Connection) -> dict:
         " COALESCE(SUM(total_tokens), 0) AS total_tokens,"
         " COALESCE(SUM(duration_ms), 0) AS duration_ms FROM ai_calls"
     ).fetchone()
+    # The reset time comes from the most recent row, not MAX() over the column: these are clock
+    # strings like "11:46 AM", so a lexicographic max puts "9:30 PM" above "11:46 AM" and the UI
+    # -- which says "last reporting a reset at ..." -- showed a time from some older row.
     limits = conn.execute(
-        "SELECT COUNT(*) AS n, MAX(created_at) AS last, MAX(resets_at) AS resets"
+        "SELECT COUNT(*) AS n, MAX(created_at) AS last,"
+        " (SELECT resets_at FROM ai_calls WHERE reason = 'usage_limit'"
+        "  ORDER BY created_at DESC, id DESC LIMIT 1) AS resets"
         " FROM ai_calls WHERE reason = 'usage_limit'"
     ).fetchone()
     captures = conn.execute(
@@ -727,7 +743,11 @@ def file_item(
     values = _clean(fields, allowed)
     if not values.get("space"):
         raise SpaceError("a space is required to file an item")
-    update_fields(conn, item_id, values, allowed)
+    # `fields`, not `values`: `update_fields` cleans what it is given, and cleaning twice loses
+    # a `text` edit -- the first pass renames it to `raw_text`, which is not an editable field
+    # name, so the second pass drops it. `approve` accepted the edit and answered 200 while
+    # discarding the write, where PATCH on the same body kept it.
+    update_fields(conn, item_id, fields, allowed)
     sets = ["stage = 'filed'", "proposal_error = NULL", "classified_at = ?"]
     params: list[object] = [utcnow_iso()]
     if proposal_json is not None:
