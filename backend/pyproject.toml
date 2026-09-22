@@ -12,6 +12,7 @@ dependencies = [
   "pywebpush>=2.5.0",  # Web Push for reminders; pulls cryptography
   "cryptography>=50.0.1",  # imported directly by tartib.vapid
   "py-vapid>=1.9.4",  # imported directly by tartib.vapid and push.check_key
+  "mcp>=2.2.0",
 ]
 
 [dependency-groups]

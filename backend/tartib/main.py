@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -17,6 +17,7 @@ from tartib import (
     db,
     items,
     links,
+    mcp_server,
     pick,
     push,
     queries,
@@ -36,6 +37,11 @@ log = logging.getLogger("tartib")
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
+
+    # Tartib over MCP (slice 35), only with its own token set. Built before the app so the
+    # lifespan below can run the SDK's session manager, which a mounted app's own lifespan would
+    # not get: FastAPI does not run the lifespans of what it mounts.
+    mcp = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -73,16 +79,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # needs push, and `broadcast` over zero subscriptions is a no-op.
         clock = Sessions(settings)
         app.state.sessions = clock
-        try:
-            if reminders is not None:
-                await reminders.start()
-            await clock.start()
-            yield
-        finally:
-            await clock.stop()
-            if reminders is not None:
-                await reminders.stop()
-            await runner.stop()
+        async with AsyncExitStack() as stack:
+            if mcp is not None:
+                await stack.enter_async_context(mcp.session_manager.run())
+            try:
+                if reminders is not None:
+                    await reminders.start()
+                await clock.start()
+                yield
+            finally:
+                await clock.stop()
+                if reminders is not None:
+                    await reminders.stop()
+                await runner.stop()
 
     app = FastAPI(title="Tartib", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.settings = settings
@@ -97,6 +106,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sessions.router)
     app.include_router(pick.router)
     app.include_router(links.router)
+    if settings.mcp_token and len(settings.mcp_token) < mcp_server.MIN_TOKEN:
+        log.error("TARTIB_MCP_TOKEN is under %d characters; /mcp stays off", mcp_server.MIN_TOKEN)
+    elif settings.mcp_token:
+        mcp, route = mcp_server.build(app, settings)
+        # First, ahead of the single-page app's catch-all, which would otherwise answer /mcp.
+        app.router.routes.insert(0, route)
 
     # Everything this app loads, it ships. Fonts are bundled, there is no CDN and no analytics,
     # so the policy can be tight. `img-src 'self' data:` is the line that matters: item text,

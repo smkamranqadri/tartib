@@ -27,6 +27,8 @@ class Settings:
     # The classifier may propose links to the similar items it is shown (slice 33 phase C). Off,
     # the prompt is exactly what it was before.
     link_proposals: bool
+    # Agents' key to /mcp (slice 35), never the login password. Unset, /mcp does not exist.
+    mcp_token: str | None
     vapid_public: str | None
     vapid_private: str | None
     vapid_email: str
@@ -103,6 +105,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         in ("1", "true", "yes", "on"),
         link_proposals=(env.get("TARTIB_LINK_PROPOSALS") or "").strip().lower()
         in ("1", "true", "yes", "on"),
+        mcp_token=(env.get("TARTIB_MCP_TOKEN") or "").strip() or None,
         vapid_public=env.get("TARTIB_VAPID_PUBLIC") or None,
         vapid_private=env.get("TARTIB_VAPID_PRIVATE") or None,
         vapid_email=env.get("TARTIB_VAPID_EMAIL") or "mailto:tartib@localhost",

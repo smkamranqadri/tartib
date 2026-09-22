@@ -180,6 +180,8 @@ export default function ItemPage({
             <span className="muted">
               {item.space ? <Link to={`/spaces/${item.space}`}>{item.space}</Link> : "no space"} ·{" "}
               <span title={new Date(item.created_at).toLocaleString()}>{formatRelative(item.created_at)}</span>
+              {/* Written by an agent over MCP (slice 35), so its words are never taken for yours. */}
+              {item.via && <> · <span className="via">via {item.via}</span></>}
               {waiting && (
                 <>
                   {" "}

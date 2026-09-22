@@ -1,6 +1,7 @@
 # Slice 35: Tartib over MCP
 
 Planned 2026-09-23 with the owner. Standard mode.
+**Built and verified 2026-09-23 (Proof, below); not deployed.**
 
 ## What was asked
 
@@ -83,3 +84,31 @@ OAuth and claude.ai connectors; editing text; delete; Ask; sessions; a skill.
 
 `technical.md`: the endpoint, the token, the tools. SPEC: "via <client>". `private.md`: the token
 and how to connect a client. history.md.
+
+## Proof (2026-09-23, local)
+
+- As built, differing from Build above: `captures.source` keeps `api` and a new
+  `captures.client` names the agent -- `source` has a CHECK constraint SQLite can only change by
+  rebuilding the table every item points at. The name comes from `?client=` on the URL, then the
+  handshake, then the User-Agent; the `mcp` SDK is 2.2.0, where `FastMCP` is `MCPServer`. After
+  review: a token under 32 characters leaves `/mcp` off, text is capped at 20,000, GET answers 405.
+- `uv run pytest -q`: **362 passed, 9 deselected** (eleven in `test_mcp.py`, the SDK's own client
+  over HTTP against the app under uvicorn: acceptance 1 to 6 -- the token the only way in, the
+  login password refused, off unset or short; the eleven tools and no edit or delete; the namazee
+  flow; a named-space note filed directly with "via" from the URL, the User-Agent, or neither; a
+  spaceless task classified; an unknown space listing the real ones, a new space, tasks-only
+  fields, bad dates, oversized text); schema asserts to 23; `ruff` clean.
+- `npm run ui`: **20/20** on the rebuilt image, which carries `mcp` 2.2.0. `tsc` clean. Looked at
+  on 390px and 1280px: "via claude-code" beside the space and age.
+- **A real client**: Claude Code 2.1.280, headless (`claude -p`, a throwaway `--mcp-config`, nothing
+  saved), against a throwaway Tartib on port 8002 with its own token and database. It listed
+  namazee's open tasks, marked the Asr task done with the thought asked for, filed the
+  social-media note directly, and, asked about a missing learning space, proposed `ai-learning`
+  and did not create it, as the instructions say. The note showed "via claude-code" from its
+  User-Agent alone. Run again after the hardening: nine POSTs, all 200, no GET. Everything was
+  deleted after.
+- **Security review** (a separate agent): no confirmed vulnerability. Every method and path
+  variant without the token is 401 or falls to the SPA; only the one SDK route is mounted; SQL is
+  bound; the `client` label is sanitised and rendered as text. Its three hardenings were taken
+  (above). Noted: prompt injection through agent text into the classifier is inherent; `via` is
+  self-asserted.

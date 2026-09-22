@@ -100,7 +100,9 @@ def capture(
 @router.get("/items/{item_id}")
 def get_item(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> dict:
     row = fetch_item(conn, item_id)
-    return {**serialize_item(row), **link_view(conn, row)}
+    # Who wrote it, when an agent did (slice 35): the client named on its capture.
+    via = conn.execute("SELECT client FROM captures WHERE id = ?", (row["capture_id"],)).fetchone()
+    return {**serialize_item(row), **link_view(conn, row), "via": via["client"] if via else None}
 
 
 class EditBody(BaseModel):

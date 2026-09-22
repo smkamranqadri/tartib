@@ -110,7 +110,7 @@ same VAPID key working on another browser is enough to rule the key out.
 
 ## Config (env)
 
-`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL` (pinned to `gpt-5.6-luna`), `TARTIB_AI_REASONING` (`medium`; sent as a `-c` override), `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85), `TARTIB_DUPLICATE_PARK` (default off), `TARTIB_LINK_PROPOSALS` (default off), `TARTIB_VAPID_PUBLIC`, `TARTIB_VAPID_PRIVATE`, `TARTIB_VAPID_EMAIL` (default `mailto:tartib@localhost`), `TARTIB_SUMMARY_TIME` (default `08:00`, read in `TARTIB_TZ`, validated at load), `TARTIB_SESSION_MINUTES` (default 25, at least 1). `CODEX_HOME` is passed through to the subprocess.
+`TARTIB_PASSWORD` (required), `TARTIB_SECRET`, `TARTIB_TZ` (default UTC), `TARTIB_DB_PATH` (default /data/tartib.db), `TARTIB_SPACES` (optional; seeds the spaces table once when it is empty, ignored after that), `TARTIB_STATIC_DIR`, `TARTIB_AI_COMMAND` (default `codex`, `off` disables), `TARTIB_AI_MODEL` (pinned to `gpt-5.6-luna`), `TARTIB_AI_REASONING` (`medium`; sent as a `-c` override), `TARTIB_AI_TIMEOUT` (default 120), `TARTIB_AUTOFILE_CONFIDENCE` (default 0.85), `TARTIB_DUPLICATE_PARK` (default off), `TARTIB_LINK_PROPOSALS` (default off), `TARTIB_MCP_TOKEN` (unset: no `/mcp`; 32+ characters), `TARTIB_VAPID_PUBLIC`, `TARTIB_VAPID_PRIVATE`, `TARTIB_VAPID_EMAIL` (default `mailto:tartib@localhost`), `TARTIB_SUMMARY_TIME` (default `08:00`, read in `TARTIB_TZ`, validated at load), `TARTIB_SESSION_MINUTES` (default 25, at least 1). `CODEX_HOME` is passed through to the subprocess.
 
 ## API
 
@@ -350,6 +350,36 @@ the host, the container name and where the password is kept are in `../state/pri
   `mode=ro`, then `docker cp` out and `scp` here. The live file is never copied while written to.
   The snapshot holds everything the owner keeps, salaries included, so it goes in the session
   scratchpad and is deleted once read, along with the copy left in the server's `/tmp`.
+
+## MCP (slice 35)
+
+`/mcp` is Tartib over MCP, served by the app itself (`tartib/mcp_server.py`, the official `mcp`
+SDK, 2.x, where `FastMCP` is `MCPServer`). **Stateless streamable HTTP with plain JSON replies**:
+Cloudflare may buffer a stream, and one request with one answer holds nothing open; a GET answers
+405. It exists only when `TARTIB_MCP_TOKEN` is set **and at least 32 characters** (shorter logs an
+error and stays off: there is no throttle on `/mcp`, so a long random token is the defence), and
+only that token opens it -- not the login password, not the cookie (`TokenGuard`,
+`hmac.compare_digest`; a class because Starlette hands a plain function a Request). `main.py`
+inserts the route first, ahead of the SPA catch-all, and runs the SDK's session manager in the
+app's lifespan, which a mounted app would not get. DNS-rebinding protection is off on purpose:
+there is no ambient credential for a rebound page to use.
+
+Eleven tools: `list_spaces`, `list_items(space, shape?, status?)` (open tasks first),
+`search(query, space?)`, `get_item(id)` (thoughts and links), `add_note` / `add_task(text, space?,
+due?)`, `add_thought`, `set_status`, `set_due`, `set_star` (tasks only), `create_space`. No text
+editing, no delete, no Ask. An add naming a space is filed directly (a `direct` capture); without
+one it is a pending capture for the runner, exactly as the app's own. Every write goes through
+the store's paths, so titles, links and triggers behave as in the app. Text is capped at 20,000
+characters. Errors a tool anticipates are raised as `ToolError`, whose message reaches the
+agent; any other exception reaches it only as "Error executing tool". The server's instructions
+tell agents to list spaces first, search before adding, and ask before creating a space.
+
+`captures.client` (migration 0023) names the agent, shown as "via <client>" on the item page:
+`?client=` on the configured URL first, then the MCP handshake's name (a stateless request only
+carries it on the newest protocol), then the User-Agent's first word unless it names an HTTP
+library, else "agent". Claude Code's User-Agent already gives `claude-code`. A label, not an
+identity. Connecting: `claude mcp add --transport http tartib https://<host>/mcp --header
+"Authorization: Bearer <token>"`; the host and token are in `../state/private.md`.
 
 ## Maintenance
 

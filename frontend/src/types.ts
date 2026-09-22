@@ -65,6 +65,8 @@ export interface Item {
   /** Each `[[space:…]]` as written, to the space it names or null when there is none. */
   space_links?: Record<string, string | null>;
   linked_from?: Item[];
+  /** From GET /api/items/{id} only (slice 35): the agent that wrote it over MCP, else null. */
+  via?: string | null;
 }
 
 export interface Answer {
