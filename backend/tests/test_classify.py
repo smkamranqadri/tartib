@@ -783,6 +783,31 @@ def test_a_real_id_offered_as_a_ref_is_not_accepted(ai_client, monkeypatch):
     assert item["duplicate_of"] is None
 
 
+def test_a_duplicate_of_an_item_deleted_mid_classification_is_dropped(ai_client, monkeypatch):
+    """The matched item was deleted while the classifier ran. Until this, the insert failed its
+    foreign key and the capture fell back to "internal error, see logs"."""
+    from tartib import runner as runner_mod
+
+    first = _file_one(ai_client, monkeypatch, "renew the car insurance")
+    # Not the newest row: deleting the newest lets SQLite hand its id to the next insert,
+    # which would then name itself and satisfy the key by accident.
+    _file_one(ai_client, monkeypatch, "water the plants")
+    real = runner_mod.similar_items
+
+    def then_delete(conn, text):
+        found = real(conn, text)
+        conn.execute("DELETE FROM items WHERE id = ?", (first["id"],))
+        conn.commit()
+        return found
+
+    monkeypatch.setattr(runner_mod, "similar_items", then_delete)
+    set_classify_reply(monkeypatch, _dup_proposal(ref="i1"))
+    cap = capture(ai_client, "car insurance needs renewing")
+    assert cap["status"] == "done"
+    assert cap["items"][0]["duplicate_of"] is None
+    assert cap["items"][0]["proposal_error"] is None
+
+
 def test_with_the_flag_off_the_verdict_is_recorded_but_nothing_is_parked(ai_client, monkeypatch):
     """SABOTAGE GUARD. Off is the default, and off must mean filing behaves exactly as before."""
     first = _file_one(ai_client, monkeypatch, "renew the car insurance")

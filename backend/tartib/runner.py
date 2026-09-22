@@ -335,6 +335,12 @@ class Runner:
                 # A proposal that asks you something is waiting on you by definition, whatever
                 # its confidence and whatever the space's policy says.
                 duplicate_of = int(p.duplicate_of) if p.duplicate_of else None
+                # The classifier runs for seconds to minutes, and the item it matched can be
+                # deleted meanwhile. A verdict about something gone is no verdict.
+                if duplicate_of is not None and not conn.execute(
+                    "SELECT 1 FROM items WHERE id = ?", (duplicate_of,)
+                ).fetchone():
+                    duplicate_of = None
                 # The verdict is recorded either way; only the flag decides whether it holds
                 # anything back. Eight seeded cases are not a false-positive rate.
                 parked = self.settings.duplicate_park and duplicate_of is not None
