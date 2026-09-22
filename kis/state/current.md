@@ -6,15 +6,13 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
 - **Live: `v2.0`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
   `smkamranqadri/tartib:v2.0`. It carries slices 18 to 29 and the fixes from three reviews run
-  before release. What each slice changed, in a line: `kis/intent/history.md`; the decisions and
+  before release, classifying on the pinned `gpt-5.6-luna` at medium reasoning (confirmed in
+  the container over SSH, 2026-09-22). What each slice changed, in a line: `kis/intent/history.md`; the decisions and
   proof: `kis/intent/slice-*.md`.
 - Task: none in flight.
 
 ## Open
 
-- **Confirmed 2026-09-22 over SSH: the model pin reached the server.** The running container
-  has `TARTIB_AI_MODEL=gpt-5.6-luna` and `TARTIB_AI_REASONING=medium`, and every row in `ai_calls`
-  names that model. So the measurements in `kis/` describe the model that is running.
 - **On `main` and not deployed, shipping with the next version:** the service-worker cache fix,
   a duplicate of an item deleted mid-classification no longer crashing the capture (`d19dd9d`),
   and saving no longer reloading the note, with indented lines keeping their indent (`c91fbf9`).
@@ -35,11 +33,9 @@
 
 ## Next
 
-1. **The next cycle's backlog** (`kis/intent/backlog.md`), led by the first-day feedback on `v2.0`:
-   the title shows in several places and is editable in only one, and a checklist typed as
-   `[x]` / `[]` does not become one -- and could not be ticked if it did. The cache fix above goes
-   out with it. **Links between items** are approved and wanted (owner, 2026-09-22); organizing a
-   long space waits on the owner trying narrower spaces first.
+1. **The next cycle's backlog** (`kis/intent/backlog.md`): first-day feedback on `v2.0` (the
+   title, checklists, delete in a modal), then links between items, approved 2026-09-22. The
+   fixes above ship with it.
 2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
 3. **Answer the four questions** under Known gaps, now that `v2.0` is on a device.
@@ -47,7 +43,7 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **285 passed, 7 deselected** (the seven are the evals) and
+  Verification commands. Expect **286 passed, 7 deselected** (the seven are the evals) and
   **10/10** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
@@ -65,8 +61,8 @@ Each slice keeps its proof in its plan file and its commits.
 `{"ok":true,"ai":true}`, the service worker is `2026-09-22.2`, and the content security policy is
 served -- which is v2.0 backend code, so the new image is running and not only the new bundle.
 **Reported by the owner the same day:** the phone runs `2026-09-22.2`, and push subscribes on the
-phone and in desktop Safari. Carried from `v1.0` and not re-checked: the session cookie carries
-`Secure` behind the proxy, and `http://` redirects.
+phone and in desktop Safari. **Re-checked 2026-09-22:** `http://` answers 302 to `https://`, and
+the login cookie is `HttpOnly; Secure; SameSite=lax`.
 
 Before release, three reviews -- code, security, and SPEC against the build -- found two things
 that must not ship (the retry probe deleted thought logs; model-written markdown could make the
