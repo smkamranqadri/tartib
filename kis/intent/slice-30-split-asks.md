@@ -2,7 +2,7 @@
 
 Planned 2026-09-22, the day `v2.0` went live. Standard mode. Built on its own branch while
 another agent worked on `main`; **merged to `main` the same day** after `main` was merged into it
-and the suite re-run. Not deployed.
+and the suite re-run. Deployed as `v2.1` the same day.
 
 ## What happened
 

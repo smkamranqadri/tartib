@@ -19,15 +19,12 @@
   Headers, a new version can take four hours to reach the phone, or a delete and re-add.
 - **Not yet seen on the phone:** everything since `v2.0` -- the modals (`<dialog>` on iOS),
   tickable checklists, the first line as the title, the pills. Each was proved in Chrome only.
-- **Real data is now accumulating on the deployed database**, and two things are set up to read
-  it later. `ai_calls` records what was in each prompt (migration 0017), which cannot be
-  backfilled; and `TARTIB_DUPLICATE_PARK` is **off**, so duplicate verdicts are recorded while
-  nothing is held back. What it should answer: whether the prompt grows with the database,
-  whether the examples are ever real corrections rather than padding, and a real false-positive
-  rate for duplicates instead of eight seeded cases.
-- **House rules are set on the live app since 2026-09-22** (four rules, written after reading the
-  live database). Captures before that day were classified without any, so compare accuracy
-  before and after that date when the duplicate verdicts are judged.
+- **Real data is accumulating on the live database, to be read later.** `ai_calls` records what
+  was in each prompt (migration 0017, cannot be backfilled), and `TARTIB_DUPLICATE_PARK` is
+  **off**, so duplicate verdicts are recorded while nothing is held back. It should answer
+  whether the prompt grows with the database, whether examples are real corrections rather than
+  padding, and a real false-positive rate for duplicates. House rules (four) are set since
+  2026-09-22, so compare accuracy before and after that date.
 - No backups of the deployed database. Deferred by decision on 2026-09-18 and not reopened.
 
 ## Next
