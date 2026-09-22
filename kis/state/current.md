@@ -59,8 +59,8 @@
   out of the CapRover app config, **`TARTIB_AI_MODEL=gpt-5.6-luna` and
   `TARTIB_AI_REASONING=medium` go in** (pinned 2026-09-21; without them the server keeps
   using whatever default the CLI picks, which can move on its own), and **`SW_VERSION` in `sw.js` is bumped by hand**. It is at
-  `2026-09-22.1`, bumped for slices 28 and 29, which changed the bundle without touching
-  `sw.js` -- exactly the case the rule exists for. Nothing outstanding unless another
+  `2026-09-22.2`, bumped for v2.0 after the review fixes changed the bundle again --
+  including the markdown image fix, which a phone on a stale worker would never receive. Nothing outstanding unless another
   bundle-only change lands before `v2.0`. The rule and its
   reason are in `../knowledge/technical.md`, Frontend shell.
 - Next, in no fixed order:
