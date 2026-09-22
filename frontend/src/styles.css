@@ -506,7 +506,7 @@ button:disabled { opacity: .5; cursor: default; }
   .row.revealed .row-actions { display: inline-flex; }
 }
 @media (max-width: 900px) {
-  .dash { grid-template-columns: 1fr; }
+  .dash { grid-template-columns: minmax(0, 1fr); } /* not `1fr`: that grows to the longest unbreakable line (found on live data, 2026-09-22) */
   /* A phone reads top to bottom: the session first, then the day. */
   .dash-col { display: contents; }
   .area-session { order: 0; } .area-today { order: 1; } .area-attention { order: 2; } .area-recent { order: 3; }

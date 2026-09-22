@@ -32,7 +32,7 @@
 
 ## Next
 
-1. **Deploy slices 32 and 33 as `v2.2`**: bump `SW_VERSION`, back up the database first
+1. **Deploy slices 32 and 33 as `v2.2`** -- rehearsed on a live snapshot 2026-09-22 (Proof): bump `SW_VERSION`, back up the database first
    (`private.md`), `./deploy.sh v2.2`, then check migrations 0019 and 0020 applied, one Pick and
    one link from the phone.
 2. **Slice 33 phase C** (the classifier proposes links) once item 4 is done.
@@ -57,6 +57,15 @@
 ## Proof
 
 Each slice keeps its proof in its plan file and its commits.
+
+**`v2.2` rehearsed on a live snapshot, 2026-09-22 (not deployed):** a read-only backup-API copy
+of the live database (schema 18, 196 items, 180 captures) run locally on `main` with AI and push
+keys off. Migrations 0019 and 0020 applied: schema 20, integrity ok, no foreign-key faults, every
+count unchanged, all 196 items identical in text, `updated_at`, star, status and space; the link
+index keyed all 196 (0 links yet, one shared first line). `npm run ui` against it: 18/18 after one
+fix -- Home scrolled sideways 12px at 390px, the phone's `.dash` column being a bare `1fr` that
+grew to the longest unbreakable line (older than 32 and 33; now `minmax(0, 1fr)`). The snapshot
+and every copy were deleted after, here, in the container and on the host.
 
 **`v2.1`, checked 2026-09-22 from outside and in the container:** `/api/health` answers
 `{"ok":true,"ai":true}`, `sw.js` is `2026-09-22.3` (purged from Cloudflare by hand), `http://`
