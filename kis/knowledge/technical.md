@@ -296,6 +296,18 @@ the container, because the persistent directory is a labelled volume and the hos
 `~/.codex` is a different directory the container never sees. The mount is read-write so the
 CLI's token refresh persists.
 
+**Reading the live app** (first done 2026-09-22). Two routes, both read-only when used as below;
+the host, the container name and where the password is kept are in `../state/private.md`.
+- The API, with the password as a bearer token (`Authorization: Bearer ...`, which `auth.py`
+  accepts for scripts): spaces, items by space, the queue, config, usage. Enough for how things
+  are organised, and the same route edits them -- moving items, renaming spaces -- when the owner
+  asks for a change.
+- A database snapshot over SSH, for what the API does not show (`ai_calls`, `proposal_json`,
+  captures): Python's `sqlite3` backup API inside the container against `/data/tartib.db` opened
+  `mode=ro`, then `docker cp` out and `scp` here. The live file is never copied while written to.
+  The snapshot holds everything the owner keeps, salaries included, so it goes in the session
+  scratchpad and is deleted once read, along with the copy left in the server's `/tmp`.
+
 ## Maintenance
 
 `python -m tartib.reclassify --all | --attention [--dry-run]` (in Docker: `docker compose exec tartib python -m tartib.reclassify --all`). Deletes the selected captures' items, marks the captures pending, runs the Runner in-process until drained, then carries `starred`/`status` over where a capture still yields one task. Safe with the server up; do not restart the server mid-run. Back up `/data/tartib.db` first (`docker cp tartib-tartib-1:/data/tartib.db …`).

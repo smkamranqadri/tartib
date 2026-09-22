@@ -15,7 +15,10 @@
 - **Confirmed 2026-09-22 over SSH: the model pin reached the server.** The running container
   has `TARTIB_AI_MODEL=gpt-5.6-luna` and `TARTIB_AI_REASONING=medium`, and every row in `ai_calls`
   names that model. So the measurements in `kis/` describe the model that is running.
-- **The service-worker cache fix is on `main` and ships with the next version.** Until then a new
+- **On `main` and not deployed, shipping with the next version:** the service-worker cache fix,
+  a duplicate of an item deleted mid-classification no longer crashing the capture (`d19dd9d`),
+  and saving no longer reloading the note, with indented lines keeping their indent (`c91fbf9`).
+  Until the cache fix is out, a new
   version reaches a phone only when Cloudflare's four-hour cache turns over, or after deleting
   and re-adding the app -- which is how `v2.0` got onto the phone. **When it deploys, purge
   `sw.js` from Cloudflare once**, or the copy cached under the old headers lingers.
