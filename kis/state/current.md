@@ -7,11 +7,9 @@
   In step with `origin/main` since 2026-09-22 (pushed after `v2.1` went live).
 - **Live: `v2.1`**, deployed 2026-09-22 on the CapRover VPS (`x86_64`) as
   `smkamranqadri/tartib:v2.1`: `v2.0` plus slices 30 and 31 and the fixes after it (history.md),
-  classifying on the pinned `gpt-5.6-luna` at medium reasoning. Checked from outside and in the
-  container: health `{"ok":true,"ai":true}`, `sw.js` at `2026-09-22.3`, `http://` 302, cookie
-  `HttpOnly; Secure; SameSite=lax`, schema 18, 43 tasks opening with their title line. `sw.js`
-  was purged from Cloudflare by hand. The database as it was just before is backed up
-  (`private.md`, Backups); that file and `v2.0` are the rollback.
+  classifying on the pinned `gpt-5.6-luna` at medium reasoning (checks under Proof). The
+  database as it was just before is backed up (`private.md`, Backups); that file and `v2.0` are
+  the rollback.
 - Task: none in flight.
 
 ## Open
@@ -38,7 +36,7 @@
    between items, approved 2026-09-22, lead it now that the first-day feedback is done.
 2. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-3. **Answer the four questions** under Known gaps, now that `v2.0` is on a device.
+3. **Answer the four questions** under Known gaps, on `v2.1`.
 
 ## Commands
 
@@ -57,32 +55,31 @@
 
 Each slice keeps its proof in its plan file and its commits.
 
-**Checked from outside on 2026-09-22, against the live domain:** `/api/health` answers
-`{"ok":true,"ai":true}`, the service worker is `2026-09-22.2`, and the content security policy is
-served -- which is v2.0 backend code, so the new image is running and not only the new bundle.
-**Reported by the owner the same day:** the phone runs `2026-09-22.2`, and push subscribes on the
-phone and in desktop Safari. **Re-checked 2026-09-22:** `http://` answers 302 to `https://`, and
-the login cookie is `HttpOnly; Secure; SameSite=lax`.
+**`v2.1`, checked 2026-09-22 from outside and in the container:** `/api/health` answers
+`{"ok":true,"ai":true}`, `sw.js` is `2026-09-22.3` (purged from Cloudflare by hand), `http://`
+answers 302, the login cookie is `HttpOnly; Secure; SameSite=lax`, the container runs `v2.1`,
+and migration 0018 applied: schema 18, 43 tasks opening with their title line, as the dry run on
+a live snapshot predicted (37 added, 0 `updated_at` moved). **From `v2.0`, reported by the
+owner:** push subscribes on the phone and in desktop Safari.
 
 ## Known gaps
 
 Offline behaviour that is designed rather than missing -- counts lagging, and text editing
 needing one moment online first -- is product truth: `../intent/SPEC.md`, Offline.
 
-- **`v2.0` is on a device, and four questions it can now answer are still open:**
+- **Four questions only the phone can answer are still open:**
   1. whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
      against readability;
   2. whether `background-attachment: fixed` survives iOS;
-  3. whether tapping a word is a discoverable way into editing when no button says so. The
-     first-day report that the title "can't be edited" bears on this, though it is about the
-     title, which tap-to-edit does not cover, rather than the body;
-  4. whether a debounced autosave feels safe without a Save button to press -- answerable only
-     after the next deploy: until `c91fbf9` every save reloaded the note in a space's split
-     view, and "Saved" never showed.
-- The committed UI suite (`npm run ui`, 10 checks) guards slices 22 to 25, 27 and 29. It cannot
-  judge how anything reads, and slices 26 and 28 are outside it for a stated reason. The reload
-  fix (`c91fbf9`), tickable boxes (`b420ed3`) and slice 30's split card were proved by scratch scripts and are not in
-  it, so nothing guards them against regression.
+  3. whether tapping a word is a discoverable way into editing when no button says so -- since
+     slice 31 that includes the title, which is now the first line of the text;
+  4. whether a debounced autosave feels safe without a Save button to press. Only answerable
+     from `v2.1` on: before `c91fbf9` every save reloaded the note in a space's split view, and
+     "Saved" never showed.
+- The committed UI suite (`npm run ui`, 14 checks) guards slices 22 to 25, 27, 29 and 31, and the
+  reload fix and tickable boxes (F1, F2). It cannot judge how anything reads; slices 26 and 28
+  are outside it for a stated reason, and slice 30's split card was proved by a scratch script
+  and is not in it.
 
 Browser and device behaviour that will not change by deploying -- iOS `notificationclick`,
 Chromium browsers that cannot reach Google's push service, `pushsubscriptionchange`, the silent

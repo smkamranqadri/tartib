@@ -438,10 +438,14 @@ Slices up to 25 each built a harness in the scratchpad and threw it away, so not
 an earlier slice's checks. That is how slice 24's conflict strip reached a phone 430px wide: its
 own checks never had a conflict on screen, and slice 25's harness was the first thing to look.
 **Settled in slice 26: they are committed.** `frontend/tools/ui/check.mjs`, run by `npm run ui`,
-holds 10 checks over slices 22 to 25, 27 and 29 -- contrast on the surface an element actually sits on,
-tap targets, horizontal scroll at 390px, markdown, tap-to-edit, an offline cold start, and an
-offline edit reading "waiting to send", the house-rules editor, and the usage readout -- the
-last of which also asserts that no money appears while `cost_verified` is false.
+holds 14 checks over slices 22 to 25, 27, 29 and 31 -- contrast on the surface an element actually sits on,
+tap targets, horizontal scroll at 390px (and, since a clipped header hid a space's Delete, every
+header control on screen), markdown, tap-to-edit, an offline cold start, and an offline edit
+reading "waiting to send", the house-rules editor (Clear asking first), the usage readout --
+which also asserts that no money appears while `cost_verified` is false -- the title shown once,
+and the delete modal. **F1 and F2** guard two fixes made after `v2.0`: a save not reloading the
+note in a split view, and a checklist box ticking where it is drawn. Every check a slice or a
+fix proves in a browser goes here, not in a scratch script.
 **Two slices are deliberately not covered, and it is not an oversight.** Slice 26's ask-bar follow-up carry and slice 28's "Looks like #N" line and `+ space` button both need a database row the API cannot create -- a prior answer with several items, and an item already carrying a duplicate verdict or a proposed space. They are covered by backend tests and were each looked at once on a 390px viewport. Anyone reading "22 to 29" as a range would assume otherwise, which is why this says it plainly. It needs the app running and `TARTIB_PASSWORD` in the
 environment, makes its own items through the API and deletes them, and exits non-zero on a
 failure. It caught a real 38x44 tap target on its first run. Two lessons from writing it: a check
