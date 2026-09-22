@@ -22,7 +22,8 @@
   design: the verdict is recorded now so it can be judged on real captures before it is ever
   allowed to hold one back.
 - Small and worth doing before `v1.1`: one consolidated `uv run pytest -m eval`. Every check has
-  passed on the pinned model, but across two runs -- the subscription limit landed in between.
+  passed, but across two runs and **on the CLI's default model** -- the evals did not carry the
+  pin until 2026-09-22. Re-running the suite now measures what ships.
   Park-and-name a duplicate, and proposing a space that does not exist yet. Phase mode.
   `kis/intent/slice-28-what-the-classifier-may-name.md`. It starts from a correction: the
   retrieval slice 26 shipped is about the database, not about the capture in hand, so

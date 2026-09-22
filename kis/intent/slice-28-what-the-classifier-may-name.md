@@ -157,9 +157,17 @@ and both came back null. Matches what an earlier build measured, on a different 
 ### The control that was not a control
 
 The house-rule eval failed on `"prepare for the exam on Friday"`: `work` without the rule,
-`None` with it. It reproduced after the model was pinned, which ruled out variance between
-models -- but measured a third time, in isolation, it answered the other way round (`None`
-without the rule, `work` with it).
+`None` with it. It reproduced on a second run, and a third measurement, in isolation, answered
+the other way round (`None` without the rule, `work` with it).
+
+**Corrected 2026-09-22.** This section originally said the reproduction "ruled out variance
+between models" because it came after the model was pinned. It did not: the eval suite was still
+building `CodexConfig(command="codex")` with no model, so both eval runs used the CLI's default
+while only the isolated third run used `gpt-5.6-luna`. The flip-flop was therefore across two
+models, not two runs of one. The conclusion -- that the capture sits on the fence and the control
+was measuring its own wobble -- still holds, since a control that answers differently on two
+models is no more usable than one that answers differently on two runs. But the evidence was
+confounded and the sentence claimed more than it had.
 
 So the capture is simply on the fence between `work` and `ideas`, and **the control was
 measuring the wobble rather than the rule.** Worse, the assertion predated slice 27: it treated
@@ -181,8 +189,10 @@ because the reflex after slice 27 was to reach for the prompt first.
 
 ## Verification -- what actually ran
 
-On the **pinned model** (`gpt-5.6-luna`, reasoning `medium`), across two runs because the
-subscription limit landed between them:
+Across two runs, because the subscription limit landed between them. **On the CLI's default
+model, not the pin** -- the evals did not carry it until 2026-09-22, so these numbers describe a
+different classifier than the app ships. They are kept as measured; re-running the suite now
+measures the pinned model:
 
 | | |
 |---|---|
@@ -199,9 +209,10 @@ subscription limit landed between them:
 - On glass at 390px: *"Looks like #52 already here. Filing this keeps both."* linking to the
   matched item; the proposed space as a dashed `+ car` button at 46x44 that fills the sentence in.
 
-**Outstanding, and small:** every acceptance check has passed on luna, but not all inside one
-run -- the limit resets at 11:46. One consolidated `pytest -m eval` is worth doing before `v1.1`,
-purely to have the whole set green in a single breath.
+**Outstanding:** every acceptance check has passed, but on the CLI's default model and across
+two runs. Now that the evals carry the pin, one consolidated `pytest -m eval` is worth doing
+before `v1.1` -- both to have the set green in a single breath and to have it green on the
+classifier that actually ships.
 
 ## Still open
 

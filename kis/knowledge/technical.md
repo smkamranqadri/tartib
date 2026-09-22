@@ -301,7 +301,12 @@ over published history. Scrub by commit going forward, never by rewrite.
 
 ```sh
 cd backend && uv run pytest -q && uv run ruff check .
-cd backend && uv run pytest -m eval        # 7 evals through real Codex, ~2m45s
+cd backend && uv run pytest -m eval        # 7 evals, 52 real calls, ~2m45s
+# The evals read the pin out of .env, so they measure the classifier that ships. They did
+# not until 2026-09-22, and their numbers before that describe the CLI's default model.
+# 12 of what used to be 64 calls were baselines -- what the model does *without* each
+# feature -- now measured once per model into tests/eval_baselines.json and reused.
+# TARTIB_EVAL_REBASELINE=1 forces a fresh one; changing model or reasoning does too.
 # An eval run that fails fast is the CLI being rate-limited, not a result: 45s for five
 # failures against 131s for a clean run. Re-run before believing a failure.
 cd frontend && npm run typecheck && npm run build
