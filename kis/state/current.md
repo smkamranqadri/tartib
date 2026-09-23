@@ -11,7 +11,7 @@
   file and `v2.1` are the rollback.
 - Task: **deploy slice 36 as `v2.3`** (`../intent/slice-36-link-cards.md`, built and verified).
   The first `suggest_links` pass ran on every space 2026-09-23: 194 calls (one timeout, retried),
-  67 items sent back with 81 links; 16 were still waiting when last checked.
+  67 items sent back with 81 links; all reviewed by the owner (0 waiting before `v2.3`).
 
 ## Open
 
