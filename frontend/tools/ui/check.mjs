@@ -1,6 +1,6 @@
 /**
  * Re-runs the UI checks slices 23, 24 and 25 proved once and then threw away, and since
- * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 to 34.
+ * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 to 34 and 36.
  *
  *     TARTIB_PASSWORD=... node frontend/tools/ui/check.mjs [--url http://localhost:8000] [--head]
  *
@@ -617,6 +617,75 @@ async function main() {
         if (sent?.space !== space) throw new Error(`sent space ${sent?.space}, the item's is ${space}`);
         if (JSON.stringify(sent?.links) !== "[21]") throw new Error(`links ${JSON.stringify(sent?.links)}`);
         return `its own space (${space}) sent, not the proposal's; no Tell it why`;
+      } finally {
+        await ctx.close();
+      }
+    });
+
+    // --- slice 36: link cards say what they decide, and clicks settle ---
+    await check("S36 link cards: Link N / No links / Later, and a quick click after lands nowhere", async () => {
+      const mk = (id, text, related) => ({
+        id, capture_id: id, raw_text: text, space, shape: "note", stage: "attention",
+        created_at: new Date().toISOString(), title: null, due: null, remind_at: null, starred: false,
+        status: "open", proposal_error: null, classified_at: null, updated_at: new Date().toISOString(),
+        thought_count: 0, wait_reason: "relink", duplicate_of: null, proposal: null, related,
+      });
+      // Newest first on screen: 9003, 9002, 9001.
+      let queue = [
+        mk(9001, "Third card", [{ id: 31, title: "Gamma", space }]),
+        mk(9002, "Second card", [{ id: 21, title: "Beta", space }]),
+        mk(9003, "First card", [{ id: 11, title: "Alpha", space }, { id: 12, title: "Delta", space }]),
+      ];
+      const sent = [];
+      const ctx = await browser.newContext({ viewport: PHONE, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+      const page = await ctx.newPage();
+      await page.route("**/api/attention*", (route) => route.fulfill({ json: { items: queue, stale: [], stale_days: 14 } }));
+      await page.route("**/api/items/90*/approve", async (route) => {
+        const id = Number(route.request().url().match(/items\/(\d+)\/approve/)[1]);
+        sent.push({ id, links: JSON.parse(route.request().postData() || "{}").links });
+        queue = queue.filter((i) => i.id !== id);
+        await route.fulfill({ json: { ...mk(id, "x", []), stage: "filed", wait_reason: null } });
+      });
+      try {
+        await page.goto(URL);
+        await page.fill('input[type="password"]', PASSWORD);
+        await page.click('button[type="submit"]');
+        await page.waitForSelector(".app", { timeout: 15000 });
+        await page.goto(`${URL}/inbox`);
+        const first = page.locator(".cards > *").first();
+        await first.locator(".asked.related").waitFor({ timeout: 8000 });
+        // Buttons are drawn uppercase; the words are what is compared.
+        const primary = async () => (await first.locator(".decisions button.primary").innerText()).toLowerCase().replace(/\s+/g, " ").trim();
+        if (!/^link 2/.test(await primary())) throw new Error(`primary reads ${await primary()}`);
+        await first.locator(".asked-opt").nth(1).tap();
+        if (!/^link 1/.test(await primary())) throw new Error(`after one off: ${await primary()}`);
+        await first.locator(".asked-opt").nth(0).tap();
+        if ((await primary()) !== "no links") throw new Error(`all off: ${await primary()}`);
+        if (!(await first.locator(".reason").innerText()).includes("Filed already")) throw new Error("reason line");
+        // Later: moved, said, nothing sent.
+        await first.locator(".decisions button", { hasText: "Later" }).tap();
+        await page.locator(".moved").waitFor({ timeout: 3000 });
+        const order = await page.locator(".cards > *").evaluateAll((cs) => cs.map((c) => c.innerText.split("\n")[0]));
+        if (order[order.length - 1] !== "First card" || sent.length) throw new Error(`order ${order} sent ${sent.length}`);
+        // Link on the card now first, then a quick second click where its button was.
+        await page.waitForTimeout(600);
+        const btn = page.locator(".cards > *").first().locator(".decisions button.primary");
+        const box = await btn.boundingBox();
+        const url = page.url();
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await page.waitForTimeout(250);
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await page.waitForTimeout(700);
+        if (sent.length !== 1) throw new Error(`the quick second click sent too: ${JSON.stringify(sent)}`);
+        if (page.url() !== url) throw new Error(`the quick second click opened ${page.url()}`);
+        if (JSON.stringify(sent[0]) !== JSON.stringify({ id: 9002, links: [21] })) throw new Error(JSON.stringify(sent));
+        // No links on the card that is last now.
+        await page.waitForTimeout(300);
+        const last = page.locator(".cards > *").filter({ hasText: "First card" });
+        await last.locator(".decisions button", { hasText: "No links" }).tap();
+        for (let i = 0; i < 20 && sent.length < 2; i++) await page.waitForTimeout(100);
+        if (JSON.stringify(sent[1]) !== JSON.stringify({ id: 9003, links: [] })) throw new Error(JSON.stringify(sent));
+        return "Link 2 -> 1 -> No links; Later moves and says so; quick repeat ignored; No links sends []";
       } finally {
         await ctx.close();
       }

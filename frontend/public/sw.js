@@ -20,7 +20,7 @@ const PENDING_NAV = "/__pending-nav";
    old worker active: its precache still holds the previous build, and nothing offers the reload.
    The app shows this in Settings, so "is the phone actually running this worker?" is a question
    with an answer instead of a guess. */
-const SW_VERSION = "2026-09-23.1";
+const SW_VERSION = "2026-09-23.2";
 const VERSION_KEY = "/__sw-version";
 /* Where the page leaves the VAPID public key, so this worker can re-subscribe on its own when
    the push service rotates an endpoint. The page is not running when that happens. */

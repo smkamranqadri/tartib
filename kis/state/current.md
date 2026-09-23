@@ -9,7 +9,9 @@
   slices 32 to 35 and the pre-deploy review fixes (history.md), with `TARTIB_LINK_PROPOSALS` off
   and `/mcp` on. The database as it was just before is backed up (`private.md`, Backups); that
   file and `v2.1` are the rollback.
-- Task: none in flight.
+- Task: **deploy slice 36 as `v2.3`** (`../intent/slice-36-link-cards.md`, built and verified).
+  The first `suggest_links` pass ran on every space 2026-09-23: 194 calls (one timeout, retried),
+  67 items sent back with 81 links; the owner has reviewed 51 of them.
 
 ## Open
 
@@ -40,11 +42,11 @@
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
   Verification commands. Expect **370 passed, 9 deselected** (the nine are the evals) and
-  **20/20** from `npm run ui`. Any red is real.
+  **21/21** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
   Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
-  it is at `2026-09-23.1`.
+  it is at `2026-09-23.2`.
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
 - Local development: `docker compose up -d --build` against http://localhost:8000.

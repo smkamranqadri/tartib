@@ -23,7 +23,8 @@ function draftOf(item: Item): Draft {
 }
 
 /** One waiting item as a decision: text, the proposal as a sentence with tappable words,
- *  Approve / Not now / "…". When `hotkey` is set, Enter approves it. */
+ *  Approve / Later / "…" -- or, when it proposes links, Link N / No links / Later. When `hotkey` is
+ *  set, Enter takes the first. */
 export default function ApprovalCard({
   item,
   spaces,
@@ -78,7 +79,11 @@ export default function ApprovalCard({
     setDraft(ask.field === "space" ? { ...draft, space: value } : { ...draft, shape: value as Shape });
   }
 
-  async function approve() {
+  /* The chips still on. On a card that proposes links, the decision is about links (slice 36):
+     Link keeps these, No links keeps none, and either way the item goes on. */
+  const keptLinks = related.map((r) => r.id).filter((id) => !dropped.has(id));
+
+  async function approve(noLinks = false) {
     if (!draft.space) {
       setMsg("Pick a space first.");
       return;
@@ -89,7 +94,7 @@ export default function ApprovalCard({
         space: draft.space,
         title: draft.shape === "task" ? draft.title.trim() || null : null,
         due: draft.shape === "task" && draft.due ? draft.due : null,
-        ...(related.length ? { links: related.map((r) => r.id).filter((id) => !dropped.has(id)) } : {}),
+        ...(related.length ? { links: noLinks ? [] : keptLinks } : {}),
       });
       onApproved(item.id);
     } catch (err) {
@@ -304,9 +309,29 @@ export default function ApprovalCard({
       </div>
       {/* While a reason is being written, that is the decision on the table. */}
       <div className="decisions" hidden={why !== null}>
-        <button type="button" className="primary" onClick={() => void approve()}>
-          Approve {hotkey && <kbd>↵</kbd>}
-        </button>
+        {related.length === 0 ? (
+          <button type="button" className="primary" onClick={() => void approve()}>
+            Approve {hotkey && <kbd>↵</kbd>}
+          </button>
+        ) : (
+          <>
+            {/* A card that proposes links decides links (slice 36). An item sent back for them is
+                already filed, so the words are only about links; one still waiting files too. */}
+            {keptLinks.length > 0 && (
+              <button type="button" className="primary" onClick={() => void approve()}>
+                {item.wait_reason === "relink" ? "Link" : "File + link"} {keptLinks.length}{" "}
+                {hotkey && <kbd>↵</kbd>}
+              </button>
+            )}
+            <button
+              type="button"
+              className={keptLinks.length ? "ghost" : "primary"}
+              onClick={() => void approve(true)}
+            >
+              {item.wait_reason === "relink" ? "No links" : "File, no links"}
+            </button>
+          </>
+        )}
         {canKeep && (
           <button
             type="button"
@@ -319,7 +344,7 @@ export default function ApprovalCard({
         )}
         {onNotNow && (
           <button type="button" className="ghost" onClick={() => onNotNow(item.id)}>
-            Not now
+            Later
           </button>
         )}
         {/* Not for an item that was already filed: a reason would reclassify it from scratch. */}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { getAttention } from "../api";
 import ApprovalCard from "../components/ApprovalCard";
@@ -36,8 +36,22 @@ export default function Inbox({
 }) {
   const { data, setData, error, loading, cachedAt } = useLoad(getAttention, [version]);
   const spaces = useSpaces(version);
-  // "Not now" sends a card to the end; newest first otherwise.
+  // "Later" sends a card to the end; newest first otherwise.
   const [deferred, setDeferred] = useState<number[]>([]);
+  /* What Later just did, said once (slice 36): it moves a card and sends nothing, and the owner
+     took it for a rejection when the card simply left the screen. */
+  const [moved, setMoved] = useState<string | null>(null);
+  /* Half a second after a card leaves, clicks on the list are ignored (slice 36). The cards below
+     move up at once, and a quick next click used to land on the next card's space picker or text
+     where the button had been. */
+  const [settling, setSettling] = useState(false);
+  const settle = useRef<number | undefined>(undefined);
+  function settleList() {
+    setSettling(true);
+    window.clearTimeout(settle.current);
+    settle.current = window.setTimeout(() => setSettling(false), 500);
+  }
+  useEffect(() => () => window.clearTimeout(settle.current), []);
   const items = useMemo(() => {
     const all = [...(data?.items ?? [])].sort((a, b) => b.id - a.id);
     return [...all.filter((i) => !deferred.includes(i.id)), ...all.filter((i) => deferred.includes(i.id))];
@@ -48,6 +62,7 @@ export default function Inbox({
     if (!data) return;
     /* A piece of a split that was decided on means the rest can no longer be kept as one. */
     const gone = data.items.find((i) => i.id === id);
+    if (!next) settleList();
     const items = next ? data.items.map((i) => (i.id === id ? next : i)) : data.items.filter((i) => i.id !== id);
     setData({
       ...data,
@@ -96,7 +111,8 @@ export default function Inbox({
       ) : tab === "attention" ? (
         <Card icon={<AlertIcon />} label="Needs attention" aside={items.length === 0 ? "All caught up" : `${items.length} ${items.length === 1 ? "thing" : "things"} to decide`}>
           {items.length === 0 && <Empty>All caught up.</Empty>}
-          <div className="cards">
+          {moved && <p className="moved muted small" role="status">{moved}</p>}
+          <div className={`cards ${settling ? "settling" : ""}`}>
             {items.map((item, i) => (
               <ApprovalCard
                 key={item.id}
@@ -104,7 +120,12 @@ export default function Inbox({
                 spaces={spaces}
                 hotkey={i === 0}
                 onApproved={(id) => replace(id, null)}
-                onNotNow={(id) => setDeferred((d) => [...d.filter((x) => x !== id), id])}
+                onNotNow={(id) => {
+                  setDeferred((d) => [...d.filter((x) => x !== id), id]);
+                  const first = (item.raw_text.split("\n").find((l) => l.trim()) ?? "").trim();
+                  setMoved(`Moved “${first.length > 40 ? first.slice(0, 40) + "…" : first}” to the end.`);
+                  settleList();
+                }}
                 onRetried={(next) => replace(next.id, next)}
                 onKept={kept}
               />
