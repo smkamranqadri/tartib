@@ -1,6 +1,6 @@
 # Slice 19: small items, round two (approved 2026-09-19)
 
-**Closed 2026-09-19; not deployed.** All six steps proved locally; the user tried the rebuilt
+**Closed 2026-09-19; deployed as `v2.0` on 2026-09-22.** All six steps proved locally; the user tried the rebuilt
 local container and accepted it ("good") after asking for the Inbox tabs in the title row, a
 highlighted running session, and different sounds -- ending on a school bell they supplied.
 

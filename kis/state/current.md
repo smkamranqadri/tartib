@@ -11,7 +11,6 @@
 - Task: none in flight.
 - **Links on the live data:** the first `suggest_links` pass ran on every space 2026-09-23 (194
   calls, one timeout retried), sent 67 items back with 81 links, and the owner reviewed them all.
-  Every item is recorded in `link_asks`, so a rerun only asks about changed text.
 - **Claude Code on this Mac is connected to `/mcp`** at user scope, so every project has the Tartib
   tools (`private.md`, MCP).
 
@@ -60,35 +59,14 @@
 
 ## Proof
 
-Each slice keeps its proof in its plan file and its commits; releases before `v2.2` are in
-`../intent/history.md` and git. The pre-deploy rehearsal on a live snapshot (2026-09-22) found the
-phone dashboard's 12px sideways scroll (`5405db3`).
+Each slice keeps its proof in its plan file and its commits; releases before `v2.3`, and the
+reviews before `v2.2`, are in `../intent/history.md` and git. The pre-deploy rehearsal on a live
+snapshot (2026-09-22) found the phone dashboard's 12px sideways scroll (`5405db3`).
 
 **`v2.3`, checked 2026-09-23:** health ok, `sw.js` `2026-09-23.2` (purged by the owner), the
 production bundle carries slice 36's labels ("No links", "File + link", "Moved “") and the settle,
 `http://` 302, cookie `HttpOnly; Secure; SameSite=lax`, the container runs `v2.3`, schema 23,
 integrity ok, 196 items; `/mcp` 401 without the token and 11 tools with it.
-
-**`v2.2`, checked 2026-09-23 from outside and in the container:** `/api/health` answers
-`{"ok":true,"ai":true}`, `sw.js` is `2026-09-23.1` (Cloudflare purged by the owner; it still sends
-`max-age=14400`), `http://` answers 302, the login cookie is `HttpOnly; Secure; SameSite=lax`, the
-container runs `v2.2`. Migrations 0019 to 0023 applied: schema 23, integrity ok, no foreign-key
-faults, and all 196 items hash identical to the pre-deploy backup (text, `updated_at`, star,
-status, space, stage); 196 link keys, 0 links. `/mcp`: 401 with no token, a wrong one, or the
-login password; with the token, `initialize` as `tartib`, 11 tools, `list_spaces` 26. In the
-container, `suggest_links --space infra --limit 5 --dry-run`: 5 calls, 3 items with 3 links,
-nothing stored. `TARTIB_LINK_PROPOSALS` off.
-
-**`v2.2` reviewed before deploy, 2026-09-23 (`ae74c43..HEAD`, three separate agents, read-only):**
-code review, security review, and SPEC against the build. No crash, data loss or exploitable hole.
-Fixed, each with a test shown to fail without its fix: `suggest_links` dropped a pair whose target
-had been sent back earlier in the same run; approving from the item page wrote every proposed
-link unseen (absent `links` now keeps none); a card's title edit was lost when a link was kept;
-Pick starred a task finished or deleted during its call, or failed with a 500; `[[space: x]]` was
-half a link; the service worker cached every picker keystroke; `@codemirror/autocomplete` was
-undeclared. Rules 4, 5 and 7 amended to record slices 32, 34 and 35. Known and left: redo ignores
-the link hold (switch off; slice 33's plan), the API cache survives sign-out (backlog). After:
-370 passed, 9 deselected; `npm run ui` 20/20.
 
 ## Known gaps
 

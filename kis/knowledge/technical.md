@@ -410,7 +410,7 @@ cd backend && uv run pytest -m eval        # 8 evals, 56 real calls, ~2m45s. One
 # An eval run that fails fast is the CLI being rate-limited, not a result: 45s for five
 # failures against 131s for a clean run. Re-run before believing a failure.
 cd frontend && npm run typecheck && npm run build
-cd frontend && TARTIB_PASSWORD=... npm run ui   # 21 UI checks, needs the app up and real Chrome
+cd frontend && TARTIB_PASSWORD=... npm run ui   # the UI checks, needs the app up and real Chrome
 # against a scratch server: it needs at least one space (TARTIB_SPACES) or every check that makes an item fails
 docker compose build && docker compose up -d && curl localhost:8000/api/health && docker stats --no-stream
 ```
@@ -475,7 +475,7 @@ Slices up to 25 each built a harness in the scratchpad and threw it away, so not
 an earlier slice's checks. That is how slice 24's conflict strip reached a phone 430px wide: its
 own checks never had a conflict on screen, and slice 25's harness was the first thing to look.
 **Settled in slice 26: they are committed.** `frontend/tools/ui/check.mjs`, run by `npm run ui`,
-holds 21 checks over slices 22 to 25, 27, 29, 31 to 34 and 36 (the Pick modal, link rendering and the `[[` picker, space links, the proposed-link and `relink` cards) -- contrast on the surface an element actually sits on,
+holds the checks for slices 22 to 25, 27, 29, 31 to 34 and 36 (State keeps the count) -- contrast on the surface an element actually sits on,
 tap targets, horizontal scroll at 390px (and, since a clipped header hid a space's Delete, every
 header control on screen), markdown, tap-to-edit, an offline cold start, and an offline edit
 reading "waiting to send", the house-rules editor (Clear asking first), the usage readout --

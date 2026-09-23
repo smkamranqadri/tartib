@@ -8,6 +8,15 @@ not ship (the retry probe deleted thought logs; model-written markdown could mak
 fetch a remote URL) and five real bugs. All seven were fixed, each with a test or a browser
 reproduction, and the whole eval suite passed in one run on the pinned model.
 
+Before `v2.2` (2026-09-23), three separate reviews of everything since `v2.1` -- code, security,
+and SPEC against the build -- found no crash, data loss or exploitable hole, and seven defects
+fixed first, each with a test shown to fail without its fix: `suggest_links` dropping a pair whose
+target had been sent back earlier in the run, the item page writing proposed links unseen, a
+card's title edit lost with a kept link, Pick starring a task finished or deleted during its call,
+`[[space: x]]` half a link, the worker caching every picker keystroke, an undeclared package.
+Rules 4, 5 and 7 were amended to record slices 32, 34 and 35. On the server after deploy,
+migrations 0019 to 0023 left all 196 items hash-identical to the backup taken just before.
+
 Deployed is not the same as accepted. **Slices 18 to 22 were seen and accepted on a device**
 before `v2.0`. **Slices 23 to 29 first reached a device with `v2.0` and are not accepted yet**:
 four questions only a phone can settle are still open, and the first day's use turned up

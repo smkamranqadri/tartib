@@ -1,6 +1,6 @@
 # Slice 20: round three (approved 2026-09-19)
 
-**Closed 2026-09-20: eight steps, proved locally and used by the user.** Not deployed. Migrations 0011-0014. Rules 4 and 8 rewritten.
+**Closed 2026-09-20: eight steps, proved locally and used by the user.** Deployed as `v2.0` on 2026-09-22. Migrations 0011-0014. Rules 4 and 8 rewritten.
 
 Eight steps from the backlog, each proved on its own and committed on its own. One slice by the
 user's choice, over a proposed split into two. Phase mode. No deploy in this slice.

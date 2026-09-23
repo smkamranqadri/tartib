@@ -1,6 +1,6 @@
 # Slice 18: small fixes (approved 2026-09-19)
 
-**Closed 2026-09-19; not deployed.** All six steps proved locally, and checked by the user on
+**Closed 2026-09-19; deployed as `v2.0` on 2026-09-22.** All six steps proved locally, and checked by the user on
 the phone against the local container over the LAN (`http://`, in the browser): no complaint on
 zoom or the sticky nav ("rest is good"), then two rounds of glass changes asked for and accepted
 ("ok good"). Not checked: the installed app's header against the real notch, which needs HTTPS
