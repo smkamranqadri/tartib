@@ -2,7 +2,7 @@
 
 Planned 2026-09-23 with the owner, after reviewing the 67 `relink` cards from the first
 `suggest_links` pass. Fast mode: one card, one list, one label.
-**Built and verified 2026-09-23 (Proof, below).**
+**Built and verified 2026-09-23 (Proof, below); deployed as `v2.3` the same day.**
 
 ## What was reported
 

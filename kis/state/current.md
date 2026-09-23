@@ -4,12 +4,11 @@
   in `kis/state/private.md`, gitignored and never published. This file carries the substance and
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  In step with `origin/main` since 2026-09-23 (pushed after `v2.2` went live).
-- **Live: `v2.2`**, deployed 2026-09-23 on the CapRover VPS as `smkamranqadri/tartib:v2.2`:
-  slices 32 to 35 and the pre-deploy review fixes (history.md), with `TARTIB_LINK_PROPOSALS` off
-  and `/mcp` on. The database as it was just before is backed up (`private.md`, Backups); that
-  file and `v2.1` are the rollback.
-- Task: **deploy slice 36 as `v2.3`** (`../intent/slice-36-link-cards.md`, built and verified).
+  In step with `origin/main` since 2026-09-23 (pushed after `v2.3` went live).
+- **Live: `v2.3`**, deployed 2026-09-23 on the CapRover VPS as `smkamranqadri/tartib:v2.3`:
+  `v2.2` (slices 32 to 35) plus slice 36, the link cards. `TARTIB_LINK_PROPOSALS` off, `/mcp` on.
+  No migration; `v2.2` and the backup taken just before (`private.md`, Backups) are the rollback.
+- Task: none in flight.
   The first `suggest_links` pass ran on every space 2026-09-23: 194 calls (one timeout, retried),
   67 items sent back with 81 links; all reviewed by the owner (0 waiting before `v2.3`).
 
@@ -54,6 +53,11 @@
 ## Proof
 
 Each slice keeps its proof in its plan file and its commits.
+
+**`v2.3`, checked 2026-09-23:** health ok, `sw.js` `2026-09-23.2` (purged by the owner), the
+production bundle carries slice 36's labels ("No links", "File + link", "Moved “") and the settle,
+`http://` 302, cookie `HttpOnly; Secure; SameSite=lax`, the container runs `v2.3`, schema 23,
+integrity ok, 196 items; `/mcp` 401 without the token and 11 tools with it.
 
 **`v2.2`, checked 2026-09-23 from outside and in the container:** `/api/health` answers
 `{"ok":true,"ai":true}`, `sw.js` is `2026-09-23.1` (Cloudflare purged by the owner; it still sends
