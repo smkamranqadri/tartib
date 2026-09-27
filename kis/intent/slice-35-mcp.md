@@ -2,6 +2,7 @@
 
 Planned 2026-09-23 with the owner. Standard mode.
 **Built and verified 2026-09-23 (Proof, below); deployed as `v2.2` the same day, `/mcp` on.**
+**No editing and no delete (decision 4, acceptance 2) SUPERSEDED - see `slice-37-edit-and-delete.md`.**
 
 ## What was asked
 
