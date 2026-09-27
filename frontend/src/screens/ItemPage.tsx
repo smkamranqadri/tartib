@@ -274,7 +274,7 @@ export default function ItemPage({
         </Card>
       )}
 
-      <Thoughts itemId={item.id} onAdded={onChanged} />
+      <Thoughts itemId={item.id} onChanged={onChanged} />
 
       <Card
         className="accordion"

@@ -217,6 +217,11 @@ export const approveItem = (id: number, edit?: Edit & { links?: number[] }) =>
 export const getThoughts = (id: number) => api<{ thoughts: Thought[] }>(`/api/items/${id}/thoughts`);
 export const addThought = (id: number, body: string) =>
   send<{ thought: Thought; thought_count: number }>("POST", `/api/items/${id}/thoughts`, { body });
+/** Slice 37: online only. Unlike adding, these do not queue offline. */
+export const editThought = (id: number, thoughtId: number, body: string) =>
+  send<{ thought: Thought }>("PATCH", `/api/items/${id}/thoughts/${thoughtId}`, { body });
+export const deleteThought = (id: number, thoughtId: number) =>
+  send<{ ok: true; thought_count: number }>("DELETE", `/api/items/${id}/thoughts/${thoughtId}`);
 /** Keep as one (slice 30): a split capture's pieces become one waiting note with its whole text. */
 export const keepWhole = (captureId: number) => send<Item>("POST", `/api/captures/${captureId}/whole`);
 export const redoItem = (id: number, reason: string) => send<Item>("POST", `/api/items/${id}/redo`, { reason });

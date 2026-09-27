@@ -1,10 +1,9 @@
-"""The thought section: an append-only log on an item, searched and read by Ask and the brief."""
+"""The thought section: a log on an item, searched and read by Ask and the brief. Entries are
+edited and deleted one at a time (slice 37)."""
 
 from __future__ import annotations
 
 import sqlite3
-
-import pytest
 
 from tests.conftest import capture, one_item, proposal, records, set_ask_reply, set_classify_reply
 
@@ -26,13 +25,50 @@ def test_entries_append_and_count(auth):
     assert auth.post("/api/items/9999/thoughts", json={"body": "x"}).status_code == 404
 
 
-def test_an_entry_cannot_be_rewritten(auth, settings):
+def test_an_entry_is_edited_and_marked(auth):
     item = one_item(auth, "x")
-    think(auth, item["id"], "as written")
-    conn = sqlite3.connect(settings.db_path)
-    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
-        conn.execute("UPDATE item_thoughts SET body = 'changed'")
-    conn.close()
+    first = think(auth, item["id"], "galvanised nails")["thought"]
+    assert first["edited_at"] is None
+    loaded = auth.get(f"/api/items/{item['id']}").json()["updated_at"]
+    r = auth.patch(
+        f"/api/items/{item['id']}/thoughts/{first['id']}", json={"body": " zinc screws "}
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["thought"]["body"] == "zinc screws" and r.json()["thought"]["edited_at"]
+
+    # Search follows the new words and forgets the old ones.
+    def found(q):
+        return [i["id"] for i in auth.get("/api/items", params={"q": q}).json()["items"]]
+
+    assert found("zinc") == [item["id"]] and found("galvanised") == []
+    # Not an edit of the item: an editor left open still saves.
+    assert auth.get(f"/api/items/{item['id']}").json()["updated_at"] == loaded
+    path = f"/api/items/{item['id']}/thoughts/{first['id']}"
+    assert auth.patch(path, json={"body": "  "}).status_code == 422
+
+
+def test_an_entry_is_deleted_and_the_count_follows(auth):
+    item = one_item(auth, "x")
+    a = think(auth, item["id"], "keep")["thought"]
+    b = think(auth, item["id"], "drop this")["thought"]
+    r = auth.delete(f"/api/items/{item['id']}/thoughts/{b['id']}")
+    assert r.status_code == 200 and r.json()["thought_count"] == 1
+    got = auth.get(f"/api/items/{item['id']}/thoughts").json()["thoughts"]
+    assert [t["id"] for t in got] == [a["id"]]
+    assert auth.get(f"/api/items/{item['id']}").json()["thought_count"] == 1
+    assert [i["id"] for i in auth.get("/api/items", params={"q": "drop"}).json()["items"]] == []
+
+
+def test_a_thought_is_reached_only_through_its_own_item(auth):
+    one = one_item(auth, "one")
+    two = one_item(auth, "two")
+    t = think(auth, one["id"], "mine")["thought"]
+    assert (
+        auth.patch(f"/api/items/{two['id']}/thoughts/{t['id']}", json={"body": "x"}).status_code
+        == 404
+    )
+    assert auth.delete(f"/api/items/{two['id']}/thoughts/{t['id']}").status_code == 404
+    assert auth.delete(f"/api/items/{one['id']}/thoughts/99999").status_code == 404
 
 
 def test_a_thought_does_not_make_an_open_editor_stale(auth):

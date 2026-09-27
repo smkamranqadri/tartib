@@ -23,7 +23,7 @@ export type Pending = { client_id: string; text: string; created_at: string };
  *  `expected_updated_at`, the first lands, and the second is refused as stale -- the queue
  *  conflicting with itself over edits the same person made seconds apart.
  *
- *  A thought cannot merge, because the log is append-only and two thoughts are two entries, so
+ *  A thought cannot merge, because two thoughts are two entries, so
  *  those take a key of their own. */
 export type PendingEdit = {
   id: string;
@@ -201,7 +201,7 @@ export async function enqueueEdit(item_id: number, edit: Edit, base_updated_at: 
   }
 }
 
-/** A thought is append-only, so each one is its own entry and none of them merge. */
+/** Each thought is its own entry, so none of them merge. */
 export async function enqueueThought(item_id: number, body: string): Promise<boolean> {
   const entry: PendingEdit = {
     id: `thought:${newId()}`,

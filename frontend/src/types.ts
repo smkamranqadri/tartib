@@ -149,10 +149,12 @@ export interface SessionState {
   item: Item | null;
 }
 
-/** One entry in an item's thought log. Append-only: never edited, never removed on its own. */
+/** One entry in an item's thought log. Editable and deletable one at a time since slice 37;
+ *  `edited_at` says an entry is not as first written. */
 export interface Thought {
   id: number;
   item_id: number;
   body: string;
   created_at: string;
+  edited_at: string | null;
 }

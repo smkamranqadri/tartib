@@ -8,7 +8,10 @@
 - **Live: `v2.3`**, deployed 2026-09-23 on the CapRover VPS as `smkamranqadri/tartib:v2.3`:
   `v2.2` (slices 32 to 35) plus slice 36, the link cards. `TARTIB_LINK_PROPOSALS` off, `/mcp` on.
   No migration; `v2.2` and the backup taken just before (`private.md`, Backups) are the rollback.
-- Task: none in flight.
+- Task: **slice 37, editing and deleting** (`../intent/slice-37-edit-and-delete.md`): MCP tools
+  to edit and delete items and thoughts, and thoughts editable in the app. Built and proved
+  locally 2026-09-27 and committed (`Slice 37`), **not pushed, not deployed**. Migration 0024 (schema 24), and the bundle
+  changed, so `SW_VERSION` needs its bump at release.
 - **Links on the live data:** the first `suggest_links` pass ran on every space 2026-09-23 (194
   calls, one timeout retried), sent 67 items back with 81 links, and the owner reviewed them all.
 - **Claude Code on this Mac is connected to `/mcp`** at user scope, so every project has the Tartib
@@ -33,6 +36,8 @@
 
 ## Next
 
+0. **Ship slice 37**: commit, back up, bump `SW_VERSION`, deploy as `v2.4`, then check `/mcp`
+   lists fifteen tools.
 1. **Try `v2.3` on the phone**: one Pick, one `[[link]]` with the picker, and a link card's
    Link / No links / Later.
 2. **Use `/mcp` from a project** (namazee): pull its tasks, and after the work mark one done with a
@@ -47,8 +52,8 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **370 passed, 9 deselected** (the nine are the evals) and
-  **21/21** from `npm run ui`. Any red is real.
+  Verification commands. Expect **376 passed, 9 deselected** (the nine are the evals) and
+  **22/22** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,
   Deploy. `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;

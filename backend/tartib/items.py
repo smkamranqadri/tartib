@@ -25,6 +25,8 @@ from tartib.store import (
     classifier_examples,
     classify_context,
     create_capture,
+    delete_thought,
+    edit_thought,
     file_item,
     house_rules,
     insert_item,
@@ -37,6 +39,7 @@ from tartib.store import (
     should_file,
     similar_items,
     space_policies,
+    thought_on,
     thoughts_for,
     update_fields,
 )
@@ -405,7 +408,7 @@ def list_thoughts(item_id: int, conn: sqlite3.Connection = Depends(get_db)) -> d
 def add_thought(
     item_id: int, body: ThoughtBody, conn: sqlite3.Connection = Depends(get_db)
 ) -> dict:
-    """Append one entry. There is no editing or deleting one: the log is append-only."""
+    """Append one entry, at the end of the log."""
     fetch_item(conn, item_id)
     text = body.body.strip()
     if not text:
@@ -418,6 +421,40 @@ def add_thought(
     row = conn.execute("SELECT * FROM item_thoughts WHERE id = ?", (cur.lastrowid,)).fetchone()
     count = fetch_item(conn, item_id)["thought_count"]
     return {"thought": dict(row), "thought_count": count}
+
+
+def _thought(conn: sqlite3.Connection, item_id: int, thought_id: int) -> sqlite3.Row:
+    fetch_item(conn, item_id)
+    row = thought_on(conn, item_id, thought_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="no such thought on this item")
+    return row
+
+
+@router.patch("/items/{item_id}/thoughts/{thought_id}")
+def patch_thought(
+    item_id: int, thought_id: int, body: ThoughtBody, conn: sqlite3.Connection = Depends(get_db)
+) -> dict:
+    """Rewrite one entry (slice 37). It is marked edited, so the log says it is not as first
+    written."""
+    _thought(conn, item_id, thought_id)
+    text = body.body.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="the thought is empty")
+    row = edit_thought(conn, thought_id, text)
+    conn.commit()
+    return {"thought": dict(row)}
+
+
+@router.delete("/items/{item_id}/thoughts/{thought_id}")
+def remove_thought(
+    item_id: int, thought_id: int, conn: sqlite3.Connection = Depends(get_db)
+) -> dict:
+    """Remove one entry (slice 37). The item stays as it is."""
+    _thought(conn, item_id, thought_id)
+    delete_thought(conn, thought_id)
+    conn.commit()
+    return {"ok": True, "thought_count": fetch_item(conn, item_id)["thought_count"]}
 
 
 @router.delete("/items/{item_id}")

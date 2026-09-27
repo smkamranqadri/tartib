@@ -201,8 +201,8 @@ class Runner:
         **The retry deletes the item, and `item_thoughts` cascades.** So the guard also requires
         `thought_count = 0` and `feedback IS NULL`: writing a thought on a failed item, or telling
         the classifier why it was wrong, changes none of the fields above, and until 2026-09-22
-        the probe destroyed both fifteen minutes later without a word. Thoughts are append-only
-        by trigger; they should not be deletable by a background loop either."""
+        the probe destroyed both fifteen minutes later without a word. Only the person deletes a
+        thought (slice 37); a background loop must not."""
         conn = self._connect()
         try:
             rows = conn.execute(

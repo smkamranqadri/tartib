@@ -21,8 +21,21 @@ from tests.conftest import AI_ENV, FAKE_VARS, PASSWORD, make_settings, proposal,
 
 TOKEN = "mcp-test-token-long-enough-to-be-accepted"
 TOOLS = {
-    "list_spaces", "list_items", "search", "get_item", "add_note", "add_task", "add_thought",
-    "set_status", "set_due", "set_star", "create_space",
+    "list_spaces",
+    "list_items",
+    "search",
+    "get_item",
+    "add_note",
+    "add_task",
+    "add_thought",
+    "set_status",
+    "set_due",
+    "set_star",
+    "create_space",
+    "edit_item",
+    "delete_item",
+    "edit_thought",
+    "delete_thought",  # slice 37
 }
 
 
@@ -109,7 +122,7 @@ def test_get_holds_nothing_open(served):
     assert r.status_code == 405
 
 
-def test_the_tools_and_nothing_that_edits_text_or_deletes(served):
+def test_the_tools(served):
     async def go():
         async with session(served) as s:
             listed = await s.list_tools()
@@ -117,6 +130,7 @@ def test_the_tools_and_nothing_that_edits_text_or_deletes(served):
             assert names == TOOLS
             instructions = s.initialize_result.instructions or ""
             assert "list_spaces" in instructions and "asking the person" in instructions
+            assert "only when the person asks" in instructions
 
     asyncio.run(go())
 
@@ -124,7 +138,9 @@ def test_the_tools_and_nothing_that_edits_text_or_deletes(served):
 def test_the_namazee_flow(served):
     api(served, "POST", "/api/spaces", json={"name": "namazee"})
     task = api(
-        served, "POST", "/api/items",
+        served,
+        "POST",
+        "/api/items",
         json={"shape": "task", "space": "namazee", "text": "Add prayer times widget"},
     ).json()
     api(served, "POST", "/api/items", json={"shape": "note", "space": "namazee", "text": "Ideas"})
@@ -200,5 +216,100 @@ def test_spaces_unknown_and_new(served):
             assert err and "YYYY-MM-DD" in text
             err, text = await call(s, "add_note", text="x" * 20_001, space="ideas")
             assert err and "20000" in text
+
+    asyncio.run(go())
+
+
+def test_an_edit_needs_the_updated_at_it_read(served):
+    note = api(
+        served, "POST", "/api/items", json={"shape": "note", "space": "ideas", "text": "Draft"}
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            _, item = await call(s, "get_item", id=note["id"])
+            err, text = await call(
+                s, "edit_item", id=note["id"], text="Stale", updated_at="2000-01-01T00:00:00Z"
+            )
+            assert err and "changed since you read it" in text
+            err, got = await call(
+                s, "edit_item", id=note["id"], text="Final draft", updated_at=item["updated_at"]
+            )
+            assert not err and got["text"] == "Final draft"
+            # The same updated_at a second time is now stale.
+            err, _ = await call(
+                s, "edit_item", id=note["id"], text="Again", updated_at=item["updated_at"]
+            )
+            assert err
+
+    asyncio.run(go())
+    assert api(served, "GET", f"/api/items/{note['id']}").json()["raw_text"] == "Final draft"
+
+
+def test_a_task_edit_retitles_it(served):
+    task = api(
+        served, "POST", "/api/items", json={"shape": "task", "space": "ideas", "text": "Old"}
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            _, item = await call(s, "get_item", id=task["id"])
+            err, got = await call(
+                s,
+                "edit_item",
+                id=task["id"],
+                text="New title\n\nbody",
+                updated_at=item["updated_at"],
+            )
+            assert not err and got["title"] == "New title"
+
+    asyncio.run(go())
+
+
+def test_delete_keeps_the_capture(served):
+    note = api(
+        served, "POST", "/api/items", json={"shape": "note", "space": "ideas", "text": "Gone"}
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "delete_item", id=note["id"])
+            assert not err and got["ok"]
+            err, text = await call(s, "get_item", id=note["id"])
+            assert err and "no item" in text
+
+    asyncio.run(go())
+    assert api(served, "GET", f"/api/items/{note['id']}").status_code == 404
+    capture = api(served, "GET", f"/api/captures/{note['capture_id']}")
+    assert capture.status_code == 200 and capture.json()["raw_text"] == "Gone"
+
+
+def test_thoughts_are_edited_and_deleted(served):
+    one = api(
+        served, "POST", "/api/items", json={"shape": "note", "space": "ideas", "text": "One"}
+    ).json()
+    two = api(
+        served, "POST", "/api/items", json={"shape": "note", "space": "ideas", "text": "Two"}
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            await call(s, "add_thought", id=one["id"], text="first")
+            await call(s, "add_thought", id=one["id"], text="second")
+            _, item = await call(s, "get_item", id=one["id"])
+            first, second = item["thoughts"]
+            assert first["edited_at"] is None
+            err, got = await call(
+                s, "edit_thought", id=one["id"], thought_id=first["id"], text="first, revised"
+            )
+            assert not err and got["text"] == "first, revised" and got["edited_at"]
+            err, text = await call(
+                s, "edit_thought", id=two["id"], thought_id=first["id"], text="x"
+            )
+            assert err and "has no thought" in text  # a thought only through its own item
+            err, got = await call(s, "delete_thought", id=one["id"], thought_id=second["id"])
+            assert not err and got["thought_count"] == 1
+            _, item = await call(s, "get_item", id=one["id"])
+            assert [t["text"] for t in item["thoughts"]] == ["first, revised"]
 
     asyncio.run(go())

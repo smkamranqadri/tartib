@@ -7,9 +7,10 @@ the login password, and nothing else is accepted here -- not the browser's cooki
 
 Every write goes through the store's own paths (`insert_item`, `update_fields`, the thoughts
 insert, `add_space`, the capture path and runner), so titles, links, the touch trigger and
-every rule behave exactly as they do from the app. There is no editing of text and no delete,
-by the owner's choice. Each capture records the client that wrote it, and the item page shows
-"via <client>".
+every rule behave exactly as they do from the app. Editing text and deleting came in slice 37,
+by the owner's choice: a text edit must name the `updated_at` it read, and an item's delete keeps
+its capture, as in the app. Each capture records the client that wrote it, and the item page
+shows "via <client>".
 """
 
 from __future__ import annotations
@@ -31,9 +32,12 @@ from tartib.config import Settings
 from tartib.queries import fts_query
 from tartib.spaces import add_space
 from tartib.store import (
+    delete_thought,
+    edit_thought,
     insert_item,
     list_spaces,
     serialize_item,
+    thought_on,
     thoughts_for,
     update_fields,
 )
@@ -53,7 +57,9 @@ INSTRUCTIONS = """Tartib is one person's notes and tasks, sorted into spaces.
 - Name the space when you know it: the item is filed there directly. Without one, Tartib's own
   classifier files it, and it may wait for the person to decide.
 - When you finish work on a task, mark it done and add a thought saying what was done.
-You cannot edit an item's text or delete anything; the person does that in the app."""
+- Edit or delete only when the person asks you to. To edit an item's text, get_item first and
+  pass its updated_at: if the item changed since, the edit is refused, so read it again.
+- Deleting an item removes it with its thoughts. Deleting a thought cannot be undone."""
 
 
 # User-Agents that name an HTTP library, not the agent behind it.
@@ -240,7 +246,11 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
             view = link_view(c, row)
             return {
                 **_item(row),
-                "thoughts": [{"at": t["created_at"], "text": t["body"]} for t in thoughts],
+                "thoughts": [
+                    {"id": t["id"], "at": t["created_at"], "edited_at": t["edited_at"],
+                     "text": t["body"]}
+                    for t in thoughts
+                ],
                 "links": view["links"],
                 "linked_from": [
                     {"id": i["id"], "title": i.get("title") or i["raw_text"].split("\n")[0][:80]}
@@ -274,16 +284,20 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
     ) -> dict:
         return add("task", text, space, due, ctx)
 
-    @server.tool(
-        name="add_thought",
-        description="Append a dated thought to an item: what happened, what was decided.",
-    )
-    def add_thought(id: int, text: str) -> dict:
+    def thought_text(text: str) -> str:
         body = (text or "").strip()
         if not body:
             raise ToolError("the thought is empty")
         if len(body) > MAX_TEXT:
             raise ToolError(f"the thought is over {MAX_TEXT} characters")
+        return body
+
+    @server.tool(
+        name="add_thought",
+        description="Append a dated thought to an item: what happened, what was decided.",
+    )
+    def add_thought(id: int, text: str) -> dict:
+        body = thought_text(text)
         c = conn()
         try:
             fetch(c, id)
@@ -291,6 +305,46 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
                 "INSERT INTO item_thoughts (item_id, body, created_at) VALUES (?, ?, ?)",
                 (id, body, utcnow_iso()),
             )
+            c.commit()
+            return {"ok": True, "thought_count": fetch(c, id)["thought_count"]}
+        finally:
+            c.close()
+
+    def thought(c: sqlite3.Connection, id: int, thought_id: int) -> sqlite3.Row:
+        fetch(c, id)
+        row = thought_on(c, id, thought_id)
+        if row is None:
+            raise ToolError(f"item {id} has no thought {thought_id}")
+        return row
+
+    @server.tool(
+        name="edit_thought",
+        description=(
+            "Rewrite one of an item's thoughts (ids from get_item). It is marked edited. Only "
+            "when the person asks."
+        ),
+    )
+    def edit_thought_tool(id: int, thought_id: int, text: str) -> dict:
+        body = thought_text(text)
+        c = conn()
+        try:
+            thought(c, id, thought_id)
+            row = edit_thought(c, thought_id, body)
+            c.commit()
+            return {"id": row["id"], "at": row["created_at"], "edited_at": row["edited_at"],
+                    "text": row["body"]}
+        finally:
+            c.close()
+
+    @server.tool(
+        name="delete_thought",
+        description="Delete one of an item's thoughts. It cannot be undone. Only when asked.",
+    )
+    def delete_thought_tool(id: int, thought_id: int) -> dict:
+        c = conn()
+        try:
+            thought(c, id, thought_id)
+            delete_thought(c, thought_id)
             c.commit()
             return {"ok": True, "thought_count": fetch(c, id)["thought_count"]}
         finally:
@@ -321,6 +375,51 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
     @server.tool(name="set_star", description="Star a task, or take its star off.")
     def set_star(id: int, starred: bool) -> dict:
         return edit(id, {"starred": bool(starred)})
+
+    @server.tool(
+        name="edit_item",
+        description=(
+            "Replace a note's or task's whole text; a task's first line is its title. Pass the "
+            "updated_at from get_item: if the item changed since, the edit is refused. Only "
+            "when the person asks."
+        ),
+    )
+    def edit_item(id: int, text: str, updated_at: str) -> dict:
+        body = (text or "").strip()
+        if not body:
+            raise ToolError("the text is empty")
+        if len(body) > MAX_TEXT:
+            raise ToolError(f"the text is over {MAX_TEXT} characters")
+        c = conn()
+        try:
+            row = fetch(c, id)
+            if row["updated_at"] != updated_at:
+                raise ToolError(
+                    f"item {id} changed since you read it (updated_at is now "
+                    f"{row['updated_at']}); get_item again and redo the edit on what is there"
+                )
+            update_fields(c, id, {"text": body}, list_spaces(c))
+            c.commit()
+            return _item(fetch(c, id))
+        finally:
+            c.close()
+
+    @server.tool(
+        name="delete_item",
+        description=(
+            "Delete a note or task with its thoughts. What was first captured is kept. Only when "
+            "the person asks."
+        ),
+    )
+    def delete_item(id: int) -> dict:
+        c = conn()
+        try:
+            fetch(c, id)
+            c.execute("DELETE FROM items WHERE id = ?", (id,))
+            c.commit()
+            return {"ok": True, "id": id}
+        finally:
+            c.close()
 
     @server.tool(
         name="create_space",

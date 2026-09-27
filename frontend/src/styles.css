@@ -670,6 +670,13 @@ mark.hit { background: color-mix(in srgb, var(--accent) 30%, transparent); color
 .thoughts li { padding: 10px 0; border-top: 1px solid var(--line); }
 .thoughts li:first-child { border-top: 0; }
 .thoughts p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thought-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.thought-actions { display: inline-flex; gap: 12px; }
+.thought-actions .link-btn { color: var(--muted); }
+.thought-actions .link-btn:hover { color: var(--fg); }
+.thought-edit { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.thought-edit textarea { padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; }
+.thought-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .thought-add { display: flex; gap: 8px; align-items: flex-end; padding: 10px 16px 14px; }
 .thought-add textarea { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--fg); resize: vertical; }
 
@@ -815,6 +822,8 @@ input.line-lead { accent-color: var(--accent); cursor: pointer; }
   .md li.md-task input:not(:disabled) { width: 22px; height: 22px; }
   .md li.md-task > ul, .md li.md-task > ol { padding-left: calc(1.4em + 22px + .55em); }
   button.ghost, button.primary { min-height: 44px; }
+  .thought-actions .link-btn { min-height: 44px; min-width: 44px; }
+  .thought-head { align-items: center; }
   /* The floating session card is one line while it runs; the outcome question may take two. */
   .session-bar.floating { padding: 8px 12px; }
   .session-bar.floating .session-ring { width: 34px; height: 34px; }

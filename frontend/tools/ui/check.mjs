@@ -1,6 +1,6 @@
 /**
  * Re-runs the UI checks slices 23, 24 and 25 proved once and then threw away, and since
- * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 to 34 and 36.
+ * 2026-09-22 the fixes after v2.0 (F1, F2) and slices 31 to 34, 36 and 37.
  *
  *     TARTIB_PASSWORD=... node frontend/tools/ui/check.mjs [--url http://localhost:8000] [--head]
  *
@@ -689,6 +689,27 @@ async function main() {
       } finally {
         await ctx.close();
       }
+    });
+
+    await check("S37 a thought is edited, marked, and deleted with the count following", async () => {
+      await api(page, "POST", `/api/items/${note.id}/thoughts`, { body: "UI check thought" });
+      await api(page, "POST", `/api/items/${note.id}/thoughts`, { body: "UI check second" });
+      await page.goto(`${URL}/items/${note.id}`);
+      const first = page.locator(".thoughts li").filter({ hasText: "UI check thought" });
+      await first.locator("button", { hasText: "Edit" }).tap();
+      await first.locator("textarea").fill("UI check thought, revised");
+      await first.locator("button", { hasText: "Save" }).tap();
+      await first.filter({ hasText: "edited" }).waitFor({ timeout: 5000 });
+      const second = page.locator(".thoughts li").filter({ hasText: "UI check second" });
+      await second.locator("button", { hasText: "Delete" }).tap();
+      await page.locator("dialog[open] button", { hasText: "Delete" }).tap();
+      await second.waitFor({ state: "detached", timeout: 5000 });
+      const got = await api(page, "GET", `/api/items/${note.id}/thoughts`);
+      const bodies = got.thoughts.map((t) => t.body);
+      if (JSON.stringify(bodies) !== JSON.stringify(["UI check thought, revised"])) throw new Error(JSON.stringify(bodies));
+      const item = await api(page, "GET", `/api/items/${note.id}`);
+      if (item.thought_count !== 1) throw new Error(`thought_count ${item.thought_count}`);
+      return "Edit -> Save marks it edited; Delete -> confirm removes it; count 1";
     });
 
   } finally {

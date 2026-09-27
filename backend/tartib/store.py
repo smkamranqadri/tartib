@@ -1257,6 +1257,27 @@ def file_item(
     conn.commit()
 
 
+def thought_on(conn: sqlite3.Connection, item_id: int, thought_id: int) -> sqlite3.Row | None:
+    """One thought, only if it belongs to that item."""
+    return conn.execute(
+        "SELECT * FROM item_thoughts WHERE id = ? AND item_id = ?", (thought_id, item_id)
+    ).fetchone()
+
+
+def edit_thought(conn: sqlite3.Connection, thought_id: int, body: str) -> sqlite3.Row:
+    """Rewrite one entry and mark it edited (slice 37). The caller has checked it exists."""
+    conn.execute(
+        "UPDATE item_thoughts SET body = ?, edited_at = ? WHERE id = ?",
+        (body, utcnow_iso(), thought_id),
+    )
+    return conn.execute("SELECT * FROM item_thoughts WHERE id = ?", (thought_id,)).fetchone()
+
+
+def delete_thought(conn: sqlite3.Connection, thought_id: int) -> None:
+    """Remove one entry; the count and the search index follow by trigger (0024)."""
+    conn.execute("DELETE FROM item_thoughts WHERE id = ?", (thought_id,))
+
+
 def thoughts_for(conn: sqlite3.Connection, item_ids: Sequence[int]) -> dict[int, list[sqlite3.Row]]:
     """Each item's thought entries, oldest first."""
     if not item_ids:
