@@ -4,18 +4,13 @@
   in `kis/state/private.md`, gitignored and never published. This file carries the substance and
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  In step with `origin/main` since 2026-09-27 (pushed before `v2.4` was built).
-- **Live: `v2.4`**, deployed 2026-09-27 on the CapRover VPS as `smkamranqadri/tartib:v2.4`:
-  `v2.3` plus slice 37 -- editing and deleting over MCP (fifteen tools), and thoughts editable and
-  deletable in the app. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. Migration 0024 only drops a
-  trigger and adds a column, so `v2.3` still runs on schema 24; it and the backup taken just
-  before (`private.md`, Backups) are the rollback.
-- Task: **`set_reminder` over MCP, built on `main` 2026-09-28, not released** (Tartib #247, was
-  a backlog entry). Sixteen tools on `main`; `v2.4` still serves fifteen. Proof: full suite
-  green, `tests/test_mcp.py` covers the zone, a past time, a note, clearing, and re-arming a
-  fired reminder; turning off the zone conversion fails the test. Backend only, so `SW_VERSION`
-  stays. Committed, not pushed. Next: release when the owner chooses (`./deploy.sh v2.5`),
-  then close #247 with a thought.
+  In step with `origin/main` since 2026-09-28 (`v2.5` was deployed from `0695dab` just before
+  it was pushed).
+- **Live: `v2.5`**, deployed 2026-09-28 on the CapRover VPS as `smkamranqadri/tartib:v2.5`:
+  `v2.4` plus the `set_reminder` MCP tool (sixteen tools; Tartib #247, done). Backend only, no
+  migration, `SW_VERSION` unchanged. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. `v2.4` runs on the
+  same schema 24 and is the rollback.
+- Task: none in flight.
 - **Claude Code on this Mac is connected to `/mcp`** at user scope, so every project has the Tartib
   tools (`private.md`, MCP).
 
@@ -34,12 +29,12 @@
   whether the prompt grows with the database, whether examples are real corrections rather than
   padding, and a real false-positive rate for duplicates. House rules (four) are set since
   2026-09-22, so compare accuracy before and after that date.
-- **No scheduled backups** of the deployed database, only a copy taken before each release
-  (`private.md`, Backups). Scheduled ones are approved in the backlog, not planned.
+- **No scheduled backups** of the deployed database, only a copy taken before a release, the
+  newest before `v2.4` (`private.md`, Backups); `v2.5` had no migration and none was taken. Scheduled ones are approved in the backlog, not planned.
 
 ## Next
 
-1. **Try `v2.4` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
+1. **Try `v2.5` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
    Delete, and a link card's Link / No links / Later.
 2. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
    thought. (`/mcp` was first used for real on 2026-09-24, starring #240.)
@@ -48,7 +43,7 @@
 4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
 5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-6. **Answer the four questions** under Known gaps, on `v2.4`.
+6. **Answer the four questions** under Known gaps, on `v2.5`.
 
 ## Commands
 
@@ -65,14 +60,13 @@
 
 ## Proof
 
-Each slice keeps its proof in its plan file and its commits; releases before `v2.4`, and the
+Each slice keeps its proof in its plan file and its commits; releases before `v2.5`, and the
 reviews before `v2.2`, are in `../intent/history.md` and git. The pre-deploy rehearsal on a live
 snapshot (2026-09-22) found the phone dashboard's 12px sideways scroll (`5405db3`).
 
-**`v2.4`, checked 2026-09-27:** health ok, `sw.js` `2026-09-27.1` (still `max-age=14400` from
-Cloudflare), `http://` 302, cookie `HttpOnly; Secure; SameSite=lax`, the container runs `v2.4`,
-schema 24 with the append-only trigger gone, integrity ok, 252 items; `/mcp` 401 without the
-token and fifteen tools with it, and this Mac's Claude Code picked up the four new ones.
+**`v2.5`, checked 2026-09-28:** health ok with AI on, `/mcp` 401 without the token and sixteen
+tools with it, and `set_reminder` called live with a past time was refused naming the current
+time in Asia/Karachi (nothing written). This session's Claude Code picked up the new tool.
 
 ## Known gaps
 
