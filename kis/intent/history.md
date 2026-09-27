@@ -2,7 +2,7 @@
 
 What each slice changed, newest first. All are done and all are deployed: slices 1 to 17 went out
 as `v1.0`, **slices 18 to 29 as `v2.0`**, and **30 and 31 as `v2.1`**, all on 2026-09-22 for the
-last two, **32 to 35 as `v2.2`** and **36 as `v2.3`**, both on 2026-09-23 (State has the deploy truth). Before
+last two, **32 to 35 as `v2.2`** and **36 as `v2.3`**, both on 2026-09-23, and **37 as `v2.4`** on 2026-09-27 (State has the deploy truth). Before
 `v2.0`, three reviews -- code, security, and SPEC against the build -- found two things that must
 not ship (the retry probe deleted thought logs; model-written markdown could make the browser
 fetch a remote URL) and five real bugs. All seven were fixed, each with a test or a browser
@@ -28,6 +28,7 @@ Until they are answered, 23 to 29 are built, tested and live, and no more than t
 Scope rules changed on 2026-09-17: rule 4 stopped banning push and pomodoro, and SPEC's Out of
 scope list dropped the ask feature and the Claude fallback, both of which had already shipped.
 
+- **37 · editing and deleting** (2026-09-27, deployed as `v2.4`) Reversing slice 35's choice and slice 20's append-only log, by the owner's decision: agents over MCP can edit an item's text (only with the `updated_at` they read, so a change made since is never overwritten), delete an item (its capture stays), and edit or delete a thought. Thoughts became editable and deletable in the app too, one rule everywhere: an edited entry says "edited", and neither needs to queue offline. Migration 0024 dropped the trigger and keeps the search index and count in step. `v2.3` checked on the server 2026-09-23: health, `sw.js` `2026-09-23.2`, schema 23, 196 items, `/mcp` 401 without the token and 11 tools with it. Proof: `slice-37-edit-and-delete.md`.
 - **36 · link cards say what they decide** (2026-09-23, deployed as `v2.3`) After the first `suggest_links` pass: a card that proposes links reads Link N / No links / Later instead of Approve / Not now, Later says it moved the card, the list takes no clicks for half a second after a card leaves (a quick repeat used to approve the *next* card), and an item filed by hand no longer reads "Proposal rejected". Proof: `slice-36-link-cards.md`.
 - **35 · Tartib over MCP** (2026-09-23, deployed as `v2.2`) Agents connect to `/mcp` with their own token and can list spaces and items, search, read an item with its thoughts, add notes, tasks and thoughts, mark tasks done, move dates, star, and create a space -- never edit text or delete. An add naming a space files directly; the item says "via claude-code". Proved with Claude Code itself running the namazee flow. Proof: `slice-35-mcp.md`.
 - **34 · suggest links for items already filed** (2026-09-23, deployed as `v2.2`) A server command, `python -m tartib.suggest_links --space NAME`, asks the classifier which similar items each filed note or task should link to and sends the ones with answers back to Needs attention as `relink`, links as chips; approving files an item back exactly as it was, with `Related: [[…]]` for the kept ones. One per pair, a skipped pair never again, an unchanged item never asked twice. Proof: `slice-34-suggest-links.md`.

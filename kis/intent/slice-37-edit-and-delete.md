@@ -1,6 +1,7 @@
 # Slice 37: editing and deleting, over MCP and in the thought log
 
 Planned 2026-09-27 with the owner. Standard mode.
+**Built and verified 2026-09-27 (Proof, below); deployed as `v2.4` the same day.**
 
 ## What was asked
 

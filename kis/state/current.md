@@ -4,14 +4,13 @@
   in `kis/state/private.md`, gitignored and never published. This file carries the substance and
   points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public.
-  In step with `origin/main` since 2026-09-23 (pushed after `v2.3` went live).
-- **Live: `v2.3`**, deployed 2026-09-23 on the CapRover VPS as `smkamranqadri/tartib:v2.3`:
-  `v2.2` (slices 32 to 35) plus slice 36, the link cards. `TARTIB_LINK_PROPOSALS` off, `/mcp` on.
-  No migration; `v2.2` and the backup taken just before (`private.md`, Backups) are the rollback.
-- Task: **slice 37, editing and deleting** (`../intent/slice-37-edit-and-delete.md`): MCP tools
-  to edit and delete items and thoughts, and thoughts editable in the app. Built and proved
-  locally 2026-09-27 and committed (`Slice 37`), **not pushed, not deployed**. Migration 0024 (schema 24), and the bundle
-  changed, so `SW_VERSION` needs its bump at release.
+  In step with `origin/main` since 2026-09-27 (pushed before `v2.4` was built).
+- **Live: `v2.4`**, deployed 2026-09-27 on the CapRover VPS as `smkamranqadri/tartib:v2.4`:
+  `v2.3` plus slice 37 -- editing and deleting over MCP (fifteen tools), and thoughts editable and
+  deletable in the app. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. Migration 0024 only drops a
+  trigger and adds a column, so `v2.3` still runs on schema 24; it and the backup taken just
+  before (`private.md`, Backups) are the rollback.
+- Task: none in flight.
 - **Links on the live data:** the first `suggest_links` pass ran on every space 2026-09-23 (194
   calls, one timeout retried), sent 67 items back with 81 links, and the owner reviewed them all.
 - **Claude Code on this Mac is connected to `/mcp`** at user scope, so every project has the Tartib
@@ -23,7 +22,7 @@
   sends `no-cache`; Knowledge, Deploy). Until Browser Cache TTL is set to Respect Existing
   Headers, a new version can take four hours to reach the phone, or a delete and re-add.
 - **Not yet seen on the phone:** the modals (`<dialog>` on iOS), tickable checklists, the first
-  line as the title, the pills, Pick for me, the `[[` picker and slice 36's link cards. Each was
+  line as the title, the pills, Pick for me, the `[[` picker, slice 36's link cards and slice 37's thought Edit and Delete. Each was
   proved in Chrome only. The `relink` cards of `v2.2` were used on the phone (the owner approved
   50 there), which is how "Not now" and the jumping list were found.
 - **Real data is accumulating on the live database, to be read later.** `ai_calls` records what
@@ -36,9 +35,8 @@
 
 ## Next
 
-0. **Ship slice 37**: commit, back up, bump `SW_VERSION`, deploy as `v2.4`, then check `/mcp`
-   lists fifteen tools.
-1. **Try `v2.3` on the phone**: one Pick, one `[[link]]` with the picker, and a link card's
+1. **Try `v2.4` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
+   Delete, and a link card's
    Link / No links / Later.
 2. **Use `/mcp` from a project** (namazee): pull its tasks, and after the work mark one done with a
    thought -- the first real use outside a test.
@@ -47,7 +45,7 @@
 4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
 5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-6. **Answer the four questions** under Known gaps, on `v2.3`.
+6. **Answer the four questions** under Known gaps, on `v2.4`.
 
 ## Commands
 
@@ -64,14 +62,14 @@
 
 ## Proof
 
-Each slice keeps its proof in its plan file and its commits; releases before `v2.3`, and the
+Each slice keeps its proof in its plan file and its commits; releases before `v2.4`, and the
 reviews before `v2.2`, are in `../intent/history.md` and git. The pre-deploy rehearsal on a live
 snapshot (2026-09-22) found the phone dashboard's 12px sideways scroll (`5405db3`).
 
-**`v2.3`, checked 2026-09-23:** health ok, `sw.js` `2026-09-23.2` (purged by the owner), the
-production bundle carries slice 36's labels ("No links", "File + link", "Moved “") and the settle,
-`http://` 302, cookie `HttpOnly; Secure; SameSite=lax`, the container runs `v2.3`, schema 23,
-integrity ok, 196 items; `/mcp` 401 without the token and 11 tools with it.
+**`v2.4`, checked 2026-09-27:** health ok, `sw.js` `2026-09-27.1` (still `max-age=14400` from
+Cloudflare), `http://` 302, cookie `HttpOnly; Secure; SameSite=lax`, the container runs `v2.4`,
+schema 24 with the append-only trigger gone, integrity ok, 252 items; `/mcp` 401 without the
+token and fifteen tools with it, and this Mac's Claude Code picked up the four new ones.
 
 ## Known gaps
 
