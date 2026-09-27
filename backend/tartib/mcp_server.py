@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import hmac
 import sqlite3
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import HTTPException
 from mcp.server.mcpserver import Context, MCPServer
@@ -27,7 +27,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from tartib import db
-from tartib.clock import utcnow_iso
+from tartib.clock import utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.queries import fts_query
 from tartib.spaces import add_space
@@ -126,6 +126,24 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
         if name not in spaces:
             raise ToolError(f"no space {name!r}; spaces are: {', '.join(spaces)}")
         return name
+
+    def _moment(value: str | None) -> datetime | None:
+        """A reminder time: naive is the owner's zone, as the classifier reads one."""
+        if not value:
+            return None
+        try:
+            moment = datetime.fromisoformat(value)
+        except ValueError as e:
+            raise ToolError(f"times are ISO 8601 like 2026-09-28T18:00, not {value!r}") from e
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=settings.zone)
+        now = utcnow()
+        if moment <= now:
+            # The worker fires only within 6h of the time and never earlier ones, so a past
+            # time would fire at once or never -- neither is what was asked for.
+            local = now.astimezone(settings.zone).replace(microsecond=0).isoformat()
+            raise ToolError(f"that time has passed; it is now {local} ({settings.tz})")
+        return moment.astimezone(UTC)
 
     def fetch(c: sqlite3.Connection, item_id: int) -> sqlite3.Row:
         row = c.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
@@ -371,6 +389,16 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
     @server.tool(name="set_due", description="Set a task's due date (YYYY-MM-DD); null clears it.")
     def set_due(id: int, due: str | None = None) -> dict:
         return edit(id, {"due": _date(due)})
+
+    @server.tool(
+        name="set_reminder",
+        description=(
+            "Set when a task notifies (ISO 8601, e.g. 2026-09-28T18:00; a time with no offset is "
+            f"read in {settings.tz}); null clears it. Must be in the future."
+        ),
+    )
+    def set_reminder(id: int, remind_at: str | None = None) -> dict:
+        return edit(id, {"remind_at": _moment(remind_at)})
 
     @server.tool(name="set_star", description="Star a task, or take its star off.")
     def set_star(id: int, starred: bool) -> dict:

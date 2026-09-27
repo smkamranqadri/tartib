@@ -10,7 +10,12 @@
   deletable in the app. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. Migration 0024 only drops a
   trigger and adds a column, so `v2.3` still runs on schema 24; it and the backup taken just
   before (`private.md`, Backups) are the rollback.
-- Task: none in flight.
+- Task: **`set_reminder` over MCP, built on `main` 2026-09-28, not released** (Tartib #247, was
+  a backlog entry). Sixteen tools on `main`; `v2.4` still serves fifteen. Proof: full suite
+  green, `tests/test_mcp.py` covers the zone, a past time, a note, clearing, and re-arming a
+  fired reminder; turning off the zone conversion fails the test. Backend only, so `SW_VERSION`
+  stays. Committed, not pushed. Next: release when the owner chooses (`./deploy.sh v2.5`),
+  then close #247 with a thought.
 - **Claude Code on this Mac is connected to `/mcp`** at user scope, so every project has the Tartib
   tools (`private.md`, MCP).
 
@@ -48,7 +53,7 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **376 passed, 9 deselected** (the nine are the evals) and
+  Verification commands. Expect **378 passed, 9 deselected** (the nine are the evals) and
   **22/22** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName". The version
   number is a rollback label, and why `v2.0` was not `v1.1` is in `../knowledge/technical.md`,

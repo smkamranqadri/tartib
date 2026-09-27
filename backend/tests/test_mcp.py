@@ -16,6 +16,7 @@ import uvicorn
 from mcp import ClientSession, types
 from mcp.client.streamable_http import streamable_http_client
 
+from tartib import db
 from tartib.main import create_app
 from tests.conftest import AI_ENV, FAKE_VARS, PASSWORD, make_settings, proposal, set_classify_reply
 
@@ -31,6 +32,7 @@ TOOLS = {
     "set_status",
     "set_due",
     "set_star",
+    "set_reminder",
     "create_space",
     "edit_item",
     "delete_item",
@@ -218,6 +220,55 @@ def test_spaces_unknown_and_new(served):
             assert err and "20000" in text
 
     asyncio.run(go())
+
+
+def test_a_reminder_is_set_in_the_owners_zone_and_rearms(served):
+    task = api(
+        served, "POST", "/api/items", json={"shape": "task", "space": "ideas", "text": "Call"}
+    ).json()
+    note = api(
+        served, "POST", "/api/items", json={"shape": "note", "space": "ideas", "text": "N"}
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            # No offset: read in TARTIB_TZ (Asia/Karachi, +05:00), stored in UTC.
+            err, got = await call(s, "set_reminder", id=task["id"], remind_at="2099-01-02T18:00")
+            assert not err and got["remind_at"] == "2099-01-02T13:00:00Z"
+            err, got = await call(
+                s, "set_reminder", id=task["id"], remind_at="2099-01-02T18:00:00+00:00"
+            )
+            assert not err and got["remind_at"] == "2099-01-02T18:00:00Z"
+            err, text = await call(s, "set_reminder", id=task["id"], remind_at="2020-01-01T09:00")
+            assert err and "passed" in text and "Asia/Karachi" in text
+            err, text = await call(s, "set_reminder", id=task["id"], remind_at="at six")
+            assert err and "ISO 8601" in text
+            err, text = await call(s, "set_reminder", id=note["id"], remind_at="2099-01-02T18:00")
+            assert err and "note" in text
+            err, got = await call(s, "set_reminder", id=task["id"])
+            assert not err and got["remind_at"] is None
+
+    asyncio.run(go())
+
+
+def test_a_moved_reminder_fires_again(served, tmp_path):
+    task = api(
+        served, "POST", "/api/items", json={"shape": "task", "space": "ideas", "text": "Call"}
+    ).json()
+    api(served, "PATCH", f"/api/items/{task['id']}", json={"remind_at": "2099-01-01T00:00:00Z"})
+    c = db.connect(tmp_path / "t.db")
+    c.execute("UPDATE items SET reminded_at = '2099-01-01T00:00:00Z' WHERE id = ?", (task["id"],))
+    c.commit()
+
+    async def go():
+        async with session(served) as s:
+            err, _ = await call(s, "set_reminder", id=task["id"], remind_at="2099-01-03T09:00")
+            assert not err
+
+    asyncio.run(go())
+    row = c.execute("SELECT reminded_at FROM items WHERE id = ?", (task["id"],)).fetchone()
+    assert row["reminded_at"] is None  # the same update path as the app: moving it re-arms it
+    c.close()
 
 
 def test_an_edit_needs_the_updated_at_it_read(served):

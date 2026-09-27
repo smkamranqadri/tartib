@@ -157,11 +157,6 @@ Defects:
   the count, and the sessions themselves (when, how long, the outcome). The data exists, since
   `sessions.item_id` points at the item and `/api/sessions/recent` already lists finished
   sessions, but there is no filter by item.
-- **A `set_reminder` MCP tool. Asked for by the owner 2026-09-24.** The MCP server (slice 35) can
-  set `due`, `starred` and `status`, but not `remind_at`, so an agent that stars a task for today
-  cannot also make it notify. That came up on the first real use, starring #240 over MCP. It is
-  small: one tool beside `set_due`, going through the same update path the app uses so the
-  reminder worker sees it.
 - **Ask that can act. Asked about by the owner 2026-09-24.** For example "star #240 and remind me
   at 6" typed into Ask. Today Ask only reads, and **rule 4 says Ask never writes**, so this needs
   the owner to amend rule 4 before any plan. The two writing AI features so far (Pick for me, and
