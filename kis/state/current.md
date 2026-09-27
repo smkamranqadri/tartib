@@ -11,8 +11,6 @@
   trigger and adds a column, so `v2.3` still runs on schema 24; it and the backup taken just
   before (`private.md`, Backups) are the rollback.
 - Task: none in flight.
-- **Links on the live data:** the first `suggest_links` pass ran on every space 2026-09-23 (194
-  calls, one timeout retried), sent 67 items back with 81 links, and the owner reviewed them all.
 - **Claude Code on this Mac is connected to `/mcp`** at user scope, so every project has the Tartib
   tools (`private.md`, MCP).
 
@@ -22,8 +20,8 @@
   sends `no-cache`; Knowledge, Deploy). Until Browser Cache TTL is set to Respect Existing
   Headers, a new version can take four hours to reach the phone, or a delete and re-add.
 - **Not yet seen on the phone:** the modals (`<dialog>` on iOS), tickable checklists, the first
-  line as the title, the pills, Pick for me, the `[[` picker, slice 36's link cards and slice 37's thought Edit and Delete. Each was
-  proved in Chrome only. The `relink` cards of `v2.2` were used on the phone (the owner approved
+  line as the title, the pills, Pick for me, the `[[` picker, slice 36's link cards and slice
+  37's thought Edit and Delete. Each was proved in Chrome only. The `relink` cards of `v2.2` were used on the phone (the owner approved
   50 there), which is how "Not now" and the jumping list were found.
 - **Real data is accumulating on the live database, to be read later.** `ai_calls` records what
   was in each prompt (migration 0017, cannot be backfilled), and `TARTIB_DUPLICATE_PARK` is
@@ -31,15 +29,15 @@
   whether the prompt grows with the database, whether examples are real corrections rather than
   padding, and a real false-positive rate for duplicates. House rules (four) are set since
   2026-09-22, so compare accuracy before and after that date.
-- No backups of the deployed database. Deferred by decision on 2026-09-18 and not reopened.
+- **No scheduled backups** of the deployed database, only a copy taken before each release
+  (`private.md`, Backups). Scheduled ones are approved in the backlog, not planned.
 
 ## Next
 
 1. **Try `v2.4` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
-   Delete, and a link card's
-   Link / No links / Later.
-2. **Use `/mcp` from a project** (namazee): pull its tasks, and after the work mark one done with a
-   thought -- the first real use outside a test.
+   Delete, and a link card's Link / No links / Later.
+2. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
+   thought. (`/mcp` was first used for real on 2026-09-24, starring #240.)
 3. **Switch `TARTIB_LINK_PROPOSALS` on** once item 5 is done -- and first fix "Tell it why" on a
    `linked` item, which ignores the link hold (slice 33's plan, Known).
 4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
@@ -73,8 +71,7 @@ token and fifteen tools with it, and this Mac's Claude Code picked up the four n
 
 ## Known gaps
 
-Offline behaviour that is designed rather than missing -- counts lagging, and text editing
-needing one moment online first -- is product truth: `../intent/SPEC.md`, Offline.
+Designed offline behaviour is in `../intent/SPEC.md`, Offline.
 
 - **Four questions only the phone can answer are still open:**
   1. whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
@@ -85,12 +82,9 @@ needing one moment online first -- is product truth: `../intent/SPEC.md`, Offlin
   4. whether a debounced autosave feels safe without a Save button to press. Only answerable
      from `v2.1` on: before `c91fbf9` every save reloaded the note in a space's split view, and
      "Saved" never showed.
-- The committed UI suite (`npm run ui`, 21 checks) guards slices 22 to 25, 27, 29, 31 to 34 and 36,
-  and the reload fix and tickable boxes (F1, F2). It cannot judge how anything reads; slices 26 and 28
+- The committed UI suite (`npm run ui`, count under Commands) guards slices 22 to 25, 27, 29, 31
+  to 34, 36 and 37, and the reload fix and tickable boxes (F1, F2). It cannot judge how anything reads; slices 26 and 28
   are outside it for a stated reason, and slice 30's split card was proved by a scratch script
   and is not in it.
 
-Browser and device behaviour that will not change by deploying -- iOS `notificationclick`,
-Chromium browsers that cannot reach Google's push service, `pushsubscriptionchange`, the silent
-worker at session end, voice capture -- is Knowledge: `../knowledge/technical.md`, "What browsers
-do to this app".
+Browser and device limits deploying will not change: `../knowledge/technical.md`, "What browsers do to this app".
