@@ -57,8 +57,8 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   folder of about 27 notes mixing infra, reading, work and personal). Spaces are flat and a
   space is one list; the in-space tree was tried and dropped in slice 21. On 2026-09-22 the owner
   chose to split into narrower spaces, which needs no code, and see how it holds before designing
-  anything. **Links shipped with slice 33 (not yet deployed), so this is due for a look once they
-  are in use:** an index note linking to its children may be structure enough, and sections or
+  anything. **Links are live since `v2.2` (slice 33, 2026-09-23), so this is due for a look once
+  they are in use:** an index note linking to its children may be structure enough, and sections or
   tags inside a space are the option if it is not.
 
 - **Routines: recurring tasks. Asked for 2026-09-22 and not yet planned.** The owner's
