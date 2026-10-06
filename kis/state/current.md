@@ -3,8 +3,9 @@
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
 - Branch: `feature/mcp-find-replace`, from `main` which tracks `origin/main` at
-  `https://github.com/smkamranqadri/tartib`. The feature changes are uncommitted. `v2.5` was
-  deployed from `0695dab`; it remains live and unchanged.
+  `https://github.com/smkamranqadri/tartib`; tracks `origin/feature/mcp-find-replace`. Feature
+  code commit `8274f4f` is pushed and the tree is clean. `v2.5` was deployed from `0695dab`; it
+  remains live and unchanged.
 - **Live: `v2.5`**, deployed 2026-09-28 on the CapRover VPS as `smkamranqadri/tartib:v2.5`:
   `v2.4` plus the `set_reminder` MCP tool (sixteen tools; Tartib #247, done). Backend only, no
   migration, `SW_VERSION` unchanged. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. `v2.4` runs on the
@@ -31,7 +32,7 @@
 
 ## Next
 
-1. **Review and integrate Slice 38** from `feature/mcp-find-replace` (uncommitted; not deployed).
+1. **Review and integrate Slice 38** from `feature/mcp-find-replace` (`8274f4f`; not deployed).
 2. **Try `v2.5` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
    Delete, and a link card's Link / No links / Later.
 3. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
