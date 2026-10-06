@@ -373,8 +373,11 @@ Seventeen tools in the current checkout: `list_spaces`, `list_items(space, shape
 in `TARTIB_TZ` as the classifier reads one, a past time is refused because the worker would fire
 it at once or never, and null clears it), `create_space`, and since slice 37 `edit_item(id, text, updated_at)` (refused unless `updated_at`
 is the one stored, so the agent must have read the item), and since slice 38
-`find_replace(id, find, replace, updated_at)` (one item; case-sensitive literal replacement in
-its text and thoughts; all matches; returns counts; changed thoughts are marked edited),
+`find_replace(id, find, replace, updated_at, expected?, scope?)` (one item; all case-sensitive
+literal matches; scope text, thoughts or both, default both; optional expected total refuses
+mismatches before writes; returns id, updated_at, counts and changed line blocks only).
+The timestamp checks the item, not thoughts; current thought bodies are read under the write
+lock and changed thoughts marked edited. Literal whitespace is preserved. Also
 `delete_item(id)` (the capture stays), `edit_thought(id, thought_id, text)`,
 `delete_thought(id, thought_id)`. No Ask. The instructions say to edit or delete only when the
 person asks. An add naming a space is filed directly (a `direct` capture); without

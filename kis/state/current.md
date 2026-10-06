@@ -4,14 +4,15 @@
   `kis/state/private.md`, gitignored and never published. This file points there.
 - Branch: `feature/mcp-find-replace`, from `main` which tracks `origin/main` at
   `https://github.com/smkamranqadri/tartib`; tracks `origin/feature/mcp-find-replace`. Feature
-  code commit `8274f4f` is pushed and the tree is clean. `v2.5` was deployed from `0695dab`; it
-  remains live and unchanged.
+  baseline code commit `8274f4f` is pushed; review fixes and final tool wording are committed locally.
+  `v2.5` was deployed from `0695dab`; it remains live and unchanged.
 - **Live: `v2.5`**, deployed 2026-09-28 on the CapRover VPS as `smkamranqadri/tartib:v2.5`:
   `v2.4` plus the `set_reminder` MCP tool (sixteen tools; Tartib #247, done). Backend only, no
   migration, `SW_VERSION` unchanged. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. `v2.4` runs on the
   same schema 24 and is the rollback.
-- Task: none in flight. Slice 38 find-and-replace is implemented and verified locally; not
-  deployed. Tartib #380 tracks the feature as open.
+- Task: Slice 38 review fixes verified locally: expected count, compact output, explicit scope,
+  literal whitespace, accurate stale-check wording and removal of unrelated formatting.
+  Revisions are committed locally and not deployed. Tartib #380 remains open (records the baseline).
 
 ## Open
 
@@ -32,7 +33,8 @@
 
 ## Next
 
-1. **Review and integrate Slice 38** from `feature/mcp-find-replace` (`8274f4f`; not deployed).
+1. **Review and integrate Slice 38** from `feature/mcp-find-replace` (baseline `8274f4f` plus
+   local review-fix commit; not deployed).
 2. **Try `v2.5` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
    Delete, and a link card's Link / No links / Later.
 3. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
@@ -47,7 +49,7 @@
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **381 passed, 9 deselected** (the nine are the evals) and
+  Verification commands. Expect **383 passed, 9 deselected** (the nine are the evals) and
   **22/22** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName" (version
   numbering: `../knowledge/technical.md`, Deploy). `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
@@ -69,8 +71,10 @@ time in Asia/Karachi (nothing written).
 **`/mcp` writes used for real, 2026-10-01:** `add_note`, `add_thought`, `edit_item` and
 `delete_item` rebuilt the owner's `ai-agents` space, backup first (`private.md`, Backups).
 
-**Slice 38, verified 2026-10-06, local only:** backend suite **381 passed, 9 deselected**;
-changed-file Ruff check and `git diff --check` passed. `/mcp` on deployed `v2.5` remains unchanged.
+**Slice 38 review fixes, verified 2026-10-06, local only:** backend suite **383 passed,
+9 deselected**; changed-file Ruff and `git diff --check` passed. Eight guard mutations failed
+as expected and source was restored byte-for-byte. Single-line edit response is under 500
+characters for a roughly 10,000-character note. No deployment performed.
 
 ## Known gaps
 

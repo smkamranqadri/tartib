@@ -18,6 +18,8 @@ from __future__ import annotations
 import hmac
 import sqlite3
 from datetime import UTC, date, datetime
+from difflib import SequenceMatcher
+from typing import Literal
 
 from fastapi import HTTPException
 from mcp.server.mcpserver import Context, MCPServer
@@ -59,10 +61,19 @@ INSTRUCTIONS = """Tartib is one person's notes and tasks, sorted into spaces.
 - When you finish work on a task, mark it done and add a thought saying what was done.
 - Edit or delete only when the person asks you to. To edit an item's text, get_item first and
   pass its updated_at: if the item changed since, the edit is refused, so read it again.
-- To find and replace text, call find_replace with one item's id, a case-sensitive literal find
-  string, a replacement string, and its updated_at from get_item. It replaces all matches in the
-  item's text and thoughts and marks changed thoughts edited. Only when the person asks.
+- To change a few words in a long item, use find_replace instead of edit_item: pass expected=1
+  and enough surrounding text to match once. It returns only the changed lines.
 - Deleting an item removes it with its thoughts. Deleting a thought cannot be undone."""
+
+
+def _changed_lines(before: str, after: str) -> list[dict]:
+    """Changed blocks only; line numbers are one-based in each version."""
+    old, new = before.splitlines(keepends=True), after.splitlines(keepends=True)
+    return [
+        {"before_line": i + 1, "after_line": j + 1, "before": old[i:end_i], "after": new[j:end_j]}
+        for tag, i, end_i, j, end_j in SequenceMatcher(None, old, new, autojunk=False).get_opcodes()
+        if tag != "equal"
+    ]
 
 
 # User-Agents that name an HTTP library, not the agent behind it.
@@ -180,13 +191,8 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
                     fields["due"] = _date(due)
                 capture_id = capture_row(c, text, client, direct=True)
                 item_id = insert_item(
-                    c,
-                    capture_id=capture_id,
-                    raw_text=text,
-                    created_at=utcnow_iso(),
-                    fields=fields,
-                    stage="filed",
-                    allowed=list_spaces(c),
+                    c, capture_id=capture_id, raw_text=text, created_at=utcnow_iso(),
+                    fields=fields, stage="filed", allowed=list_spaces(c),
                 )
                 c.commit()
                 return {"filed": True, "item": _item(fetch(c, item_id))}
@@ -443,14 +449,24 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
     @server.tool(
         name="find_replace",
         description=(
-            "Replace every case-sensitive literal occurrence in one item's text and thoughts. "
-            "Pass the updated_at from get_item; changed thoughts are marked edited. Applies "
-            "immediately. Only when the person asks."
+            "Replace case-sensitive literal text in one item. scope: text, thoughts or both "
+            "(default). Pass expected (usually 1) to refuse all writes unless the match count "
+            "equals it. updated_at from get_item checks the item, not its thoughts. Returns "
+            "counts, updated_at and changed lines. Only when the person asks."
         ),
     )
-    def find_replace(id: int, find: str, replace: str, updated_at: str) -> dict:
+    def find_replace(
+        id: int,
+        find: str,
+        replace: str,
+        updated_at: str,
+        expected: int | None = None,
+        scope: Literal["text", "thoughts", "both"] = "both",
+    ) -> dict:
         if not find:
             raise ToolError("the find text is empty")
+        if expected is not None and expected < 0:
+            raise ToolError("expected must be a non-negative match count")
 
         c = conn()
         try:
@@ -464,11 +480,18 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
                 )
 
             text = row["raw_text"]
-            text_count = text.count(find)
+            text_count = text.count(find) if scope in ("text", "both") else 0
+            thoughts = thoughts_for(c, [id]).get(id, []) if scope != "text" else []
+            thought_count = sum(t["body"].count(find) for t in thoughts)
+            total = text_count + thought_count
+            if expected is not None and total != expected:
+                raise ToolError(
+                    f"expected {expected} matches, found {total}; no changes were made"
+                )
+
             new_text = text.replace(find, replace) if text_count else text
             if text_count:
-                new_text = new_text.strip()
-                if not new_text:
+                if not new_text.strip():
                     raise ToolError("replacement would leave the item's text empty")
                 if len(new_text) > MAX_TEXT:
                     raise ToolError(
@@ -476,13 +499,14 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
                     )
 
             thought_changes = []
-            thought_count = 0
-            for thought in thoughts_for(c, [id]).get(id, []):
-                count = thought["body"].count(find)
-                if not count:
+            changed_lines = []
+            if new_text != text:
+                changed_lines.append({"scope": "text", "lines": _changed_lines(text, new_text)})
+            for thought in thoughts:
+                if not thought["body"].count(find):
                     continue
-                body = thought["body"].replace(find, replace).strip()
-                if not body:
+                body = thought["body"].replace(find, replace)
+                if not body.strip():
                     raise ToolError(
                         f"replacement would leave thought {thought['id']} empty; "
                         "no changes were made"
@@ -490,32 +514,30 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
                 if len(body) > MAX_TEXT:
                     raise ToolError(
                         f"replacement would put thought {thought['id']} over "
-                        f"{MAX_TEXT} characters; "
-                        "no changes were made"
+                        f"{MAX_TEXT} characters; no changes were made"
                     )
-                thought_count += count
                 if body != thought["body"]:
                     thought_changes.append((thought["id"], body))
+                    changed_lines.append({
+                        "scope": "thoughts", "thought_id": thought["id"],
+                        "lines": _changed_lines(thought["body"], body),
+                    })
 
-            if text_count and new_text != text:
-                update_fields(c, id, {"text": new_text}, list_spaces(c))
+            if new_text != text:
+                update_fields(
+                    c, id, {"text": new_text}, list_spaces(c), preserve_text_whitespace=True
+                )
             for thought_id, body in thought_changes:
                 edit_thought(c, thought_id, body)
 
-            c.commit()
-            return {
-                **_item(fetch(c, id)),
-                "thoughts": [
-                    {
-                        "id": t["id"],
-                        "at": t["created_at"],
-                        "edited_at": t["edited_at"],
-                        "text": t["body"],
-                    }
-                    for t in thoughts_for(c, [id]).get(id, [])
-                ],
+            result = {
+                "id": id,
+                "updated_at": fetch(c, id)["updated_at"],
                 "replacements": {"item_text": text_count, "thoughts": thought_count},
+                "changed_lines": changed_lines,
             }
+            c.commit()
+            return result
         finally:
             c.close()
 

@@ -347,11 +347,15 @@ def test_find_replace_updates_item_and_thoughts(served):
                 updated_at=item["updated_at"],
             )
             assert not err
-            assert got["text"] == "Revised title\nRevised in body"
-            assert got["title"] == "Revised title"
+            assert set(got) == {"id", "updated_at", "replacements", "changed_lines"}
+            _, revised = await call(s, "get_item", id=task["id"])
+            assert revised["text"] == "Revised title\nRevised in body"
+            assert revised["title"] == "Revised title"
+            assert got["updated_at"] == revised["updated_at"]
             assert got["replacements"] == {"item_text": 2, "thoughts": 2}
-            assert got["thoughts"][0]["text"] == "Revised thought Revised"
-            assert got["thoughts"][0]["edited_at"]
+            assert revised["thoughts"][0]["text"] == "Revised thought Revised"
+            assert revised["thoughts"][0]["edited_at"]
+            assert len(got["changed_lines"]) == 2
 
             err, found = await call(s, "search", query="Revised thought")
             assert not err and any(i["id"] == task["id"] for i in found["items"])
@@ -386,7 +390,8 @@ def test_find_replace_no_match_is_a_noop_and_stale_read_is_refused(served):
                 updated_at=item["updated_at"],
             )
             assert not err
-            assert got["text"] == "Keep this text"
+            assert got["changed_lines"] == []
+            assert got["updated_at"] == item["updated_at"]
             assert got["replacements"] == {"item_text": 0, "thoughts": 0}
 
             err, message = await call(
@@ -435,6 +440,99 @@ def test_find_replace_no_match_is_a_noop_and_stale_read_is_refused(served):
 
     asyncio.run(go())
     assert api(served, "GET", f"/api/items/{note['id']}").json()["raw_text"] == "Keep this text"
+
+
+
+def test_find_replace_expected_scope_and_compact_response(served):
+    text = "Header\n" + "Unchanged content\n" * 600 + "\n".join(
+        f"Rule {i} (×4)" for i in range(7)
+    )
+    note = api(served, "POST", "/api/items", json={
+        "shape": "note", "space": "ideas", "text": text,
+    }).json()
+
+    async def go():
+        async with session(served) as s:
+            await call(s, "add_thought", id=note["id"], text="Rule 0 (×4)")
+            _, original = await call(s, "get_item", id=note["id"])
+            thought = original["thoughts"][0]
+            args = dict(id=note["id"], find="(×4)", replace="(×5)",
+                        updated_at=original["updated_at"])
+            for expected, scope, count in [(1, "text", 7), (7, "both", 8), (0, "thoughts", 1)]:
+                err, message = await call(s, "find_replace", **args, expected=expected, scope=scope)
+                assert err and f"found {count}" in message and "no changes" in message
+                _, unchanged = await call(s, "get_item", id=note["id"])
+                assert unchanged == original
+            err, message = await call(s, "find_replace", **args, expected=-1)
+            assert err and "non-negative" in message
+            err, _ = await call(s, "find_replace", **args, scope="invalid")
+            assert err
+            err, got = await call(s, "find_replace", id=note["id"], find="Rule 0 (×4)",
+                                 replace="Rule 0 (×5)", updated_at=original["updated_at"],
+                                 expected=1, scope="text")
+            assert not err
+            assert set(got) == {"id", "updated_at", "replacements", "changed_lines"}
+            assert got["replacements"] == {"item_text": 1, "thoughts": 0}
+            assert got["changed_lines"] == [{"scope": "text", "lines": [{
+                "before_line": 602, "after_line": 602,
+                "before": ["Rule 0 (×4)\n"], "after": ["Rule 0 (×5)\n"],
+            }]}]
+            assert len(json.dumps(got)) < 500
+            _, current = await call(s, "get_item", id=note["id"])
+            assert current["text"] == text.replace("Rule 0 (×4)", "Rule 0 (×5)")
+            assert current["thoughts"] == original["thoughts"]
+            assert current["updated_at"] == got["updated_at"]
+            assert got["updated_at"] != original["updated_at"]
+            # Thought edits leave the parent timestamp unchanged; use the current body.
+            err, _ = await call(s, "edit_thought", id=note["id"], thought_id=thought["id"],
+                                text="Rule 0 (×4)\nConcurrent content")
+            assert not err
+            err, got = await call(s, "find_replace", id=note["id"], find="(×4)", replace="(×5)",
+                                 updated_at=current["updated_at"], expected=1, scope="thoughts")
+            assert not err and got["replacements"] == {"item_text": 0, "thoughts": 1}
+            assert got["updated_at"] == current["updated_at"]
+            assert got["changed_lines"][0]["thought_id"] == thought["id"]
+            assert "Concurrent content" not in json.dumps(got)
+            _, final = await call(s, "get_item", id=note["id"])
+            assert final["text"] == current["text"]
+            assert final["thoughts"][0]["text"] == "Rule 0 (×5)\nConcurrent content"
+            err, noop = await call(s, "find_replace", id=note["id"], find="absent", replace="x",
+                                  updated_at=final["updated_at"], expected=0)
+            assert not err and noop["changed_lines"] == []
+            _, unchanged = await call(s, "get_item", id=note["id"])
+            assert unchanged == final
+    asyncio.run(go())
+
+
+def test_find_replace_preserves_whitespace_and_reports_multiline_changes(served):
+    note = api(served, "POST", "/api/items", json={
+        "shape": "note", "space": "ideas", "text": "Needle",
+    }).json()
+
+    async def go():
+        async with session(served) as s:
+            await call(s, "add_thought", id=note["id"], text="Needle")
+            _, item = await call(s, "get_item", id=note["id"])
+            err, _ = await call(s, "find_replace", id=note["id"], find="Needle",
+                                replace="  Needle\nkept\n  ",
+                                updated_at=item["updated_at"], expected=2)
+            assert not err
+            _, item = await call(s, "get_item", id=note["id"])
+            assert item["text"] == item["thoughts"][0]["text"] == "  Needle\nkept\n  "
+            err, got = await call(s, "find_replace", id=note["id"], find="Needle",
+                                 replace="First\nSecond", updated_at=item["updated_at"], expected=2)
+            assert not err
+            _, item = await call(s, "get_item", id=note["id"])
+            assert item["text"] == item["thoughts"][0]["text"] == "  First\nSecond\nkept\n  "
+            for change in got["changed_lines"]:
+                assert change["lines"] == [{"before_line": 1, "after_line": 1,
+                    "before": ["  Needle\n"], "after": ["  First\n", "Second\n"]}]
+            err, noop = await call(s, "find_replace", id=note["id"], find="First", replace="First",
+                                  updated_at=item["updated_at"], expected=2)
+            assert not err and noop["changed_lines"] == []
+            _, unchanged = await call(s, "get_item", id=note["id"])
+            assert unchanged == item
+    asyncio.run(go())
 
 
 def test_find_replace_respects_text_limits_without_partial_changes(served):

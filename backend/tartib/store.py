@@ -622,11 +622,13 @@ def should_file(
     return confidence >= threshold
 
 
-def _clean(fields: dict, allowed: Sequence[str]) -> dict:
+def _clean(fields: dict, allowed: Sequence[str], *, preserve_text_whitespace: bool = False) -> dict:
     values = {k: to_db_value(k, v) for k, v in fields.items() if k in EDITABLE_FIELDS}
     if "text" in values:
-        text = str(values.pop("text") or "").strip()
-        if text:
+        text = str(values.pop("text") or "")
+        if not preserve_text_whitespace:
+            text = text.strip()
+        if text.strip():
             values["raw_text"] = text
     if "space" in values:
         values["space"] = check_space(values["space"], allowed)
@@ -1178,12 +1180,13 @@ def update_fields(
     allowed: Sequence[str],
     *,
     _depth: int = 0,
+    preserve_text_whitespace: bool = False,
 ) -> None:
     """Apply editable fields. Raises SpaceError for a bad space; the DB rejects filed + null.
 
     A text change re-indexes the item's links, and a changed first line rewrites the links to
     it in other items, in the caller's transaction (slice 33)."""
-    values = _clean(fields, allowed)
+    values = _clean(fields, allowed, preserve_text_whitespace=preserve_text_whitespace)
     if not values:
         return
     if {"raw_text", "title", "shape"} & values.keys():
