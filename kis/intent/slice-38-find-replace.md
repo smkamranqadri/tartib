@@ -1,7 +1,8 @@
 # Slice 38: find and replace over MCP
 
 Planned 2026-10-06 with the owner. Standard mode. Scope approved.
-Review revisions built and verified locally 2026-10-06; committed locally, not deployed.
+Review revisions verified locally 2026-10-06; merged into main at `b230c3d` on
+2026-10-07 by fast-forward (same verified code tree). Not deployed.
 
 ## Decided with the owner
 

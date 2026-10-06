@@ -2,9 +2,8 @@
 
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
-- Branch: `feature/mcp-find-replace`, from `main` which tracks `origin/main` at
-  `https://github.com/smkamranqadri/tartib`; tracks `origin/feature/mcp-find-replace`. Feature
-  baseline code commit `8274f4f` is pushed; review fixes and final tool wording are committed locally.
+- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`.
+  Slice 38 is merged by fast-forward at code commit `b230c3d`; local main is not yet pushed.
   `v2.5` was deployed from `0695dab`; it remains live and unchanged.
 - **Live: `v2.5`**, deployed 2026-09-28 on the CapRover VPS as `smkamranqadri/tartib:v2.5`:
   `v2.4` plus the `set_reminder` MCP tool (sixteen tools; Tartib #247, done). Backend only, no
@@ -12,7 +11,7 @@
   same schema 24 and is the rollback.
 - Task: Slice 38 review fixes verified locally: expected count, compact output, explicit scope,
   literal whitespace, accurate stale-check wording and removal of unrelated formatting.
-  Revisions are committed locally and not deployed. Tartib #380 remains open (records the baseline).
+  Revisions are merged into local main and not deployed. Tartib #380 remains open (records the baseline).
 
 ## Open
 
@@ -33,8 +32,8 @@
 
 ## Next
 
-1. **Review and integrate Slice 38** from `feature/mcp-find-replace` (baseline `8274f4f` plus
-   local review-fix commit; not deployed).
+1. **Deploy Slice 38** from main (`b230c3d`), using the next unused image tag (planned `v2.6`).
+   Local main has not yet been pushed; the feature branch is retained.
 2. **Try `v2.5` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
    Delete, and a link card's Link / No links / Later.
 3. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
