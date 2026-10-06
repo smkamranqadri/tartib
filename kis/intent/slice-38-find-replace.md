@@ -2,7 +2,7 @@
 
 Planned 2026-10-06 with the owner. Standard mode. Scope approved.
 Review revisions verified locally 2026-10-06; merged into main at `b230c3d` on
-2026-10-07 by fast-forward (same verified code tree). Not deployed.
+2026-10-07 by fast-forward (same verified code tree). Deployed as v2.6 on 2026-10-07.
 
 ## Decided with the owner
 
@@ -74,3 +74,7 @@ Review revisions verified locally 2026-10-06; merged into main at `b230c3d` on
 - Compared against main: the unrelated insert_item reflow is removed.
 
 - Final description and server instruction use the owner's exact wording (2026-10-07).
+
+- v2.6 live verification (2026-10-07): running image confirmed, health ok with AI on,
+  17 MCP tools, exact tool description and expected/scope schema. Count mismatch refused;
+  independent get_item readback unchanged. Successful production replacement not exercised.

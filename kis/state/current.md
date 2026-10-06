@@ -3,15 +3,13 @@
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`.
-  Slice 38 is merged by fast-forward at code commit `b230c3d`; local main is not yet pushed.
-  `v2.5` was deployed from `0695dab`; it remains live and unchanged.
-- **Live: `v2.5`**, deployed 2026-09-28 on the CapRover VPS as `smkamranqadri/tartib:v2.5`:
-  `v2.4` plus the `set_reminder` MCP tool (sixteen tools; Tartib #247, done). Backend only, no
-  migration, `SW_VERSION` unchanged. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. `v2.4` runs on the
-  same schema 24 and is the rollback.
-- Task: Slice 38 review fixes verified locally: expected count, compact output, explicit scope,
-  literal whitespace, accurate stale-check wording and removal of unrelated formatting.
-  Revisions are merged into local main and not deployed. Tartib #380 remains open (records the baseline).
+  Slice 38 is merged by fast-forward at code commit `b230c3d`; main is pushed and the feature
+  branch removed.
+- **Live: `v2.6`**, deployed by the owner and checked 2026-10-07 as
+  `smkamranqadri/tartib:v2.6`, code `b230c3d`: Slice 38 find_replace, seventeen MCP tools.
+  Backend only; no migration or service-worker change. Rollback is `v2.5` on schema 24.
+- Task: Slice 38 deployed and verified. Health and MCP contract checked live; expected-count
+  mismatch refused and get_item readback confirmed unchanged item and thoughts. Tartib #380 done.
 
 ## Open
 
@@ -32,18 +30,16 @@
 
 ## Next
 
-1. **Deploy Slice 38** from main (`b230c3d`), using the next unused image tag (planned `v2.6`).
-   Local main has not yet been pushed; the feature branch is retained.
-2. **Try `v2.5` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
+1. **Try `v2.6` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
    Delete, and a link card's Link / No links / Later.
-3. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
+2. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
    thought.
-4. **Switch `TARTIB_LINK_PROPOSALS` on** once item 5 is done -- and first fix "Tell it why" on a
+3. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
    `linked` item, which ignores the link hold (slice 33's plan, Known).
-5. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
-6. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
+5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-7. **Answer the four questions** under Known gaps, on `v2.5`.
+6. **Answer the four questions** under Known gaps, on `v2.6`.
 
 ## Commands
 
@@ -59,21 +55,16 @@
 
 ## Proof
 
-Each slice keeps its proof in its plan file and its commits; releases before `v2.5`, and the
-reviews before `v2.2`, are in `../intent/history.md` and git. The pre-deploy rehearsal on a live
-snapshot (2026-09-22) found the phone dashboard's 12px sideways scroll (`5405db3`).
+Slice 38's local tests and mutation checks are in `../intent/slice-38-find-replace.md`;
+older releases and checks are in `../intent/history.md`.
 
-**`v2.5`, checked 2026-09-28:** health ok with AI on, `/mcp` 401 without the token and sixteen
-tools with it, and `set_reminder` called live with a past time was refused naming the current
-time in Asia/Karachi (nothing written).
-
-**`/mcp` writes used for real, 2026-10-01:** `add_note`, `add_thought`, `edit_item` and
-`delete_item` rebuilt the owner's `ai-agents` space, backup first (`private.md`, Backups).
-
-**Slice 38 review fixes, verified 2026-10-06, local only:** backend suite **383 passed,
-9 deselected**; changed-file Ruff and `git diff --check` passed. Eight guard mutations failed
-as expected and source was restored byte-for-byte. Single-line edit response is under 500
-characters for a roughly 10,000-character note. No deployment performed.
+**v2.6 live check, 2026-10-07:** running container image confirmed over SSH; public health
+returned ok=true, ai=true. Authenticated MCP lists 17 tools; find_replace description matches
+owner wording, server instruction recommends expected=1, and schema exposes expected and scope.
+A mismatched expected count was refused; get_item before/after was identical. One successful
+replacement ran on production the same day (ai-agents start-here note, expected=1, about 700
+characters returned with only the changed line). Build log records image digest
+`sha256:c8e48ab633c0a61e193a910177b24f9bc5896c500f5156494d04dd37b9a5a358`.
 
 ## Known gaps
 
