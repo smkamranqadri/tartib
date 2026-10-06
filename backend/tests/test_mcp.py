@@ -35,6 +35,7 @@ TOOLS = {
     "set_reminder",
     "create_space",
     "edit_item",
+    "find_replace",
     "delete_item",
     "edit_thought",
     "delete_thought",  # slice 37
@@ -133,6 +134,7 @@ def test_the_tools(served):
             instructions = s.initialize_result.instructions or ""
             assert "list_spaces" in instructions and "asking the person" in instructions
             assert "only when the person asks" in instructions
+            assert "find_replace" in instructions
 
     asyncio.run(go())
 
@@ -313,6 +315,173 @@ def test_a_task_edit_retitles_it(served):
                 updated_at=item["updated_at"],
             )
             assert not err and got["title"] == "New title"
+
+    asyncio.run(go())
+
+
+def test_find_replace_updates_item_and_thoughts(served):
+    task = api(
+        served,
+        "POST",
+        "/api/items",
+        json={"shape": "task", "space": "ideas", "text": "Draft title\nDraft in body"},
+    ).json()
+    source = api(
+        served,
+        "POST",
+        "/api/items",
+        json={"shape": "note", "space": "ideas", "text": "See [[Draft title]]"},
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            err, _ = await call(s, "add_thought", id=task["id"], text="Draft thought Draft")
+            assert not err
+            _, item = await call(s, "get_item", id=task["id"])
+            err, got = await call(
+                s,
+                "find_replace",
+                id=task["id"],
+                find="Draft",
+                replace="Revised",
+                updated_at=item["updated_at"],
+            )
+            assert not err
+            assert got["text"] == "Revised title\nRevised in body"
+            assert got["title"] == "Revised title"
+            assert got["replacements"] == {"item_text": 2, "thoughts": 2}
+            assert got["thoughts"][0]["text"] == "Revised thought Revised"
+            assert got["thoughts"][0]["edited_at"]
+
+            err, found = await call(s, "search", query="Revised thought")
+            assert not err and any(i["id"] == task["id"] for i in found["items"])
+            err, found = await call(s, "search", query="Draft")
+            assert not err and not any(i["id"] == task["id"] for i in found["items"])
+
+    asyncio.run(go())
+    assert api(served, "GET", f"/api/items/{source['id']}").json()["raw_text"] == (
+        "See [[Revised title]]"
+    )
+
+
+def test_find_replace_no_match_is_a_noop_and_stale_read_is_refused(served):
+    note = api(
+        served,
+        "POST",
+        "/api/items",
+        json={"shape": "note", "space": "ideas", "text": "Keep this text"},
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            err, _ = await call(s, "add_thought", id=note["id"], text="Needle")
+            assert not err
+            _, item = await call(s, "get_item", id=note["id"])
+            err, got = await call(
+                s,
+                "find_replace",
+                id=note["id"],
+                find="keep",
+                replace="present",
+                updated_at=item["updated_at"],
+            )
+            assert not err
+            assert got["text"] == "Keep this text"
+            assert got["replacements"] == {"item_text": 0, "thoughts": 0}
+
+            err, message = await call(
+                s,
+                "find_replace",
+                id=note["id"],
+                find="",
+                replace="present",
+                updated_at=item["updated_at"],
+            )
+            assert err and "find text is empty" in message
+
+            err, message = await call(
+                s,
+                "find_replace",
+                id=note["id"],
+                find="Needle",
+                replace="",
+                updated_at=item["updated_at"],
+            )
+            assert err and "thought" in message and "no changes were made" in message
+
+            err, message = await call(
+                s,
+                "find_replace",
+                id=note["id"],
+                find="Keep this text",
+                replace="",
+                updated_at=item["updated_at"],
+            )
+            assert err and "item's text empty" in message
+
+            _, unchanged = await call(s, "get_item", id=note["id"])
+            assert unchanged["text"] == "Keep this text"
+            assert unchanged["thoughts"][0]["text"] == "Needle"
+
+            err, message = await call(
+                s,
+                "find_replace",
+                id=note["id"],
+                find="Keep",
+                replace="Change",
+                updated_at="2000-01-01T00:00:00Z",
+            )
+            assert err and "changed since you read it" in message
+
+    asyncio.run(go())
+    assert api(served, "GET", f"/api/items/{note['id']}").json()["raw_text"] == "Keep this text"
+
+
+def test_find_replace_respects_text_limits_without_partial_changes(served):
+    long_text = "a" * 11_000
+    note = api(
+        served,
+        "POST",
+        "/api/items",
+        json={"shape": "note", "space": "ideas", "text": long_text},
+    ).json()
+    thought_note = api(
+        served,
+        "POST",
+        "/api/items",
+        json={"shape": "note", "space": "ideas", "text": "safe"},
+    ).json()
+
+    async def go():
+        async with session(served) as s:
+            _, item = await call(s, "get_item", id=note["id"])
+            err, message = await call(
+                s,
+                "find_replace",
+                id=note["id"],
+                find="a",
+                replace="aa",
+                updated_at=item["updated_at"],
+            )
+            assert err and "item's text over 20000 characters" in message
+            _, unchanged = await call(s, "get_item", id=note["id"])
+            assert unchanged["text"] == long_text
+
+            err, _ = await call(s, "add_thought", id=thought_note["id"], text=long_text)
+            assert not err
+            _, item = await call(s, "get_item", id=thought_note["id"])
+            err, message = await call(
+                s,
+                "find_replace",
+                id=thought_note["id"],
+                find="a",
+                replace="aa",
+                updated_at=item["updated_at"],
+            )
+            assert err and "thought" in message and "over 20000 characters" in message
+            _, unchanged = await call(s, "get_item", id=thought_note["id"])
+            assert unchanged["text"] == "safe"
+            assert unchanged["thoughts"][0]["text"] == long_text
 
     asyncio.run(go())
 

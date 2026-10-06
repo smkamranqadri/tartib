@@ -366,15 +366,18 @@ inserts the route first, ahead of the SPA catch-all, and runs the SDK's session 
 app's lifespan, which a mounted app would not get. DNS-rebinding protection is off on purpose:
 there is no ambient credential for a rebound page to use.
 
-Sixteen tools: `list_spaces`, `list_items(space, shape?, status?)` (open tasks first),
+Seventeen tools in the current checkout: `list_spaces`, `list_items(space, shape?, status?)` (open tasks first),
 `search(query, space?)`, `get_item(id)` (thoughts with their ids and links), `add_note` /
 `add_task(text, space?, due?)`, `add_thought`, `set_status`, `set_due`, `set_star`,
 `set_reminder(id, remind_at?)` (tasks only; since 2026-09-28, an ISO time with no offset is read
 in `TARTIB_TZ` as the classifier reads one, a past time is refused because the worker would fire
 it at once or never, and null clears it), `create_space`, and since slice 37 `edit_item(id, text, updated_at)` (refused unless `updated_at`
-is the one stored, so the agent must have read the item), `delete_item(id)` (the capture stays),
-`edit_thought(id, thought_id, text)`, `delete_thought(id, thought_id)`. No Ask. The instructions
-say to edit or delete only when the person asks. An add naming a space is filed directly (a `direct` capture); without
+is the one stored, so the agent must have read the item), and since slice 38
+`find_replace(id, find, replace, updated_at)` (one item; case-sensitive literal replacement in
+its text and thoughts; all matches; returns counts; changed thoughts are marked edited),
+`delete_item(id)` (the capture stays), `edit_thought(id, thought_id, text)`,
+`delete_thought(id, thought_id)`. No Ask. The instructions say to edit or delete only when the
+person asks. An add naming a space is filed directly (a `direct` capture); without
 one it is a pending capture for the runner, exactly as the app's own. Every write goes through
 the store's paths, so titles, links and triggers behave as in the app. Text is capped at 20,000
 characters. Errors a tool anticipates are raised as `ToolError`, whose message reaches the

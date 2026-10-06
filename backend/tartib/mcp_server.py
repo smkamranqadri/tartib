@@ -59,6 +59,9 @@ INSTRUCTIONS = """Tartib is one person's notes and tasks, sorted into spaces.
 - When you finish work on a task, mark it done and add a thought saying what was done.
 - Edit or delete only when the person asks you to. To edit an item's text, get_item first and
   pass its updated_at: if the item changed since, the edit is refused, so read it again.
+- To find and replace text, call find_replace with one item's id, a case-sensitive literal find
+  string, a replacement string, and its updated_at from get_item. It replaces all matches in the
+  item's text and thoughts and marks changed thoughts edited. Only when the person asks.
 - Deleting an item removes it with its thoughts. Deleting a thought cannot be undone."""
 
 
@@ -177,8 +180,13 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
                     fields["due"] = _date(due)
                 capture_id = capture_row(c, text, client, direct=True)
                 item_id = insert_item(
-                    c, capture_id=capture_id, raw_text=text, created_at=utcnow_iso(),
-                    fields=fields, stage="filed", allowed=list_spaces(c),
+                    c,
+                    capture_id=capture_id,
+                    raw_text=text,
+                    created_at=utcnow_iso(),
+                    fields=fields,
+                    stage="filed",
+                    allowed=list_spaces(c),
                 )
                 c.commit()
                 return {"filed": True, "item": _item(fetch(c, item_id))}
@@ -429,6 +437,85 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
             update_fields(c, id, {"text": body}, list_spaces(c))
             c.commit()
             return _item(fetch(c, id))
+        finally:
+            c.close()
+
+    @server.tool(
+        name="find_replace",
+        description=(
+            "Replace every case-sensitive literal occurrence in one item's text and thoughts. "
+            "Pass the updated_at from get_item; changed thoughts are marked edited. Applies "
+            "immediately. Only when the person asks."
+        ),
+    )
+    def find_replace(id: int, find: str, replace: str, updated_at: str) -> dict:
+        if not find:
+            raise ToolError("the find text is empty")
+
+        c = conn()
+        try:
+            c.execute("BEGIN IMMEDIATE")
+            row = fetch(c, id)
+            if row["updated_at"] != updated_at:
+                raise ToolError(
+                    f"item {id} changed since you read it (updated_at is now "
+                    f"{row['updated_at']}); get_item again and redo the replacement "
+                    "on what is there"
+                )
+
+            text = row["raw_text"]
+            text_count = text.count(find)
+            new_text = text.replace(find, replace) if text_count else text
+            if text_count:
+                new_text = new_text.strip()
+                if not new_text:
+                    raise ToolError("replacement would leave the item's text empty")
+                if len(new_text) > MAX_TEXT:
+                    raise ToolError(
+                        f"replacement would put the item's text over {MAX_TEXT} characters"
+                    )
+
+            thought_changes = []
+            thought_count = 0
+            for thought in thoughts_for(c, [id]).get(id, []):
+                count = thought["body"].count(find)
+                if not count:
+                    continue
+                body = thought["body"].replace(find, replace).strip()
+                if not body:
+                    raise ToolError(
+                        f"replacement would leave thought {thought['id']} empty; "
+                        "no changes were made"
+                    )
+                if len(body) > MAX_TEXT:
+                    raise ToolError(
+                        f"replacement would put thought {thought['id']} over "
+                        f"{MAX_TEXT} characters; "
+                        "no changes were made"
+                    )
+                thought_count += count
+                if body != thought["body"]:
+                    thought_changes.append((thought["id"], body))
+
+            if text_count and new_text != text:
+                update_fields(c, id, {"text": new_text}, list_spaces(c))
+            for thought_id, body in thought_changes:
+                edit_thought(c, thought_id, body)
+
+            c.commit()
+            return {
+                **_item(fetch(c, id)),
+                "thoughts": [
+                    {
+                        "id": t["id"],
+                        "at": t["created_at"],
+                        "edited_at": t["edited_at"],
+                        "text": t["body"],
+                    }
+                    for t in thoughts_for(c, [id]).get(id, [])
+                ],
+                "replacements": {"item_text": text_count, "thoughts": thought_count},
+            }
         finally:
             c.close()
 

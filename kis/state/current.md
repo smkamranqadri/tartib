@@ -2,13 +2,15 @@
 
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
-- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, public,
-  and in step with it. `v2.5` was deployed from `0695dab`; later commits are KIS only.
+- Branch: `feature/mcp-find-replace`, from `main` which tracks `origin/main` at
+  `https://github.com/smkamranqadri/tartib`. The feature changes are uncommitted. `v2.5` was
+  deployed from `0695dab`; it remains live and unchanged.
 - **Live: `v2.5`**, deployed 2026-09-28 on the CapRover VPS as `smkamranqadri/tartib:v2.5`:
   `v2.4` plus the `set_reminder` MCP tool (sixteen tools; Tartib #247, done). Backend only, no
   migration, `SW_VERSION` unchanged. `TARTIB_LINK_PROPOSALS` off, `/mcp` on. `v2.4` runs on the
   same schema 24 and is the rollback.
-- Task: none in flight.
+- Task: none in flight. Slice 38 find-and-replace is implemented and verified locally; not
+  deployed. Tartib #380 tracks the feature as open.
 
 ## Open
 
@@ -29,21 +31,22 @@
 
 ## Next
 
-1. **Try `v2.5` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
+1. **Review and integrate Slice 38** from `feature/mcp-find-replace` (uncommitted; not deployed).
+2. **Try `v2.5` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
    Delete, and a link card's Link / No links / Later.
-2. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
+3. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
    thought.
-3. **Switch `TARTIB_LINK_PROPOSALS` on** once item 5 is done -- and first fix "Tell it why" on a
+4. **Switch `TARTIB_LINK_PROPOSALS` on** once item 5 is done -- and first fix "Tell it why" on a
    `linked` item, which ignores the link hold (slice 33's plan, Known).
-4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
-5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+5. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
+6. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-6. **Answer the four questions** under Known gaps, on `v2.5`.
+7. **Answer the four questions** under Known gaps, on `v2.5`.
 
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **378 passed, 9 deselected** (the nine are the evals) and
+  Verification commands. Expect **381 passed, 9 deselected** (the nine are the evals) and
   **22/22** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName" (version
   numbering: `../knowledge/technical.md`, Deploy). `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
@@ -65,19 +68,18 @@ time in Asia/Karachi (nothing written).
 **`/mcp` writes used for real, 2026-10-01:** `add_note`, `add_thought`, `edit_item` and
 `delete_item` rebuilt the owner's `ai-agents` space, backup first (`private.md`, Backups).
 
+**Slice 38, verified 2026-10-06, local only:** backend suite **381 passed, 9 deselected**;
+changed-file Ruff check and `git diff --check` passed. `/mcp` on deployed `v2.5` remains unchanged.
+
 ## Known gaps
 
 Designed offline behaviour is in `../intent/SPEC.md`, Offline.
 
-- **Four questions only the phone can answer are still open:**
-  1. whether mono at 14px suits a long note -- the one decision in slice 23 taken knowingly
-     against readability;
-  2. whether `background-attachment: fixed` survives iOS;
-  3. whether tapping a word is a discoverable way into editing when no button says so -- since
-     slice 31 that includes the title, which is now the first line of the text;
-  4. whether a debounced autosave feels safe without a Save button to press. Only answerable
-     from `v2.1` on: before `c91fbf9` every save reloaded the note in a space's split view, and
-     "Saved" never showed.
+- **Four phone-only questions remain:** mono at 14px for long notes; fixed background on iOS;
+  whether tapping text (including the first-line title) makes editing discoverable; and whether
+  debounced autosave feels safe without a Save button. Autosave is judgeable from `v2.1` onward;
+  before `c91fbf9`, saves reloaded the split view and never showed "Saved". Details:
+  `../intent/slice-26-retrieval.md`.
 - What the committed UI suite covers, and what it leaves out, is `../knowledge/technical.md`,
   "Settled in slice 26".
 
