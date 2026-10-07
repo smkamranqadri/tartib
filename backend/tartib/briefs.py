@@ -14,6 +14,7 @@ from tartib.clock import today_in, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.deps import get_db, get_settings
 from tartib.sessions import space_counts_today
+from tartib.space_descriptions import space_description
 from tartib.store import list_spaces, serialize_item, thoughts_for
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
@@ -63,6 +64,9 @@ def spaces_summary(
         r = by_space.get(key)
         return {
             "name": name,
+            "description": ""
+            if unfiled
+            else (space_description(conn, name) or {}).get("description", ""),
             "unfiled": unfiled,
             "open": int(r["open"] or 0) if r else 0,
             "notes": int(r["notes"] or 0) if r else 0,

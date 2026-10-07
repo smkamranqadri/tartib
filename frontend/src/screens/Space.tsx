@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { deleteSpace, getLinkedHere, getSpaces, listItems, renameSpace, type SpacePolicy, setSpacePolicy } from "../api";
+import { deleteSpace, getLinkedHere, getSpaces, listItems, renameSpace, setSpaceDescription, type SpacePolicy, type SpaceDescription, setSpacePolicy } from "../api";
 import AddItemForm from "../components/AddItemForm";
 import BackLink from "../components/BackLink";
 import Card from "../components/Card";
 import { LinkIcon } from "../components/Icons";
 import ItemRow from "../components/ItemRow";
-import { ConfirmModal } from "../components/Modal";
+import Modal, { ConfirmModal } from "../components/Modal";
 import NameForm from "../components/NameForm";
 import PageHead from "../components/PageHead";
 import { Stale } from "../components/Status";
@@ -30,6 +30,7 @@ export default function Space({ version, onChanged }: { version: number; onChang
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [manageError, setManageError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
   const spaces = useLoad(getSpaces, [version]);
   const policy: SpacePolicy = spaces.data?.policies[space] ?? "auto";
   // Delete is offered only for an empty space, so the page needs to know whether it is one.
@@ -141,6 +142,13 @@ export default function Space({ version, onChanged }: { version: number; onChang
         </div>
       </div>
       <Stale at={cachedAt} />
+      <SpaceDescriptionRow
+        detail={spaces.data?.descriptions[space] ?? { name: space, description: "", updated_at: "" }}
+        editing={editingDescription}
+        onEdit={() => setEditingDescription(true)}
+        onClose={() => setEditingDescription(false)}
+        onSaved={() => { spaces.reload(); setEditingDescription(false); }}
+      />
       {adding && (
         <AddItemForm
           space={space}
@@ -169,4 +177,74 @@ export default function Space({ version, onChanged }: { version: number; onChang
       )}
     </div>
   );
+}
+
+function SpaceDescriptionRow({
+  detail, editing, onEdit, onClose, onSaved,
+}: {
+  detail: SpaceDescription;
+  editing: boolean;
+  onEdit: () => void;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  return <>
+    <div className={`space-description-row ${detail.description ? "" : "space-description-empty"}`}>
+      {detail.description ? <p>{detail.description}</p> : <p>No description yet.</p>}
+      <button type="button" className="ghost" onClick={onEdit}>
+        {detail.description ? "Edit description" : "Add a description"}
+      </button>
+    </div>
+    <SpaceDescriptionModal key={`${detail.name}:${detail.updated_at}:${editing}`} open={editing} detail={detail} onClose={onClose} onSaved={onSaved} />
+  </>;
+}
+
+function SpaceDescriptionModal({
+  open, detail, onClose, onSaved,
+}: { open: boolean; detail: SpaceDescription; onClose: () => void; onSaved: () => void }) {
+  const [draft, setDraft] = useState(detail.description);
+  const [token, setToken] = useState(detail.updated_at);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) { setDraft(detail.description); setToken(detail.updated_at); setError(null); }
+  }, [open, detail.description, detail.updated_at]);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      await setSpaceDescription(detail.name, draft, token);
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save this description.");
+    } finally { setBusy(false); }
+  }
+
+  async function loadLatest() {
+    try {
+      const latest = (await getSpaces()).descriptions[detail.name];
+      if (!latest) throw new Error("Could not load the latest description.");
+      setDraft(latest.description); setToken(latest.updated_at); setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load the latest description.");
+    }
+  }
+
+  return <Modal open={open} title="Space description" onClose={busy ? undefined : onClose} actions={
+    <>
+      <button type="button" className="ghost" onClick={onClose} disabled={busy}>Cancel</button>
+      <button type="submit" form="space-description-form" className="primary space-description-save" disabled={busy}>
+        {busy ? <span className="spinner" aria-label="Saving" /> : "Save"}
+      </button>
+    </>
+  }>
+    <form id="space-description-form" className="space-description-editor" onSubmit={(e) => void save(e)}>
+      <p>Used by agents and automatic filing.</p>
+      <label><span>Description</span><textarea value={draft} onChange={(e) => setDraft(Array.from(e.target.value).slice(0, 500).join(""))} /></label>
+      <div className="description-meta"><span>{Array.from(draft).length} / 500</span>{error && <span className="error" role="alert">{error}</span>}</div>
+      {error?.includes("changed elsewhere") && <button type="button" className="ghost" onClick={() => void loadLatest()}>Use latest version</button>}
+    </form>
+  </Modal>;
 }

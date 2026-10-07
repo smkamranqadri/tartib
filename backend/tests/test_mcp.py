@@ -23,6 +23,7 @@ from tests.conftest import AI_ENV, FAKE_VARS, PASSWORD, make_settings, proposal,
 TOKEN = "mcp-test-token-long-enough-to-be-accepted"
 TOOLS = {
     "list_spaces",
+    "set_space_description",
     "list_items",
     "search",
     "get_item",
@@ -134,7 +135,67 @@ def test_the_tools(served):
             instructions = s.initialize_result.instructions or ""
             assert "list_spaces" in instructions and "asking the person" in instructions
             assert "only when the person asks" in instructions
-            assert "find_replace" in instructions
+            assert "find_replace" in instructions and "Read its description" in instructions
+
+    asyncio.run(go())
+
+
+def test_space_description_details_writes_and_validation(served):
+    async def go():
+        async with session(served) as s:
+            err, spaces = await call(s, "list_spaces")
+            assert not err and spaces["spaces"] == [
+                "work",
+                "home",
+                "health",
+                "finance",
+                "ideas",
+                "travel",
+            ]
+            detail = next(d for d in spaces["details"] if d["name"] == "work")
+            assert detail["description"] == "" and detail["updated_at"] == ""
+            err, saved = await call(
+                s,
+                "set_space_description",
+                space="work",
+                description="School\r\nfollow-ups",
+                updated_at="",
+            )
+            assert not err and saved["description"] == "School\nfollow-ups"
+            err, again = await call(
+                s,
+                "set_space_description",
+                space="work",
+                description=saved["description"],
+                updated_at=saved["updated_at"],
+            )
+            assert not err and again["updated_at"] > saved["updated_at"]
+            err, stale = await call(
+                s,
+                "set_space_description",
+                space="work",
+                description="lost",
+                updated_at=saved["updated_at"],
+            )
+            assert err and "changed elsewhere" in stale
+            err, too_long = await call(
+                s,
+                "set_space_description",
+                space="work",
+                description="x" * 501,
+                updated_at=again["updated_at"],
+            )
+            assert err and "500 characters" in too_long
+            err, controls = await call(
+                s,
+                "set_space_description",
+                space="work",
+                description="x\ty",
+                updated_at=again["updated_at"],
+            )
+            assert err and "control character" in controls
+            err, listed = await call(s, "list_items", space="work")
+            assert not err and listed["description"] == "School\nfollow-ups"
 
     asyncio.run(go())
 
@@ -442,7 +503,6 @@ def test_find_replace_no_match_is_a_noop_and_stale_read_is_refused(served):
     assert api(served, "GET", f"/api/items/{note['id']}").json()["raw_text"] == "Keep this text"
 
 
-
 def test_find_replace_expected_scope_and_compact_response(served):
     text = "Header\n" + "Unchanged content\n" * 600 + "\n".join(
         f"Rule {i} (×4)" for i in range(7)
@@ -501,6 +561,7 @@ def test_find_replace_expected_scope_and_compact_response(served):
             assert not err and noop["changed_lines"] == []
             _, unchanged = await call(s, "get_item", id=note["id"])
             assert unchanged == final
+
     asyncio.run(go())
 
 
@@ -532,6 +593,7 @@ def test_find_replace_preserves_whitespace_and_reports_multiline_changes(served)
             assert not err and noop["changed_lines"] == []
             _, unchanged = await call(s, "get_item", id=note["id"])
             assert unchanged == item
+
     asyncio.run(go())
 
 

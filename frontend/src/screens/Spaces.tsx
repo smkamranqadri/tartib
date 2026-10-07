@@ -115,6 +115,7 @@ function SpaceCard({ s, most }: { s: SpaceSummary; most: number }) {
         </span>
         <span className="space-total">{s.total}</span>
       </span>
+      {!s.unfiled && s.description && <span className="space-description-preview">{s.description}</span>}
       <span className="space-bar" aria-hidden="true">
         <span style={{ width: `${Math.max(share, s.total ? 4 : 0)}%` }} />
       </span>

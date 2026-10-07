@@ -23,6 +23,7 @@ const URL = arg("url", process.env.TARTIB_URL || "http://localhost:8000");
 const PASSWORD = process.env.TARTIB_PASSWORD;
 const HEADED = process.argv.includes("--head");
 const PHONE = { width: 390, height: 844 };
+const DESIGN_EXPORTS = process.env.SPACE_DESCRIPTION_UI_EXPORT_DIR;
 
 const results = [];
 const record = (id, ok, note = "") => {
@@ -710,6 +711,58 @@ async function main() {
       const item = await api(page, "GET", `/api/items/${note.id}`);
       if (item.thought_count !== 1) throw new Error(`thought_count ${item.thought_count}`);
       return "Edit -> Save marks it edited; Delete -> confirm removes it; count 1";
+    });
+
+    await check("Space descriptions render and edit on desktop and 390px phone", async () => {
+      const initial = await api(page, "GET", "/api/spaces");
+      const before = initial.descriptions[space];
+      const sample = "Family-school follow-ups, release planning, and the notes behind each next step.";
+      const set = await api(page, "PUT", `/api/spaces/${encodeURIComponent(space)}/description`, {
+        description: sample, updated_at: before.updated_at,
+      });
+
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto(`${URL}/spaces/${space}`);
+      await page.getByText(sample, { exact: true }).waitFor();
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error("desktop horizontal overflow");
+      const row = page.locator(".title-row");
+      const [head, actions] = await Promise.all([row.locator(".page-head").boundingBox(), row.locator(".title-actions").boundingBox()]);
+      if (!head || !actions || Math.abs((head.y + head.height / 2) - (actions.y + actions.height / 2)) > 38) throw new Error("desktop title actions are detached from heading");
+      if (DESIGN_EXPORTS) await page.screenshot({ path: `${DESIGN_EXPORTS}/space-desktop.png` });
+      await page.getByRole("button", { name: "Edit description" }).click();
+      const dialog = page.locator("dialog[open]");
+      await dialog.waitFor();
+      if ((await dialog.locator("textarea").inputValue()) !== sample) throw new Error(`editor did not load saved description: ${JSON.stringify(await dialog.locator("textarea").inputValue())}`);
+      if (DESIGN_EXPORTS) await page.screenshot({ path: `${DESIGN_EXPORTS}/space-desktop-modal.png` });
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+
+      await page.setViewportSize(PHONE);
+      await page.goto(`${URL}/spaces/${space}`);
+      await page.getByText(sample, { exact: true }).waitFor();
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error("phone horizontal overflow");
+      if (DESIGN_EXPORTS) await page.screenshot({ path: `${DESIGN_EXPORTS}/space-phone.png` });
+      await page.getByRole("button", { name: "Edit description" }).tap();
+      const phoneDialog = page.locator("dialog[open]");
+      await phoneDialog.waitFor();
+      if ((await phoneDialog.locator("textarea").inputValue()) !== sample) throw new Error("phone editor did not load description");
+      // Playwright's mobile tap flash otherwise persists into the screenshot behind the dialog.
+      await page.mouse.move(4, 4);
+      await page.waitForTimeout(900);
+      if (DESIGN_EXPORTS) await page.screenshot({ path: `${DESIGN_EXPORTS}/space-phone-modal.png` });
+      await page.goto(`${URL}/spaces`);
+      const card = page.locator(".space-card").filter({ hasText: space });
+      await card.locator(".space-description-preview").getByText(sample, { exact: true }).waitFor();
+      await page.goto(`${URL}/spaces/${space}`);
+      await page.getByText(sample, { exact: true }).waitFor();
+      await page.getByRole("button", { name: "Edit description" }).tap();
+      const clearDialog = page.locator("dialog[open]");
+      await clearDialog.waitFor();
+      await clearDialog.locator("textarea").fill("");
+      await clearDialog.getByRole("button", { name: "Save" }).tap();
+      await page.getByRole("button", { name: "Add a description" }).waitFor();
+      const after = (await api(page, "GET", "/api/spaces")).descriptions[space];
+      if (after.description !== "" || !(after.updated_at > set.updated_at)) throw new Error("clear did not advance its token");
+      return "desktop and phone description row/editor; phone clear advanced the token";
     });
 
   } finally {

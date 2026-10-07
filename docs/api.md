@@ -19,6 +19,7 @@ POST   /api/items/{id}/approve   optional overrides, same fields
 POST   /api/items/{id}/reject
 POST   /api/ask                  {question, space?} -> {answer, item_ids, items}   read-only
 GET    /api/spaces               POST /api/spaces {name}
+PUT    /api/spaces/{name}/description {description, updated_at}  409 on stale token
 PATCH  /api/spaces/{name}        {name}          rename, cascading to items and briefs
 DELETE /api/spaces/{name}                        409 unless the space is empty
 GET    /api/spaces/summary
@@ -31,3 +32,12 @@ POST   /api/sessions/{id}/stop   POST /api/sessions/{id}/outcome {outcome}
 ```
 
 Dates: `due` is `YYYY-MM-DD`. `remind_at` and `created_at` are ISO 8601 in UTC.
+
+`GET /api/spaces` retains its ordered `spaces` names and `policies` map and adds a `descriptions`
+map keyed by name. Each value is `{name, description, updated_at}`. Descriptions start empty.
+The PUT normalizes CRLF/CR to LF, trims the ends, permits internal newlines, counts Unicode code
+points and accepts at most 500 characters; blank text clears it. Other control characters are
+422. `updated_at` must match the token read from GET. Every accepted write advances the token,
+including unchanged text and clears. A stale token returns 409; an unknown space returns 404.
+`GET /api/spaces/summary` includes `description` for each configured space; Unfiled has an empty
+description.

@@ -106,6 +106,7 @@ export interface Edit {
 
 export interface SpaceSummary {
   name: string;
+  description: string;
   unfiled: boolean;
   open: number;
   notes: number;

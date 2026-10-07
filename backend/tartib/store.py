@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 
 from tartib.clock import utcnow, utcnow_iso, utcnow_ms_iso
+from tartib.space_descriptions import space_description
 
 FILING_FIELDS = ("shape", "space", "title", "due", "remind_at")
 EDITABLE_FIELDS = FILING_FIELDS + ("starred", "status", "text")
@@ -559,6 +560,7 @@ class SpaceContext:
     open_tasks: int
     notes: int
     recent: tuple[str, ...]  # item_header lines, most recent first
+    description: str = ""
 
 
 def classify_context(
@@ -602,6 +604,7 @@ def classify_context(
                 open_tasks=int(row["open_tasks"] or 0) if row else 0,
                 notes=int(row["notes"] or 0) if row else 0,
                 recent=tuple(context_line(r) for r in recent),
+                description=(space_description(conn, name) or {}).get("description", ""),
             )
         )
     return tuple(out)

@@ -151,7 +151,14 @@ export const subscribePush = (endpoint: string, keys: { p256dh: string; auth: st
 export const unsubscribePush = (endpoint: string) =>
   send<{ ok: true; removed: number }>("DELETE", "/api/subscriptions", { endpoint });
 export type SpacePolicy = "auto" | "ask" | "file";
-export const getSpaces = () => api<{ spaces: string[]; policies: Record<string, SpacePolicy> }>("/api/spaces");
+export interface SpaceDescription { name: string; description: string; updated_at: string }
+export const getSpaces = () => api<{
+  spaces: string[];
+  policies: Record<string, SpacePolicy>;
+  descriptions: Record<string, SpaceDescription>;
+}>("/api/spaces");
+export const setSpaceDescription = (space: string, description: string, updated_at: string) =>
+  send<SpaceDescription>("PUT", `/api/spaces/${encodeURIComponent(space)}/description`, { description, updated_at });
 export const setSpacePolicy = (space: string, policy: SpacePolicy) =>
   send<{ name: string; policy: SpacePolicy }>("PUT", `/api/spaces/${encodeURIComponent(space)}/policy`, { policy });
 

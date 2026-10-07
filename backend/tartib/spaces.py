@@ -12,6 +12,13 @@ from pydantic import BaseModel, Field
 from tartib.auth import require_auth
 from tartib.clock import utcnow_iso
 from tartib.deps import get_db
+from tartib.space_descriptions import (
+    DescriptionError,
+    StaleDescription,
+    UnknownSpace,
+    set_space_description,
+    space_description,
+)
 from tartib.store import list_spaces, rewrite_space_links, space_policies
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
@@ -48,9 +55,38 @@ class PolicyBody(BaseModel):
     policy: Literal["auto", "ask", "file"]
 
 
+class DescriptionBody(BaseModel):
+    description: str
+    updated_at: str
+
+
 @router.get("/spaces")
 def get_spaces(conn: sqlite3.Connection = Depends(get_db)) -> dict:
-    return {"spaces": list_spaces(conn), "policies": space_policies(conn)}
+    names = list_spaces(conn)
+    details = [
+        {"name": name, **(space_description(conn, name) or {"description": "", "updated_at": ""})}
+        for name in names
+    ]
+    return {
+        "spaces": names,
+        "policies": space_policies(conn),
+        "descriptions": {detail["name"]: detail for detail in details},
+    }
+
+
+@router.put("/spaces/{name}/description")
+def put_space_description(
+    name: str, body: DescriptionBody, conn: sqlite3.Connection = Depends(get_db)
+) -> dict:
+    space = name.strip().lower()
+    try:
+        return set_space_description(conn, space, body.description, body.updated_at)
+    except UnknownSpace as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except StaleDescription as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except DescriptionError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 @router.put("/spaces/{name}/policy")

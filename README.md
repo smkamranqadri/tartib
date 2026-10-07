@@ -36,6 +36,11 @@ No Codex? Set `TARTIB_AI_COMMAND=off` and every capture goes to Needs Attention 
 
 Spaces are managed on the Spaces screen and live in the database. `TARTIB_SPACES` only seeds the table once, when it is empty.
 
+Each space can have an owner-written description (up to 500 characters). Descriptions are shown
+on the space page and Spaces cards, and guide automatic filing. They begin empty; nothing is
+inferred or seeded. MCP `list_spaces` keeps its ordered `spaces` names and adds `details`; use
+`set_space_description` with the current `updated_at` token only when the owner asks.
+
 **Running it for real** — on a server, behind HTTPS, with push working — is in **[docs/deploying.md](docs/deploying.md)**: how to generate the password, the cookie key, the push keys and the two AI logins, the full environment table, and what to set in CapRover. Read the [security section](docs/deploying.md#security) before exposing it to anything.
 
 ## How filing works
