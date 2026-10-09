@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useSearchParams } from "react-router-dom";
 import { getAttention } from "../api";
 import ApprovalCard from "../components/ApprovalCard";
 import Card from "../components/Card";
@@ -52,6 +52,25 @@ export default function Inbox({
     settle.current = window.setTimeout(() => setSettling(false), 500);
   }
   useEffect(() => () => window.clearTimeout(settle.current), []);
+
+  /* Land on one entry (Tartib #243): a row on Home opens the Inbox at that item's card, so the
+     decision is a tap away rather than the item page's read-only proposal. The target is in the
+     URL (`?card=`), taken once per arrival, and it flashes so which one you came for is clear. */
+  const [params] = useSearchParams();
+  const focusId = Number(params.get("card")) || null;
+  const landed = useRef<number | null>(null);
+  useEffect(() => {
+    if (!focusId || !data || landed.current === focusId) return;
+    const el = document.getElementById(`card-${focusId}`);
+    if (!el) return;
+    landed.current = focusId;
+    el.scrollIntoView({ block: "center" });
+    /* The wash clears itself when it finishes, so a re-render between here and then cannot cut
+       it short -- and the class never has to be tracked back off by hand. */
+    el.classList.add("flash");
+    el.addEventListener("animationend", () => el.classList.remove("flash"), { once: true });
+  }, [focusId, data]);
+
   const items = useMemo(() => {
     const all = [...(data?.items ?? [])].sort((a, b) => b.id - a.id);
     return [...all.filter((i) => !deferred.includes(i.id)), ...all.filter((i) => deferred.includes(i.id))];
@@ -119,6 +138,7 @@ export default function Inbox({
                 item={item}
                 spaces={spaces}
                 hotkey={i === 0}
+                id={`card-${item.id}`}
                 onApproved={(id) => replace(id, null)}
                 onNotNow={(id) => {
                   setDeferred((d) => [...d.filter((x) => x !== id), id]);
@@ -138,7 +158,7 @@ export default function Inbox({
           {stale.length > 0 && (
             <ul className="rows flat">
               {stale.map((item) => (
-                <ItemRow key={item.id} item={item} onChange={updateStale} />
+                <ItemRow key={item.id} item={item} onChange={updateStale} id={`card-${item.id}`} />
               ))}
             </ul>
           )}

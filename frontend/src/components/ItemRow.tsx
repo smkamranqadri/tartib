@@ -20,15 +20,18 @@ export default function ItemRow({
   sessions = 0,
   query,
   to,
+  id,
 }: {
   item: Item;
   onChange: (item: Item) => void;
   /** The search that listed this row: the item page opens on the match. */
   query?: string;
-  /** Where the row opens, when not the item's own page: the space page's side pane. */
+  /** Where the row opens, when not the item's own page: a space's side pane, or the Inbox. */
   to?: string;
   /** Today's pomodoro count for this item, shown in the meta line when there is one. */
   sessions?: number;
+  /** Anchor target, so a screen can scroll to this row. */
+  id?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const pending = usePending();
@@ -77,6 +80,7 @@ export default function ItemRow({
 
   return (
     <Row
+      id={id}
       className={`${item.status === "done" ? "done" : ""} ${overdue ? "overdue" : ""} ${waiting ? "waiting" : ""}`}
       leading={
         isTask && editable ? (

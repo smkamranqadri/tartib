@@ -10,6 +10,7 @@ export default function Row({
   trailing,
   actions,
   className = "",
+  id,
   children,
 }: {
   /** Checkbox or glyph at the start of the row. */
@@ -23,6 +24,8 @@ export default function Row({
   /** Revealed on hover, focus, or long press. */
   actions?: ReactNode;
   className?: string;
+  /** Anchor target, so a screen can land on this row (the Inbox at a waiting item's card). */
+  id?: string;
   children?: ReactNode;
 }) {
   const [revealed, setRevealed] = useState(false);
@@ -38,6 +41,7 @@ export default function Row({
 
   return (
     <li
+      id={id}
       className={`row ${revealed ? "revealed" : ""} ${className}`}
       onTouchStart={startHold}
       onTouchEnd={endHold}
