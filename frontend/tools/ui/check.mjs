@@ -765,6 +765,92 @@ async function main() {
       return "desktop and phone description row/editor; phone clear advanced the token";
     });
 
+    // --- the needs-attention cycle (Tartib #243 and #228) ---
+    // Both need a waiting item, which only the classifier can make, and a browser run must not
+    // spend quota: the queue is stubbed at the network, in its own context with the service
+    // worker blocked, so a request the worker would answer itself still reaches page.route.
+    const attentionItem = (id, extra = {}) => ({
+      id, capture_id: id, raw_text: `UI check waiting ${id}`, space: null, shape: "note",
+      stage: "attention", created_at: new Date().toISOString(), title: null, due: null,
+      remind_at: null, starred: false, status: "open", proposal_error: null, classified_at: null,
+      updated_at: new Date().toISOString(), thought_count: 0, wait_reason: "low_confidence",
+      duplicate_of: null,
+      proposal: { shape: "note", space, title: null, due: null, remind_at: null, confidence: 0.4,
+        clarify: null, duplicate_of: null, new_space: null },
+      related: [],
+      ...extra,
+    });
+
+    await check("#228 the Inbox nav wears the waiting count, and draws nothing at zero", async () => {
+      const staleTask = attentionItem(9099, { stage: "filed", shape: "task", wait_reason: null, space });
+      let payload = { items: [attentionItem(9097), attentionItem(9098)], stale: [staleTask], stale_days: 14 };
+      const ctx = await browser.newContext({ viewport: PHONE, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+      const p = await ctx.newPage();
+      await p.route("**/api/attention*", (route) => route.fulfill({ json: payload }));
+      const countOn = (sel) =>
+        p.evaluate((s) => {
+          const a = [...document.querySelectorAll(s)].find((x) => x.textContent.includes("Inbox"));
+          return a?.querySelector(".count")?.textContent ?? null;
+        }, sel);
+      try {
+        await p.goto(URL);
+        await p.fill('input[type="password"]', PASSWORD);
+        await p.click('button[type="submit"]');
+        await p.waitForSelector(".app", { timeout: 15000 });
+        await p.waitForFunction(() => !!document.querySelector(".tabbar a .count"), null, { timeout: 8000 });
+        if ((await countOn(".tabbar a")) !== "2") throw new Error(`phone shows ${await countOn(".tabbar a")}`);
+        await p.setViewportSize({ width: 1200, height: 900 });
+        await p.waitForFunction(() => !!document.querySelector("nav.pills a .count"), null, { timeout: 8000 });
+        if ((await countOn("nav.pills a")) !== "2") throw new Error(`desktop shows ${await countOn("nav.pills a")}`);
+        // A stale task alone is not a decision waiting, so the chip goes.
+        payload = { items: [], stale: [staleTask], stale_days: 14 };
+        await p.goto(URL + "/");
+        await p.waitForSelector("nav.pills a");
+        await p.waitForTimeout(600);
+        if (await p.locator("nav.pills a .count").count()) throw new Error("a desktop chip is drawn at zero");
+        await p.setViewportSize(PHONE);
+        await p.waitForSelector(".tabbar a");
+        await p.waitForTimeout(600);
+        if (await p.locator(".tabbar a .count").count()) throw new Error("a phone chip is drawn at zero");
+        return "2 on both shells; stale alone draws nothing";
+      } finally {
+        await ctx.close();
+      }
+    });
+
+    await check("#243 a waiting row on Home opens the Inbox at its card, a stale row at Stale", async () => {
+      const waiting = attentionItem(9096);
+      const staleTask = attentionItem(9095, { stage: "filed", shape: "task", wait_reason: null, space });
+      let payload = { items: [waiting], stale: [], stale_days: 14 };
+      const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 }, serviceWorkers: "block" });
+      const p = await ctx.newPage();
+      await p.route("**/api/attention*", (route) => route.fulfill({ json: payload }));
+      try {
+        await p.goto(URL);
+        await p.fill('input[type="password"]', PASSWORD);
+        await p.click('button[type="submit"]');
+        await p.waitForSelector(".app", { timeout: 15000 });
+        await p.locator(".area-attention .row a.row-text").first().waitFor({ timeout: 8000 });
+        const href = await p.locator(".area-attention .row a.row-text").first().getAttribute("href");
+        if (href !== `/inbox?card=${waiting.id}`) throw new Error(`waiting row opens ${href}`);
+        await p.locator(".area-attention .row a.row-text").first().click();
+        await p.waitForURL(new RegExp(`/inbox\\?card=${waiting.id}`), { timeout: 8000 });
+        await p.waitForFunction((id) => document.getElementById(`card-${id}`)?.classList.contains("flash") === true, waiting.id, { timeout: 6000 });
+        // A stale task is not a decision: its row belongs on the Inbox's Stale tab.
+        payload = { items: [], stale: [staleTask], stale_days: 14 };
+        await p.goto(URL + "/");
+        await p.locator(".area-attention .row a.row-text").first().waitFor({ timeout: 8000 });
+        const href2 = await p.locator(".area-attention .row a.row-text").first().getAttribute("href");
+        if (href2 !== `/inbox/stale?card=${staleTask.id}`) throw new Error(`stale row opens ${href2}`);
+        await p.locator(".area-attention .row a.row-text").first().click();
+        await p.waitForURL(new RegExp(`/inbox/stale\\?card=${staleTask.id}`), { timeout: 8000 });
+        await p.waitForFunction((id) => document.getElementById(`card-${id}`)?.classList.contains("flash") === true, staleTask.id, { timeout: 6000 });
+        return "waiting row -> ?card=, stale row -> /inbox/stale, both land and flash";
+      } finally {
+        await ctx.close();
+      }
+    });
+
   } finally {
     for (const id of made) await api(page, "DELETE", `/api/items/${id}`).catch(() => {});
     await browser.close();

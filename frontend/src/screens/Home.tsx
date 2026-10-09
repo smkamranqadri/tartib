@@ -120,8 +120,16 @@ export default function Home({ version, answer, pending, onCloseAnswer }: { vers
             {attention.data && waiting === 0 && <Empty>All caught up.</Empty>}
             {needing.length > 0 && (
               <ul className="rows flat">
+                {/* A waiting row opens the Inbox at its card, where the decision can actually be
+                    made -- the item page shows the proposal read-only (Tartib #243). A stale task
+                    opens its own tab there, so every row in this card taps through to the Inbox. */}
                 {needing.map((item) => (
-                  <ItemRow key={item.id} item={item} onChange={updateAttention} />
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    onChange={updateAttention}
+                    to={item.stage === "attention" ? `/inbox?card=${item.id}` : `/inbox/stale?card=${item.id}`}
+                  />
                 ))}
               </ul>
             )}

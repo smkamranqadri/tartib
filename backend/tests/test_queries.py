@@ -50,9 +50,9 @@ def test_today_rules(auth, settings):
 def test_today_recent_is_newest_three_and_recent_page_is_fifty(auth):
     made = [capture(auth, f"note {i}") for i in range(12)]
     caps = [c["id"] for c in made]
-    recent = auth.get("/api/today").json()["recent"]
-    for c in made:  # file them: the page leaves out what is waiting in Needs Attention
+    for c in made:  # file them: both lists leave out what is waiting in Needs Attention
         auth.post(f"/api/items/{c['items'][0]['id']}/approve", json={"space": "work"})
+    recent = auth.get("/api/today").json()["recent"]
     assert [c["id"] for c in recent] == list(reversed(caps))[:3]
     page = auth.get("/api/recent").json()
     assert [c["id"] for c in page["captures"]] == list(reversed(caps)) and page[
@@ -69,11 +69,11 @@ def test_today_recent_is_newest_three_and_recent_page_is_fifty(auth):
     ] is None
     assert recent[0]["raw_text"] == "note 11"
     assert recent[0]["status"] == "error" and len(recent[0]["items"]) == 1
-    assert recent[0]["items"][0]["stage"] == "attention"
+    assert recent[0]["items"][0]["stage"] == "filed"
 
 
 def test_recent_page_leaves_out_what_is_waiting(ai_client, monkeypatch):
-    """Needs Attention sits above Recent in the Inbox; the same item should not be in both."""
+    """Needs Attention sits above Recent in the Inbox and Home; the same item is in neither."""
     set_classify_reply(monkeypatch, proposal(space="work"), proposal(confidence=0.3))
     mixed = capture(ai_client, "one filed, one unsure")
     # A split files nothing itself (slice 30), so one piece is filed by hand.
@@ -86,8 +86,11 @@ def test_recent_page_leaves_out_what_is_waiting(ai_client, monkeypatch):
     page = ai_client.get("/api/recent").json()["captures"]
     assert [c["id"] for c in page] == [mixed["id"]]
     assert [i["id"] for i in page[0]["items"]] == [filed["id"]]
-    # Today's three are unchanged: Home has no Needs Attention to repeat
-    assert parked["id"] in [c["id"] for c in ai_client.get("/api/today").json()["recent"]]
+    # Home repeats the same exclusion (Tartib #243): the waiting capture is not under its Recent
+    # either, and the mixed one keeps only the piece that was filed.
+    today = ai_client.get("/api/today").json()["recent"]
+    assert [c["id"] for c in today] == [mixed["id"]]
+    assert [i["id"] for i in today[0]["items"]] == [filed["id"]]
 
     ai_client.post(f"/api/items/{parked['items'][0]['id']}/approve", json={"space": "home"})
     assert [c["id"] for c in ai_client.get("/api/recent").json()["captures"]] == [

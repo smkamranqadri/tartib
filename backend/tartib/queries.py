@@ -38,6 +38,31 @@ RECENT_PAGE = 50
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
 
+def recent_page(
+    conn: sqlite3.Connection, limit: int, before: int | None = None
+) -> tuple[list[dict], int | None]:
+    """Captures newest first, keyset-paged by id, with what is waiting in Needs Attention left
+    out: those items are dropped, and so is a capture left with none -- one still filing, or
+    answered, stays. Home's short list and the Inbox's paged one read the same exclusion here,
+    so an item waiting to be decided cannot also show under Recent on either screen."""
+    rows = conn.execute(
+        f"""
+        SELECT * FROM captures
+        WHERE {"id < ? AND" if before is not None else ""}
+          (NOT EXISTS (SELECT 1 FROM items WHERE capture_id = captures.id)
+           OR EXISTS (SELECT 1 FROM items WHERE capture_id = captures.id AND stage != 'attention'))
+        ORDER BY id DESC LIMIT ?
+        """,
+        (*([before] if before is not None else []), limit + 1),
+    ).fetchall()
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    captures = [serialize_capture(conn, r) for r in rows]
+    for cap in captures:
+        cap["items"] = [i for i in cap["items"] if i["stage"] != "attention"]
+    return captures, (rows[-1]["id"] if has_more and rows else None)
+
+
 def today_rows(
     conn: sqlite3.Connection, settings: Settings, now, *, without_picks: bool = False
 ) -> tuple[list[sqlite3.Row], dict]:
@@ -76,14 +101,14 @@ def today(
     now = utcnow()
     day = today_in(settings.zone, now).isoformat()
     rows, counts = today_rows(conn, settings, now)
-    recent = conn.execute("SELECT * FROM captures ORDER BY id DESC LIMIT ?", (RECENT,)).fetchall()
+    recent, _ = recent_page(conn, RECENT)
     active = conn.execute(
         "SELECT space FROM items WHERE space IS NOT NULL ORDER BY updated_at DESC, id DESC LIMIT 1"
     ).fetchone()
     return {
         "date": day,
         "items": [serialize_item(r) for r in rows],
-        "recent": [serialize_capture(conn, r) for r in recent],
+        "recent": recent,
         "active_space": active["space"] if active else None,
         # Today's pomodoros: the total, and per task where one was attached.
         "sessions": counts,
@@ -202,25 +227,10 @@ def recent_captures(
 ) -> dict:
     """Captures newest first, keyset-paged by id: pass next_before back as before.
 
-    What is waiting in Needs Attention is not repeated here: those items are dropped, and so is
-    a capture left with none. A capture with no items at all (still filing, or answered) stays.
-    The exclusion is in the SQL so a page is still `limit` long."""
-    rows = conn.execute(
-        f"""
-        SELECT * FROM captures
-        WHERE {"id < ? AND" if before is not None else ""}
-          (NOT EXISTS (SELECT 1 FROM items WHERE capture_id = captures.id)
-           OR EXISTS (SELECT 1 FROM items WHERE capture_id = captures.id AND stage != 'attention'))
-        ORDER BY id DESC LIMIT ?
-        """,
-        (*([before] if before is not None else []), limit + 1),
-    ).fetchall()
-    has_more = len(rows) > limit
-    rows = rows[:limit]
-    captures = [serialize_capture(conn, r) for r in rows]
-    for cap in captures:
-        cap["items"] = [i for i in cap["items"] if i["stage"] != "attention"]
-    return {"captures": captures, "next_before": rows[-1]["id"] if has_more and rows else None}
+    What is waiting in Needs Attention is not repeated here; see `recent_page` for the one
+    exclusion Home and this page share."""
+    captures, next_before = recent_page(conn, limit, before)
+    return {"captures": captures, "next_before": next_before}
 
 
 def fts_query(q: str) -> str:

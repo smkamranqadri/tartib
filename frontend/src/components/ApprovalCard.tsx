@@ -29,6 +29,7 @@ export default function ApprovalCard({
   item,
   spaces,
   hotkey,
+  id,
   onApproved,
   onNotNow,
   onRetried,
@@ -37,6 +38,8 @@ export default function ApprovalCard({
   item: Item;
   spaces: string[];
   hotkey?: boolean;
+  /** Anchor target, so the Inbox can land on this card. */
+  id?: string;
   onApproved: (id: number) => void;
   onNotNow?: (id: number) => void;
   /** The classifier tried again and the item is still waiting, with a new proposal. */
@@ -156,7 +159,7 @@ export default function ApprovalCard({
   }); // re-bound every render so approve sees the latest draft
 
   return (
-    <div className={`one ${hotkey ? "hot" : ""}`}>
+    <div id={id} className={`one ${hotkey ? "hot" : ""}`}>
       {/* The card is two halves on a wide screen: what you are deciding about on the left, the
           decision itself on the right. Stacked, it left everything in the first third of a
           1200px card and wasted the rest. */}

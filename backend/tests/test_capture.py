@@ -88,11 +88,11 @@ def test_a_queued_capture_is_safe_to_send_twice(auth):
     assert again.status_code == 200, "a repeat is not a new capture"
     assert again.json()["id"] == first.json()["id"]
 
-    # And there is genuinely one row, not two that merely share an id in the response.
-    # (Today's list, not /api/recent: with AI off this capture waits in Needs Attention, which
-    # the Recent page leaves out.)
-    recent = auth.get("/api/today").json()["recent"]
-    assert [c["raw_text"] for c in recent].count("call the dentist") == 1
+    # And there is genuinely one row, not two that merely share an id in the response. The item
+    # list, because with AI off this capture waits in Needs Attention: both Recent lists leave a
+    # waiting capture out (Tartib #243), so neither can be where a second row would show.
+    items = auth.get("/api/items").json()["items"]
+    assert [i["raw_text"] for i in items].count("call the dentist") == 1
 
 
 def test_the_retry_wins_even_when_the_text_differs(auth):

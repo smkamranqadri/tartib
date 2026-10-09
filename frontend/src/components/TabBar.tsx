@@ -4,7 +4,7 @@ import { HomeIcon, InboxIcon, LayersIcon, SettingsIcon } from "./Icons";
 
 /** The phone's navigation, under the thumb. Hidden on wide screens, where the header's pills do
  *  the same job. The ⊕ in the middle is capture (and, from step 2, ask). */
-export default function TabBar({ onAdd }: { onAdd: () => void }) {
+export default function TabBar({ onAdd, count }: { onAdd: () => void; count?: number | null }) {
   // Its height is published, so the ask bar and the session card stack above it exactly.
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -27,7 +27,8 @@ export default function TabBar({ onAdd }: { onAdd: () => void }) {
       </NavLink>
       <NavLink to="/inbox">
         <InboxIcon />
-        <span>Inbox</span>
+        {/* The decisions waiting in the Inbox (Tartib #228). Nothing is drawn at zero. */}
+        <span>Inbox{!!count && <span className="count">{count}</span>}</span>
       </NavLink>
       <button type="button" className="tab-add" onClick={onAdd} aria-label="Capture">
         <span aria-hidden="true">+</span>

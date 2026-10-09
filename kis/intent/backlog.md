@@ -49,6 +49,10 @@ Approved, not yet planned. Each gets a plan file when it comes up:
   should show it, unless the plan decides otherwise. The count has to update when a card is
   decided (the `version` bump the Inbox routes already use), and like every count it may lag
   offline (SPEC, Offline). A zero should show nothing.
+  **Built on `cycle-needs-attention` 2026-10-07, awaiting merge.** The badge is on the Inbox pill
+  (`App.tsx`) and the phone's Inbox tab (`TabBar.tsx`), counting only the decisions waiting (not
+  stale), and a zero draws nothing. The header's right-side "N needs you" readout stays, still
+  summing attention and stale.
 
 Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
 
@@ -127,6 +131,10 @@ Defects:
     row should open the Inbox, at that item's card.
   - **Nothing outside Home says something is waiting.** The Inbox count in the nav (the entry
     above, Tartib #228) is the rest of the answer.
+  **Built on `cycle-needs-attention` 2026-10-07, awaiting merge.** Home's Recent reads the Inbox
+  Recent's one exclusion (`recent_page`, `queries.py`), so a waiting capture is under neither; a
+  waiting row opens `/inbox?card=<id>` at that item's card and a stale row `/inbox/stale?card=<id>`,
+  which scrolls to it and flashes it.
 
 - **Forgetting to run a session. Reported by the owner 2026-09-24.** Work goes untracked because
   no session was started, or because the next one was not started after the last one ended.

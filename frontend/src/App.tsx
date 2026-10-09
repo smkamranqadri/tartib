@@ -153,6 +153,10 @@ export default function App() {
      the time. Both are readouts, not controls -- the nav is for going places. */
   const attention = useLoad(() => (authed ? getAttention() : Promise.resolve(null)), [authed, version]);
   const waitingCount = attention.data ? attention.data.items.length + attention.data.stale.length : null;
+  /* What the Inbox nav item wears (Tartib #228): the decisions waiting there. Attention only,
+     unlike the readout's sum with stale, because a stale task is not a decision. It follows the
+     same `version` bump the Inbox routes fire, so deciding a card moves it. */
+  const inboxCount = attention.data ? attention.data.items.length : null;
   const [clock, setClock] = useState(() => new Date());
   useEffect(() => {
     const t = window.setInterval(() => setClock(new Date()), 30_000);
@@ -235,7 +239,7 @@ export default function App() {
               <HomeIcon /> Home
             </NavLink>
             <NavLink to="/inbox">
-              <InboxIcon /> Inbox
+              <InboxIcon /> Inbox{!!inboxCount && <span className="count">{inboxCount}</span>}
             </NavLink>
             <NavLink to="/spaces" className={onSearchPage ? "active" : undefined}>
               <LayersIcon /> Spaces
@@ -290,7 +294,7 @@ export default function App() {
             above the ask bar while the page scrolls. */}
         {location.pathname !== "/" && <SessionBar placement="float" />}
         {wideEnough && <AskBar spaces={spaces} />}
-        {!wideEnough && <TabBar onAdd={() => setSheet("capture")} />}
+        {!wideEnough && <TabBar onAdd={() => setSheet("capture")} count={inboxCount} />}
         {!wideEnough && openItem && (
           <ItemSheet
             itemId={openItem}
