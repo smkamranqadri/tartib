@@ -3,22 +3,29 @@
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`.
-  Slice 38 is merged by fast-forward at code commit `b230c3d`; main is pushed and the feature
-  branch removed.
+  #378 space descriptions is merged by fast-forward at code commit `e5890af` (feature branch
+  and worktree removed at close). Not deployed: the owner said no deploy for now.
 - **Live: `v2.6`**, deployed by the owner and checked 2026-10-07 as
   `smkamranqadri/tartib:v2.6`, code `b230c3d`: Slice 38 find_replace, seventeen MCP tools.
   Backend only; no migration or service-worker change. Rollback is `v2.5` on schema 24.
-- Task: Slice 38 deployed and verified. Health and MCP contract checked live; expected-count
-  mismatch refused and get_item readback confirmed unchanged item and thoughts. Tartib #380 done.
+- Task: #378 space descriptions done on main, unreleased. Owner-written description per
+  space (500 characters, empty clears, stale-write token), migration 0025, app editor,
+  REST, MCP `set_space_description` (eighteen tools), description-aware classification
+  capped at 12,000 characters of space context. Plan and decisions:
+  `../intent/space-descriptions.md`; verification: `../tartib.reports/space-descriptions/design-handoff.md`,
+  "Resume verification". Tartib #378 stays open until released.
+- Before releasing #378 (as `v2.7`): prove `v2.6` starts and works on schema 25 (rollback);
+  run the live described-vs-baseline eval once Codex quota returns
+  (`backend/tests/test_space_descriptions_eval.py`, `-m eval`); bump `SW_VERSION`.
+- Rest of the approved cycle, not started: #243 Home Needs attention, #228 nav Inbox count,
+  #281 session finish sound. Next: the owner picks one. Orchestrator ledger:
+  `../tartib.reports/orch/ledger.md`.
 
 ## Open
 
 - **Cloudflare still overrides the browser cache on `sw.js`** (`max-age=14400` where the app
   sends `no-cache`; Knowledge, Deploy). Until Browser Cache TTL is set to Respect Existing
   Headers, a new version can take four hours to reach the phone, or a delete and re-add.
-- **Not yet seen on the phone:** the modals (`<dialog>` on iOS), tickable checklists, the first
-  line as the title, the pills, Pick for me, the `[[` picker, slice 36's link cards and slice
-  37's thought Edit and Delete. Each was proved in Chrome only.
 - **Real data is accumulating on the live database, to be read later.** `ai_calls` records what
   was in each prompt (migration 0017, cannot be backfilled), and `TARTIB_DUPLICATE_PARK` is
   **off**, so duplicate verdicts are recorded while nothing is held back. It should answer
@@ -30,22 +37,18 @@
 
 ## Next
 
-1. **Try `v2.6` on the phone**: one Pick, one `[[link]]` with the picker, a thought's Edit and
-   Delete, and a link card's Link / No links / Later.
-2. **Run the namazee flow over `/mcp`**: pull its tasks, and after the work mark one done with a
-   thought.
-3. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
+1. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
    `linked` item, which ignores the link hold (slice 33's plan, Known).
-4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
-5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+2. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
+3. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-6. **Answer the four questions** under Known gaps, on `v2.6`.
+4. **Answer the four questions** under Known gaps, on `v2.6`.
 
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **383 passed, 9 deselected** (the nine are the evals) and
-  **22/22** from `npm run ui`. Any red is real.
+  Verification commands. Expect **397 passed, 10 deselected** (the ten are the evals; run pytest from `backend/`, or
+  its `-m 'not eval'` default is skipped and the evals call Codex) and **23/23** from `npm run ui`. Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName" (version
   numbering: `../knowledge/technical.md`, Deploy). `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
   it is at `2026-09-27.1`.
@@ -54,6 +57,15 @@
 - Local development: `docker compose up -d --build` against http://localhost:8000.
 
 ## Proof
+
+**MCP task flow, 2026-10-07:** owner confirmed ongoing use across multiple
+projects. Open Namazee tasks were independently read through MCP in this session;
+completion and thought writes are owner-reported proof from their existing use.
+
+**Phone check, 2026-10-07:** owner reported "all working" after the v2.6 phone
+checklist (Pick, `[[` picker and links, thought Edit/Delete, link-card actions where
+available, modals, checklists, titles and pills). Owner-reported manual proof; no
+independent device probe or confirmation that link proposals were enabled.
 
 Slice 38's local tests and mutation checks are in `../intent/slice-38-find-replace.md`;
 older releases and checks are in `../intent/history.md`.

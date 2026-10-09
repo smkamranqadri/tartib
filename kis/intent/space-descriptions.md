@@ -2,7 +2,7 @@
 
 Owner-approved scope, 2026-10-07. Standard mode on `cycle-space-descriptions`.
 The owner approved the design and said “looks good, let’s proceed” on 2026-10-07;
-implementation is authorized and in progress on this branch.
+implemented and merged into main at `e5890af` on 2026-10-07; not yet released.
 Shared State belongs to the coordinator and is not changed by this stream.
 
 ## Cycle decisions
@@ -65,7 +65,7 @@ matched real-model evals. Mutation-check new guards and description propagation,
 restoring saved originals. Visually inspect rendered UI after changes.
 ## Status (2026-10-07, resume verification)
 
-Implemented on this branch, uncommitted. Proved locally: non-eval backend suite 397
+Committed as `e5890af` and merged into main; also proved in a clean detached checkout. Proved locally: non-eval backend suite 397
 passed (10 evals deselected), ruff clean, typecheck and build, `npm run ui` 23/23, the
 four rendered exports compared with the approved ones, and `set_space_description` over
 `/mcp` on a scratch database (set, readback, stale refused, 501 refused, clear, unknown

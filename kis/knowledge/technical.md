@@ -413,7 +413,7 @@ over published history. Scrub by commit going forward, never by rewrite.
 
 ```sh
 cd backend && uv run pytest -q && uv run ruff check .
-cd backend && uv run pytest -m eval        # 9 evals. One alone: -k heading
+cd backend && uv run pytest -m eval        # 10 evals. One alone: -k heading
 # The last timing, 56 real calls in ~2m45s, was taken with 8; slice 33 added the links eval.
 # The evals read the pin out of .env, so they measure the classifier that ships. They did
 # not until 2026-09-22, and their numbers before that describe the CLI's default model.
