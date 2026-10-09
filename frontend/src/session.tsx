@@ -83,10 +83,19 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
         ended.id === tracking.current &&
         ended.id !== rung.current &&
         ended.ended_at !== null &&
-        ended.ended_at >= ended.ends_at && // ran out; stopped by hand never rings
+        // Exactly equal is the only ran-out: the server stamps ended_at = ends_at when the
+        // clock runs down (close_finished) and when the outcome is set (set_outcome), while a
+        // hand-stop stamps now, which is strictly past ends_at whenever Stop is tapped after
+        // the time was up. Equality keeps the ran-out; everything later is a hand-stop.
+        ended.ended_at === ended.ends_at &&
         // A push check that fails is read as no push: a missed announcement is worse than a
         // late one, and it must never cost the state update below.
-        (await currentSubscription().catch(() => null)) === null
+        (await currentSubscription().catch(() => null)) === null &&
+        // Re-asserted after that await: coming back to the tab fires visibilitychange and
+        // focus together, so a second reload() can be in flight and pass the tests above
+        // while this one is suspended at the await. Whichever caller resumes last sees
+        // rung.current already set, and only the other rings -- one end, one ring.
+        ended.id !== rung.current
       ) {
         rung.current = ended.id;
         writeStored(RUNG_KEY, ended.id);

@@ -774,21 +774,23 @@ async function main() {
   // stopped by hand. The push case fakes a subscription the way the app asks for one.
   await check("#281 an unwatched session end rings on return, once, unless push is on", async () => {
     const whole = (offsetMs) => new Date(Date.now() + offsetMs).toISOString().replace(/\.\d{3}Z$/, "Z");
-    const session = (id, ranOut) => ({
+    const session = (id, ranOut, late = false) => ({
       id,
       item_id: null,
       started_at: whole(-120000),
       ends_at: whole(-60000),
-      // ran out: ended exactly at ends_at. Stopped by hand: ended before it.
-      ended_at: ranOut ? whole(-60000) : whole(-90000),
+      // Ran out: ended exactly at ends_at (the server stamps ended_at = ends_at). Stopped by
+      // hand: ended before ends_at, or strictly past it when Stop is tapped after the time was
+      // up -- `late` is that second shape, the one the exact-equality test has to keep out.
+      ended_at: late ? whole(-30000) : ranOut ? whole(-60000) : whole(-90000),
       outcome: null,
       created_at: whole(-120000),
     });
-    const run = async (id, { ranOut, subscribed }) => {
+    const run = async (id, { ranOut, subscribed, tracked = true, late = false }) => {
       const ctx = await browser.newContext({ viewport: PHONE, serviceWorkers: "block" });
       const p = await ctx.newPage();
       await p.addInitScript(
-        ([trackId, withSub]) => {
+        ([trackId, withSub, withTrack]) => {
           window.__ring = { starts: 0 };
           for (const name of ["createBufferSource", "createOscillator"]) {
             const orig = AudioContext.prototype[name];
@@ -802,11 +804,15 @@ async function main() {
               return node;
             };
           }
-          try {
-            // What this tab was counting when it last saw the session running.
-            sessionStorage.setItem("tartib-session-tracking", String(trackId));
-          } catch {
-            /* storage refused: the check cannot mean anything, and will fail below */
+          if (withTrack) {
+            try {
+              // What this tab was counting when it last saw the session running. A tab that
+              // never saw it running carries no key: it did not watch the session, so the
+              // tracking guard must keep it silent.
+              sessionStorage.setItem("tartib-session-tracking", String(trackId));
+            } catch {
+              /* storage refused: the check cannot mean anything, and will fail below */
+            }
           }
           if (withSub && "serviceWorker" in navigator) {
             const fake = { pushManager: { getSubscription: async () => ({ endpoint: "https://example.invalid/x" }) } };
@@ -817,10 +823,10 @@ async function main() {
             }
           }
         },
-        [id, subscribed],
+        [id, subscribed, tracked],
       );
       await p.route("**/api/sessions/current*", (route) =>
-        route.fulfill({ json: { state: "awaiting", session: session(id, ranOut), item: null } }),
+        route.fulfill({ json: { state: "awaiting", session: session(id, ranOut, late), item: null } }),
       );
       try {
         await ctx.request.post(`${URL}/api/login`, { data: { password: PASSWORD } });
@@ -835,12 +841,16 @@ async function main() {
     };
 
     const ranOut = await run(77001, { ranOut: true, subscribed: false });
-    if (ranOut < 1) throw new Error("an unwatched end did not ring on return");
+    if (ranOut !== 1) throw new Error(`an unwatched end rang ${ranOut} times, not once, on return`);
     const stopped = await run(77002, { ranOut: false, subscribed: false });
     if (stopped !== 0) throw new Error(`a hand-stopped session rang (${stopped})`);
+    const stoppedLate = await run(77005, { ranOut: true, subscribed: false, late: true });
+    if (stoppedLate !== 0) throw new Error(`a session stopped by hand after its time had run out rang (${stoppedLate})`);
     const pushed = await run(77003, { ranOut: true, subscribed: true });
     if (pushed !== 0) throw new Error(`rang while push is on (${pushed})`);
-    return "rings once for an unwatched end; silent when stopped by hand or push is on";
+    const untracked = await run(77004, { ranOut: true, subscribed: false, tracked: false });
+    if (untracked !== 0) throw new Error(`rang for a session this tab never tracked (${untracked})`);
+    return "rings once for an unwatched end; silent when stopped by hand (before or after expiry), push is on, or never tracked";
   });
 
   } finally {
