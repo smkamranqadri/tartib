@@ -3,8 +3,8 @@
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`.
-  #378 space descriptions is merged by fast-forward at code commit `e5890af` (feature branch
-  and worktree removed at close). Not deployed: the owner said no deploy for now.
+  The `#378` + `#243` + `#228` + `#281` cycle is merged on main by two merge commits, tip
+  `192f64f` (not pushed). Not deployed: `v2.6` is live and the owner has not released.
 - **Live: `v2.6`**, deployed by the owner and checked 2026-10-07 as
   `smkamranqadri/tartib:v2.6`, code `b230c3d`: Slice 38 find_replace, seventeen MCP tools.
   Backend only; no migration or service-worker change. Rollback is `v2.5` on schema 24.
@@ -14,12 +14,14 @@
   capped at 12,000 characters of space context. Plan and decisions:
   `../intent/space-descriptions.md`; verification: `../tartib.reports/space-descriptions/design-handoff.md`,
   "Resume verification". Tartib #378 stays open until released.
-- Before releasing #378 (as `v2.7`): prove `v2.6` starts and works on schema 25 (rollback);
-  run the live described-vs-baseline eval once Codex quota returns
-  (`backend/tests/test_space_descriptions_eval.py`, `-m eval`); bump `SW_VERSION`.
-- Rest of the approved cycle, not started: #243 Home Needs attention, #228 nav Inbox count,
-  #281 session finish sound. Next: the owner picks one. Orchestrator ledger:
-  `../tartib.reports/orch/ledger.md`.
+- Before releasing the cycle (as `v2.7`): prove `v2.6` starts and works on schema 25
+  (rollback); run the live described-vs-baseline eval once Codex quota returns
+  (`backend/tests/test_space_descriptions_eval.py`, `-m eval`); bump `SW_VERSION` by hand.
+- The rest of the cycle -- #243 Home Needs attention, #228 nav Inbox count, #281 session
+  finish sound -- is implemented and merged on main, unreleased. Verified on the merged tree
+  on 2026-10-09: backend 397 passed / 10 deselected, frontend typecheck and build clean,
+  `npm run ui` 26/26 with three new checks. Details: `../intent/backlog.md` and
+  `../intent/bug-281-session-ring.md`; orchestrator ledger: `../tartib.reports/orch/ledger.md`.
 
 ## Open
 
