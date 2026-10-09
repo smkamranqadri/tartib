@@ -6,7 +6,30 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { answerSession, describe, getCurrentSession, startSession, stopSession } from "./api";
 import { playChime, unlockChime } from "./chime";
+import { currentSubscription } from "./push";
 import type { Outcome, SessionState } from "./types";
+
+/** The session this tab is counting, and the one it has already rung for. Kept in
+ *  sessionStorage so a reload (or a wake from frozen) still knows what it was watching: an
+ *  in-memory ref is lost exactly when the catch-up below needs it. */
+const TRACK_KEY = "tartib-session-tracking";
+const RUNG_KEY = "tartib-session-rung";
+function readStored(key: string): number | null {
+  try {
+    const v = sessionStorage.getItem(key);
+    return v === null ? null : Number(v);
+  } catch {
+    return null;
+  }
+}
+function writeStored(key: string, id: number | null): void {
+  try {
+    if (id === null) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, String(id));
+  } catch {
+    /* private mode: the ring still works for a tab that never reloads */
+  }
+}
 
 interface SessionContextValue {
   current: SessionState | null;
@@ -41,11 +64,50 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
   const [error, setError] = useState<string | null>(null);
   // The session this tab has already rung for: the countdown can read zero on more than one tick
   // before the server confirms the end.
-  const rung = useRef<number | null>(null);
+  const rung = useRef<number | null>(readStored(RUNG_KEY));
+  // The session this tab is counting, so an end it did not watch can still be rung for.
+  const tracking = useRef<number | null>(readStored(TRACK_KEY));
 
   const reload = useCallback(async () => {
     try {
       const next = await getCurrentSession();
+      // A session this tab was counting that ended while it was not watching -- the tab left
+      // open in the background, where the 1s countdown is throttled or frozen, or the machine
+      // asleep -- never reached the zero tick, so nothing ever rang. Ring now instead, once:
+      // on the next wake the end is still here to be heard even though the moment was missed.
+      // Not when this device has push: the notification is the announcer for that case, and a
+      // chime on top of it is the nagging rule 4 exists to prevent (owner, 2026-10-07).
+      const ended = next.state === "awaiting" ? next.session : null;
+      if (
+        ended &&
+        ended.id === tracking.current &&
+        ended.id !== rung.current &&
+        ended.ended_at !== null &&
+        // Exactly equal is the only ran-out: the server stamps ended_at = ends_at when the
+        // clock runs down (close_finished) and when the outcome is set (set_outcome), while a
+        // hand-stop stamps now, which is strictly past ends_at whenever Stop is tapped after
+        // the time was up. Equality keeps the ran-out; everything later is a hand-stop.
+        ended.ended_at === ended.ends_at &&
+        // A push check that fails is read as no push: a missed announcement is worse than a
+        // late one, and it must never cost the state update below.
+        (await currentSubscription().catch(() => null)) === null &&
+        // Re-asserted after that await: coming back to the tab fires visibilitychange and
+        // focus together, so a second reload() can be in flight and pass the tests above
+        // while this one is suspended at the await. Whichever caller resumes last sees
+        // rung.current already set, and only the other rings -- one end, one ring.
+        ended.id !== rung.current
+      ) {
+        rung.current = ended.id;
+        writeStored(RUNG_KEY, ended.id);
+        void playChime();
+      }
+      if (next.state === "running" && next.session) {
+        tracking.current = next.session.id;
+        writeStored(TRACK_KEY, next.session.id);
+      } else if (next.state === null) {
+        tracking.current = null;
+        writeStored(TRACK_KEY, null);
+      }
       setCurrent(next);
       setRemaining(secondsLeft(next.session?.ends_at));
     } catch {
@@ -65,11 +127,12 @@ export function SessionProvider({ children, onFinish }: { children: ReactNode; o
       const left = secondsLeft(current.session?.ends_at);
       setRemaining(left);
       if (left === 0) {
-        // Only a countdown watched to zero rings. A session stopped by hand never gets here, and
-        // one that ended while the app was away is the push notification's to announce.
+        // A countdown watched to zero rings here. A session stopped by hand never gets here;
+        // one that ended while this tab was not watching is caught by `reload` instead.
         const id = current.session?.id ?? null;
         if (id !== null && rung.current !== id) {
           rung.current = id;
+          writeStored(RUNG_KEY, id);
           void playChime();
         }
         void reload();
