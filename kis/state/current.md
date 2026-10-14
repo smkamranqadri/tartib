@@ -22,6 +22,9 @@
   on 2026-10-09: backend 397 passed / 10 deselected, frontend typecheck and build clean,
   `npm run ui` 26/26 with three new checks. Details: `../intent/backlog.md` and
   `../intent/bug-281-session-ring.md`; orchestrator ledger: `../tartib.reports/orch/ledger.md`.
+- MCP `search` and `list_items` return id, first line and a snippet, not the whole item
+  (`41d8c63`, merged on main 2026-10-14, unreleased; plan `../intent/search-snippets.md`).
+  Verified in a clean checkout at `41d8c63`: backend 399 passed / 10 deselected. Ships with `v2.7`.
 
 ## Open
 
