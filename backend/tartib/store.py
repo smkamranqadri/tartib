@@ -381,6 +381,7 @@ def space_policies(conn: sqlite3.Connection) -> dict[str, str]:
 # They live here rather than in ask.py because classify must not import from ask.
 
 MAX_ITEMS = 20
+SNIPPET_TOKENS = 12  # words of context in a search hit's snippet, around the match
 
 STOPWORDS = frozenset(
     """a about after again all am an and any are as at be because been before being but by
@@ -416,10 +417,16 @@ def _space_clause(space: str | None) -> tuple[str, list[object]]:
 
 
 def search(conn: sqlite3.Connection, match: str, space: str | None) -> list:
-    """Items matching an FTS5 query, best first, plus any whose thoughts match it."""
+    """Items matching an FTS5 query, best first, plus any whose thoughts match it.
+
+    Every row carries a `snippet` column: a short window around the match, taken from the item's
+    own text or -- for a hit found only through a thought -- from the thought that matched. It is
+    what the MCP tools show instead of the whole item (the REST search builds its own rows)."""
     space_sql, params = _space_clause(space)
     rows = conn.execute(
-        "SELECT items.* FROM items_fts JOIN items ON items.id = items_fts.rowid"
+        "SELECT items.*, snippet(items_fts, -1, '[', ']', '…', "
+        f"{SNIPPET_TOKENS}) AS snippet"
+        " FROM items_fts JOIN items ON items.id = items_fts.rowid"
         f" WHERE items_fts MATCH ?{space_sql} ORDER BY items_fts.rank, items.id DESC LIMIT ?",
         [match, *params, MAX_ITEMS],
     ).fetchall()
@@ -1306,12 +1313,22 @@ def items_by_thoughts(
     limit: int,
 ) -> list[sqlite3.Row]:
     """Items whose thoughts match an FTS5 query, newest first, under the same filters -- the
-    ones their own text did not already bring up."""
+    ones their own text did not already bring up.
+
+    Each row carries a `snippet` column from the thought that matched, so a hit found only
+    through a thought still shows why (paired with `search`'s own snippet column)."""
     sql = (
-        "SELECT items.* FROM items WHERE items.id IN (SELECT t.item_id FROM thoughts_fts"
+        "SELECT items.*, ("
+        "  SELECT snippet(thoughts_fts, 0, '[', ']', '…', "
+        f"  {SNIPPET_TOKENS})"
+        "  FROM thoughts_fts JOIN item_thoughts t2 ON t2.id = thoughts_fts.rowid"
+        "  WHERE t2.item_id = items.id AND thoughts_fts MATCH ?"
+        "  LIMIT 1"
+        ") AS snippet"
+        " FROM items WHERE items.id IN (SELECT t.item_id FROM thoughts_fts"
         " JOIN item_thoughts t ON t.id = thoughts_fts.rowid WHERE thoughts_fts MATCH ?)"
     )
-    args: list[object] = [match]
+    args: list[object] = [match, match]
     for clause in where:
         sql += f" AND {clause}"
     args += list(params)

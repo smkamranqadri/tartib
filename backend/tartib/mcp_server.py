@@ -42,6 +42,7 @@ from tartib.store import (
     serialize_item,
     thought_on,
     thoughts_for,
+    title_of,
     update_fields,
 )
 from tartib.store import (
@@ -50,6 +51,8 @@ from tartib.store import (
 
 LIST_LIMIT = 100
 MAX_TEXT = 20_000  # the REST API's own cap on an item's text
+FIRST_LINE_MAX = 120  # a hit's first line, which is what names an item (a note keeps no title)
+SNIPPET_CHARS = 200  # a hit's opening excerpt when there is no query match to window around
 MIN_TOKEN = 32  # /mcp has no throttle of its own; a long random token is what makes that fine
 
 INSTRUCTIONS = """Tartib is one person's notes and tasks, sorted into spaces.
@@ -60,6 +63,8 @@ INSTRUCTIONS = """Tartib is one person's notes and tasks, sorted into spaces.
 - Never create a space without asking the person first. Suggest the name and wait for a yes.
 - Before adding a note or task, search: if the same thing is already there, add a thought to
   it instead of a near-duplicate.
+- list_items and search return each item's first line and a short snippet, not its text; call
+  get_item to read a whole item.
 - Name the space when you know it: the item is filed there directly. Without one, Tartib's own
   classifier files it, and it may wait for the person to decide.
 - When you finish work on a task, mark it done and add a thought saying what was done.
@@ -128,6 +133,30 @@ def _item(row: sqlite3.Row) -> dict:
     )
     out = {k: item.get(k) for k in keep}
     out["text"] = out.pop("raw_text")
+    return out
+
+
+HIT_FIELDS = (
+    "id", "space", "shape", "title", "due", "remind_at", "starred", "status",
+    "stage", "created_at", "updated_at", "thought_count",
+)
+
+
+def _hit(row: sqlite3.Row) -> dict:
+    """One item in a list or a search: what it is and why it matched, never its whole text.
+
+    `first_line` comes from the text (a note keeps no `title`) and is what names the item.
+    `snippet` is the window `store.search` computed around the match; with no query -- a
+    list_items -- it is a short opening excerpt. `get_item` is the way to read a whole item.
+    """
+    item = serialize_item(row)
+    out = {k: item.get(k) for k in HIT_FIELDS}
+    line = title_of(row["raw_text"]) or ""
+    out["first_line"] = line[:FIRST_LINE_MAX]
+    snippet = (item.get("snippet") or "").strip()
+    if not snippet:
+        snippet = " ".join((row["raw_text"] or "").split())[:SNIPPET_CHARS]
+    out["snippet"] = snippet
     return out
 
 
@@ -240,7 +269,8 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
         name="list_items",
         description=(
             "Filed items in one space: open tasks first (by due date), then done tasks, then "
-            "notes, newest first. shape: task|note; status: open|done (tasks only)."
+            "notes, newest first. shape: task|note; status: open|done (tasks only). Each item is "
+            "a summary (first line and a short excerpt), not its text; use get_item to read one."
         ),
     )
     def list_items(space: str, shape: str | None = None, status: str | None = None) -> dict:
@@ -263,7 +293,7 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
             return {
                 "space": name,
                 "description": (space_description(c, name) or {}).get("description", ""),
-                "items": [_item(r) for r in rows],
+                "items": [_hit(r) for r in rows],
             }
         finally:
             c.close()
@@ -285,7 +315,11 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
 
     @server.tool(
         name="search",
-        description="Search items' text and thoughts, best match first; optionally in one space.",
+        description=(
+            "Search items' text and thoughts, best match first; optionally in one space. Each hit "
+            "is a summary (first line and a snippet around the match), not the item's text; use "
+            "get_item to read one."
+        ),
     )
     def search(query: str, space: str | None = None) -> dict:
         c = conn()
@@ -293,7 +327,7 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
             name = space_or_fail(c, space) if space else None
             match = fts_query(query)
             rows = search_items(c, match, name) if match else []
-            return {"items": [_item(r) for r in rows]}
+            return {"items": [_hit(r) for r in rows]}
         finally:
             c.close()
 

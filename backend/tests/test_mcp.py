@@ -693,3 +693,57 @@ def test_thoughts_are_edited_and_deleted(served):
             assert [t["text"] for t in item["thoughts"]] == ["first, revised"]
 
     asyncio.run(go())
+
+
+def test_search_and_list_items_return_summaries_not_whole_items(served):
+    """A search or a list over long items is what blew agents' context up: each hit is a short
+    summary (first line and a snippet), and get_item stays the way to read one in full."""
+    body = "Preamble about context budgets.\n" + "A context line with the marker needle.\n" * 300
+    notes = [
+        api(served, "POST", "/api/items", json={
+            "shape": "note", "space": "ideas", "text": f"{body}\ncopy {n}",
+        }).json()
+        for n in range(3)
+    ]
+    assert all(len(n["raw_text"]) > 10_000 for n in notes)  # ~30k chars if returned whole
+
+    async def go():
+        async with session(served) as s:
+            err, found = await call(s, "search", query="needle")
+            assert not err
+            assert {i["id"] for i in found["items"]} == {n["id"] for n in notes}
+            err, listed = await call(s, "list_items", space="ideas")
+            assert not err
+            assert {i["id"] for i in listed["items"]} == {n["id"] for n in notes}
+            for result in (found, listed):
+                for hit in result["items"]:
+                    assert "text" not in hit
+                    assert hit["first_line"] == "Preamble about context budgets."
+                    assert "needle" in hit["snippet"]
+            # The whole reply is a summary, not ~30k chars of body.
+            assert len(json.dumps(found)) < 2_000
+            assert len(json.dumps(listed)) < 2_000
+            # get_item is unchanged: the whole item, thoughts and links.
+            _, whole = await call(s, "get_item", id=notes[0]["id"])
+            assert whole["text"] == notes[0]["raw_text"] and len(whole["text"]) > 10_000
+
+    asyncio.run(go())
+
+
+def test_a_hit_found_through_a_thought_shows_the_thought(served):
+    """A search matches thoughts too; its hit's snippet comes from the matched thought, so the
+    agent can see why an item whose own text lacks the word came back."""
+    note = api(served, "POST", "/api/items", json={
+        "shape": "note", "space": "ideas", "text": "A note with nothing special in its own text.",
+    }).json()
+
+    async def go():
+        async with session(served) as s:
+            await call(s, "add_thought", id=note["id"], text="The zebra crossing is where it goes.")
+            err, found = await call(s, "search", query="zebra")
+            assert not err
+            hit = next(i for i in found["items"] if i["id"] == note["id"])
+            assert "text" not in hit
+            assert "zebra" in hit["snippet"]
+
+    asyncio.run(go())
