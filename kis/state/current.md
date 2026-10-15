@@ -2,9 +2,11 @@
 
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
-- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`.
-  The `#378` + `#243` + `#228` + `#281` cycle is merged on main by two merge commits, tip
-  `192f64f` (not pushed). Not deployed: `v2.6` is live and the owner has not released.
+- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, pushed and
+  in step with it. The `#378` + `#243` + `#228` + `#281` cycle is merged by two merge commits
+  (`ff734b7`, `192f64f`); the owner's later work sits on top, the newest being the search
+  snippets (`41d8c63`) and the KIS anchor 0.10.1 (`90ed6ab`). Not deployed: `v2.6` is live and
+  the owner has not released.
 - **Live: `v2.6`**, deployed by the owner and checked 2026-10-07 as
   `smkamranqadri/tartib:v2.6`, code `b230c3d`: Slice 38 find_replace, seventeen MCP tools.
   Backend only; no migration or service-worker change. Rollback is `v2.5` on schema 24.

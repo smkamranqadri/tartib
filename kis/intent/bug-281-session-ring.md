@@ -1,8 +1,9 @@
 # Bug #281: the session-finish ring does not play on a long-open window
 
-Owner-scoped fix, 2026-10-07. Standard mode on `cycle-session-ring`. The owner answered the
-KIS plan questions before any code: the window is **open but not in front** when the ring fails;
-push **is** enabled on that device; and the rule for the fix is **ring only when push is off**.
+Owner-scoped fix, 2026-10-07; merged into main at `192f64f` on 2026-10-09, branch and worktree
+removed. The owner answered the KIS plan questions before any code: the window is **open but not
+in front** when the ring fails. Push **is** enabled on that device; and the rule for the fix is
+**ring only when push is off**.
 Shared State belongs to the coordinator and is not changed by this stream.
 
 ## Cause (reproduced)
