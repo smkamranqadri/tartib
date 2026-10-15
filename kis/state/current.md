@@ -5,26 +5,31 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, pushed and
   in step with it. The `#378` + `#243` + `#228` + `#281` cycle is merged by two merge commits
   (`ff734b7`, `192f64f`); the owner's later work sits on top, the newest being the search
-  snippets (`41d8c63`) and the KIS anchor 0.10.1 (`90ed6ab`). `v2.6` is still what is live and
-  serving; the `v2.7` image is built and pushed below, and the owner has not run the CapRover
-  deploy yet.
-- **Live: `v2.6`**, deployed by the owner and checked 2026-10-07 as
-  `smkamranqadri/tartib:v2.6`, code `b230c3d`: Slice 38 find_replace, seventeen MCP tools.
-  Backend only; no migration or service-worker change. Rollback is `v2.5` on schema 24.
-- Task: #378 space descriptions done on main, unreleased. Owner-written description per
+  snippets (`41d8c63`) and the KIS anchor 0.10.1 (`90ed6ab`). The owner deployed `v2.7` on
+  2026-10-15; it is live and verified from outside (below).
+- **Live: `v2.7`**, deployed by the owner on 2026-10-15 and verified from outside the same day:
+  public health `{"ok":true,"ai":true}`, `http://` answers 302 to `https://`, the served `sw.js`
+  says `SW_VERSION = "2026-10-15.1"`, and the page serves the bundle the build produced
+  (`assets/index-D5v0LKfV.js`). It carries #378 space descriptions (migration 0025) plus #243,
+  #228 and #281. Previous release: `v2.6` (`b230c3d`, checked 2026-10-07). Rollback is `v2.6`
+  **on schema 25** - the unproven check below: v2.6 predates migration 0025, so a rollback leaves
+  it running against a schema it did not create.
+- Task: #378 space descriptions, released in `v2.7` on 2026-10-15. Owner-written description per
   space (500 characters, empty clears, stale-write token), migration 0025, app editor,
   REST, MCP `set_space_description` (eighteen tools), description-aware classification
   capped at 12,000 characters of space context. Plan and decisions:
   `../intent/space-descriptions.md`; verification: `../tartib.reports/space-descriptions/design-handoff.md`,
-  "Resume verification". Tartib #378 stays open until released.
-- Release `v2.7`, 2026-10-15: the image is built and pushed as `smkamranqadri/tartib:v2.7`
-  (manifest index `sha256:10957e4373ef61c3d69fd4e40cb0f3d8b2ae2d92548ba001194eada87a233c75`, built
-  by `./deploy.sh v2.7`), and `SW_VERSION` is bumped to `2026-10-15.1`. The owner's remaining
-  step is CapRover's Deployment tab, "Deploy via ImageName", `smkamranqadri/tartib:v2.7`.
-  Two checks recorded here as prerequisites were **not** run: proving `v2.6` starts and works on
-  schema 25 (rollback), and the live described-vs-baseline eval (`-m eval`, needs Codex quota).
+  "Resume verification". Tartib #378 can be closed now that it is released.
+- Release `v2.7`, 2026-10-15: image built and pushed by `./deploy.sh v2.7` as
+  `smkamranqadri/tartib:v2.7` (manifest index
+  `sha256:10957e4373ef61c3d69fd4e40cb0f3d8b2ae2d92548ba001194eada87a233c75`), `SW_VERSION` bumped
+  to `2026-10-15.1`, deployed by the owner the same day. Two checks recorded here as
+  prerequisites were **not** run: proving `v2.6` starts and works on schema 25 (rollback), and the
+  live described-vs-baseline eval (`-m eval`, needs Codex quota). A phone may still take up to
+  four hours to pick this up - Cloudflare rewrites `sw.js`'s `no-cache` to `max-age=14400` (seen
+  at this deploy), which is the open item below.
 - The rest of the cycle -- #243 Home Needs attention, #228 nav Inbox count, #281 session
-  finish sound -- is implemented and merged on main, unreleased. Verified on the merged tree
+  finish sound -- is implemented, merged on main and released in `v2.7`. Verified on the merged tree
   on 2026-10-09: backend 397 passed / 10 deselected, frontend typecheck and build clean,
   `npm run ui` 26/26 with three new checks. Details: `../intent/backlog.md` and
   `../intent/bug-281-session-ring.md`; orchestrator ledger: `../tartib.reports/orch/ledger.md`.
