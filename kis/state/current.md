@@ -5,8 +5,9 @@
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, pushed and
   in step with it. The `#378` + `#243` + `#228` + `#281` cycle is merged by two merge commits
   (`ff734b7`, `192f64f`); the owner's later work sits on top, the newest being the search
-  snippets (`41d8c63`) and the KIS anchor 0.10.1 (`90ed6ab`). Not deployed: `v2.6` is live and
-  the owner has not released.
+  snippets (`41d8c63`) and the KIS anchor 0.10.1 (`90ed6ab`). `v2.6` is still what is live and
+  serving; the `v2.7` image is built and pushed below, and the owner has not run the CapRover
+  deploy yet.
 - **Live: `v2.6`**, deployed by the owner and checked 2026-10-07 as
   `smkamranqadri/tartib:v2.6`, code `b230c3d`: Slice 38 find_replace, seventeen MCP tools.
   Backend only; no migration or service-worker change. Rollback is `v2.5` on schema 24.
@@ -16,9 +17,12 @@
   capped at 12,000 characters of space context. Plan and decisions:
   `../intent/space-descriptions.md`; verification: `../tartib.reports/space-descriptions/design-handoff.md`,
   "Resume verification". Tartib #378 stays open until released.
-- Before releasing the cycle (as `v2.7`): prove `v2.6` starts and works on schema 25
-  (rollback); run the live described-vs-baseline eval once Codex quota returns
-  (`backend/tests/test_space_descriptions_eval.py`, `-m eval`); bump `SW_VERSION` by hand.
+- Release `v2.7`, 2026-10-15: the image is built and pushed as `smkamranqadri/tartib:v2.7`
+  (manifest index `sha256:10957e4373ef61c3d69fd4e40cb0f3d8b2ae2d92548ba001194eada87a233c75`, built
+  by `./deploy.sh v2.7`), and `SW_VERSION` is bumped to `2026-10-15.1`. The owner's remaining
+  step is CapRover's Deployment tab, "Deploy via ImageName", `smkamranqadri/tartib:v2.7`.
+  Two checks recorded here as prerequisites were **not** run: proving `v2.6` starts and works on
+  schema 25 (rollback), and the live described-vs-baseline eval (`-m eval`, needs Codex quota).
 - The rest of the cycle -- #243 Home Needs attention, #228 nav Inbox count, #281 session
   finish sound -- is implemented and merged on main, unreleased. Verified on the merged tree
   on 2026-10-09: backend 397 passed / 10 deselected, frontend typecheck and build clean,
