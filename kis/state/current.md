@@ -37,8 +37,12 @@
   (`41d8c63`, merged on main 2026-10-14 and released in `v2.7`; plan `../intent/search-snippets.md`).
   Verified in a clean checkout at `41d8c63`: backend 399 passed / 10 deselected. Ships with `v2.7`.
 
-- **Release `v2.8`, 2026-11-05: open-source release prep**, merged to main and tagged; the
-  image and the CapRover deploy are recorded below once done. Audit (2026-10-18):
+- **Release `v2.8`, 2026-11-05: open-source release prep**, merged to main (`e7d5994`),
+  tagged, GitHub release published, CI green on `e7d5994`. Image pushed by `./deploy.sh v2.8` as
+  `smkamranqadri/tartib:v2.8` (manifest index
+  `sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`); the CapRover deploy
+  is the owner's next step. No migration and no bundle change, so rollback to `v2.7` is clean and
+  `SW_VERSION` stays `2026-10-15.1`. Audit (2026-10-18):
   the repo has been public since slice 16; a full-history secret scan found only placeholders; one
   author identity. Changes: README rewritten (animated `docs/assets/hero.svg`, then title,
   description, product shot, how to use, contributing, security), screenshots retaken from a
