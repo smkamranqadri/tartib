@@ -79,7 +79,7 @@ compared with a design export. Deploying needs a database copy first (migration 
 
 ## Design and detailed review references
 
-Concrete brief: `../../../../tartib.reports/space-descriptions/design-brief-space-descriptions.md`.
+Concrete brief: `../../.orch/legacy/space-descriptions/design-brief-space-descriptions.md`.
 Detailed implementation plan and corrections are beside it in `plan.md` and
 `report-codex.md`; owner decisions are in `questions.md`. These are run artifacts.
 The brief uses current source layouts and real space names. Its proposed tartib

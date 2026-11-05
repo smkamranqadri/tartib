@@ -202,6 +202,14 @@ Defects:
 
 Unscheduled candidates:
 
+- **Knowledge-gap lint for notes.** From the LLM Wiki pattern (Karpathy's gist, seen through
+  understory, 2026-10-22): a periodic check that flags what a space's notes are missing, not only
+  what is wrong. Examples: a note that mentions a person, project or place no other note covers;
+  a question asked in Ask that no item answered; a space whose description promises a topic its
+  notes never reach. Lint finds the gaps by rule, and a model only proposes what to add, as a
+  suggested note the owner accepts or drops. Pairs with the item graph above (orphans and
+  missing links are the same walk).
+
 - **Clear the service worker's API cache on sign-out.** `tartib-api-v1` keeps every successful
   `/api/*` GET for offline reading and nothing empties it when you sign out, so whoever holds the
   device can read it offline. Older than v2.2; raised by its security review (2026-09-23).
