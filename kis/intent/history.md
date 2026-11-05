@@ -39,6 +39,16 @@ scope list dropped the ask feature and the Claude fallback, both of which had al
 
 ## Completed slices
 
+- **The v2.7 cycle** (merged 2026-10-09 at `ff734b7` and `192f64f`, deployed as `v2.7` on
+  2026-10-15; backlog entries, not slices) **#378 space descriptions**: plan and proof in
+  `space-descriptions.md`. **#228 Inbox count in the nav**: a badge on the Inbox pill
+  (`App.tsx`) and the phone's Inbox tab (`TabBar.tsx`) counting only the decisions waiting, not
+  stale ones; zero draws nothing, and the header's "N needs you" still sums both. **#243 Home
+  Needs attention**: Home's Recent shares the Inbox Recent's one exclusion (`recent_page`,
+  `queries.py`), so a waiting capture is under neither; a waiting row opens
+  `/inbox?card=<id>` at its card and a stale row `/inbox/stale?card=<id>`, which scrolls to it
+  and flashes it. **#281 session finish sound**: `bug-281-session-ring.md`. The search
+  snippets (`41d8c63`) shipped in the same release: `search-snippets.md`.
 - **38 · find and replace over MCP** (2026-10-07, deployed as `v2.6`, `b230c3d`) One item, literal replace-all with optional expected-count refusal, text/thoughts/both scope, preserved whitespace and compact changed-line replies. Parent timestamp checks the item; thoughts use current bodies under the write lock. Local backend: 383 passed, 9 deselected; eight guard mutations. Live: health, 17 tools, exact description and count-mismatch refusal with unchanged readback. Proof: `slice-38-find-replace.md`.
 - **37 · editing and deleting** (2026-09-27, deployed as `v2.4`) Reversing slice 35's choice and slice 20's append-only log, by the owner's decision: agents over MCP can edit an item's text (only with the `updated_at` they read, so a change made since is never overwritten), delete an item (its capture stays), and edit or delete a thought. Thoughts became editable and deletable in the app too, one rule everywhere: an edited entry says "edited", and neither needs to queue offline. Migration 0024 dropped the trigger and keeps the search index and count in step. `v2.4` checked on the server 2026-09-27: health, `sw.js` `2026-09-27.1`, `http://` 302, secure cookie, schema 24 with the append-only trigger gone, integrity ok, 252 items, `/mcp` 401 without the token and 15 tools with it. Proof: `slice-37-edit-and-delete.md`.
 - **36 · link cards say what they decide** (2026-09-23, deployed as `v2.3`) After the first `suggest_links` pass: a card that proposes links reads Link N / No links / Later instead of Approve / Not now, Later says it moved the card, the list takes no clicks for half a second after a card leaves (a quick repeat used to approve the *next* card), and an item filed by hand no longer reads "Proposal rejected". `v2.3` checked on the server 2026-09-23: health, `sw.js` `2026-09-23.2`, schema 23, 196 items, `/mcp` 401 without the token and 11 tools with it. Proof: `slice-36-link-cards.md`.

@@ -42,17 +42,6 @@ Approved, not yet planned. Each gets a plan file when it comes up:
   `/data/tartib.db` off the persistent directory and one restore actually performed; deferred
   2026-09-18. CapRover's persistent directory is the same disk as the rest of the host, so it is
   not a backup, and everything in that database exists exactly once.
-- **A Needs attention count on the nav's Inbox. Asked for by the owner 2026-09-23.** The Inbox
-  label in the nav should show how many items wait in Needs attention. Today there is a count
-  only on the Inbox page's own tabs (SPEC, Inbox), and none in the nav. The nav is the header
-  pills on a wide screen (`App.tsx`) and the bottom tab bar on a phone (`TabBar.tsx`). Both
-  should show it, unless the plan decides otherwise. The count has to update when a card is
-  decided (the `version` bump the Inbox routes already use), and like every count it may lag
-  offline (SPEC, Offline). A zero should show nothing.
-  **Merged into main at `ff734b7` (2026-10-09).** The badge is on the Inbox pill
-  (`App.tsx`) and the phone's Inbox tab (`TabBar.tsx`), counting only the decisions waiting (not
-  stale), and a zero draws nothing. The header's right-side "N needs you" readout stays, still
-  summing attention and stale.
 
 Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
 
@@ -118,23 +107,6 @@ Defects:
   Since then the title does the same job, and since 2026-09-20 tapping the text is how you edit.
   Remove the pencil, keep Start session in the hover actions, and update SPEC's "hover or
   long-press reveals edit" (Rows).
-- **A capture that needs attention is hard to act on from Home. Reported by the owner
-  2026-09-23.** It has three parts, checked against the code 2026-09-24:
-  - **Home's Recent shows waiting captures.** `queries.py:79` takes the last three captures
-    whatever their stage, so a waiting item appears under both Recent and Needs attention.
-    Inbox's own Recent tab already leaves out what waits (SPEC, Inbox). Home's Recent should do
-    the same and show only what is filed.
-  - **A Needs attention row on Home opens the item page**, because it uses the shared `ItemRow`
-    link. The item page shows the proposal only as read-only fields plus the "File it" form
-    (`ItemPage.tsx`). It has no Approve, Later or "Tell it why", no question buttons and no
-    link chips, so the decision cannot be made there the way the Inbox card makes it. A waiting
-    row should open the Inbox, at that item's card.
-  - **Nothing outside Home says something is waiting.** The Inbox count in the nav (the entry
-    above, Tartib #228) is the rest of the answer.
-  **Merged into main at `ff734b7` (2026-10-09).** Home's Recent reads the Inbox
-  Recent's one exclusion (`recent_page`, `queries.py`), so a waiting capture is under neither; a
-  waiting row opens `/inbox?card=<id>` at that item's card and a stale row `/inbox/stale?card=<id>`,
-  which scrolls to it and flashes it.
 
 - **Forgetting to run a session. Reported by the owner 2026-09-24.** Work goes untracked because
   no session was started, or because the next one was not started after the last one ended.
