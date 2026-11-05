@@ -18,7 +18,7 @@
   space (500 characters, empty clears, stale-write token), migration 0025, app editor,
   REST, MCP `set_space_description` (eighteen tools), description-aware classification
   capped at 12,000 characters of space context. Plan and decisions:
-  `../intent/space-descriptions.md`; verification: `../tartib.reports/space-descriptions/design-handoff.md`,
+  `../intent/space-descriptions.md`; verification: `../../.orch/legacy/space-descriptions/design-handoff.md`,
   "Resume verification". Tartib #378 can be closed now that it is released.
 - Release `v2.7`, 2026-10-15: image built and pushed by `./deploy.sh v2.7` as
   `smkamranqadri/tartib:v2.7` (manifest index
@@ -32,10 +32,22 @@
   finish sound -- is implemented, merged on main and released in `v2.7`. Verified on the merged tree
   on 2026-10-09: backend 397 passed / 10 deselected, frontend typecheck and build clean,
   `npm run ui` 26/26 with three new checks. Details: `../intent/backlog.md` and
-  `../intent/bug-281-session-ring.md`; orchestrator ledger: `../tartib.reports/orch/ledger.md`.
+  `../intent/bug-281-session-ring.md`; orchestrator ledger: `../../.orch/run-legacy/ledger.md`.
 - MCP `search` and `list_items` return id, first line and a snippet, not the whole item
   (`41d8c63`, merged on main 2026-10-14 and released in `v2.7`; plan `../intent/search-snippets.md`).
   Verified in a clean checkout at `41d8c63`: backend 399 passed / 10 deselected. Ships with `v2.7`.
+
+- **Release `v2.8`, 2026-11-05: open-source release prep**, merged to main and tagged; the
+  image and the CapRover deploy are recorded below once done. Audit (2026-10-18):
+  the repo has been public since slice 16; a full-history secret scan found only placeholders; one
+  author identity. Changes: README rewritten (animated `docs/assets/hero.svg`, then title,
+  description, product shot, how to use, contributing, security), screenshots retaken from a
+  seeded fictional database against the test suite's fake Codex, `SECURITY.md`, `CHANGELOG.md`,
+  `.github/` (CI, issue and PR templates), the four undocumented env keys added to `.env.example`
+  and `docs/deploying.md`, and `pyjwt` 2.15.1 / `multidict` 6.9.1 in `uv.lock` for three
+  advisories (pip-audit clean after). Verified: backend 399 passed / 10 deselected after the bump,
+  `uv sync --locked`, frontend typecheck and build. Not done: `docs/api.md` lacks 14 newer routes;
+  GitHub private vulnerability reporting is off, and `SECURITY.md` links to it.
 
 ## Open
 
