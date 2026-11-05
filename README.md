@@ -95,7 +95,8 @@ Four screens:
 
 - **Home** shows what is due today, overdue, starred, reminded or worked on in a session today,
   along with what needs a decision and what you captured last.
-- **Inbox** holds the classifier's proposals to approve or reject, plus tasks that have gone stale.
+- **Inbox** holds the classifier's proposals to approve, send back with a reason, or leave for
+  later, plus tasks that have gone stale.
 - **Spaces** is where things live. Each space has a description, a brief and search, and a search
   ending in `?` asks a question instead.
 - **Settings** shows how this copy is set up: classifier, usage, reminders and spaces.
@@ -162,9 +163,10 @@ Share Sheet trigger lets you capture from any app.
    error. Restarting mid-classify loses nothing, because pending captures are re-queued on
    startup.
 
-**Reject** discards the proposal and keeps the item in Needs Attention with no space. **Approve**
-needs a space. A decision never deletes anything, and the capture keeps the original text either
-way.
+**Approve** files the item as proposed, with any field you changed; it needs a space. **Tell it
+why** sends the proposal back with your reason, and the classifier tries again; a confident new
+proposal files itself, and the reason stays on the item. **Later** moves the card to the end. A
+decision never deletes anything, and the capture keeps the original text either way.
 
 **Ask** runs SQLite FTS5 over the question's content words and gives the top matches to Codex with
 a prompt that allows answering only from them. It never writes anything. A space's **brief** is
