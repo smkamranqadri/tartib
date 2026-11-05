@@ -41,7 +41,11 @@
   tagged, GitHub release published, CI green on `e7d5994`. Image pushed by `./deploy.sh v2.8` as
   `smkamranqadri/tartib:v2.8` (manifest index
   `sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`); the CapRover deploy
-  is the owner's next step. No migration and no bundle change, so rollback to `v2.7` is clean and
+  was done by the owner on 2026-11-05. Checked from outside at 2026-11-05T10:52Z: health
+  `{"ok":true,"ai":true}`, `http://` 302 to `https://`, `sw.js` `2026-10-15.1`, bundle
+  `index-D5v0LKfV.js`, `/mcp` and `/api` 401 without credentials. None of these tells `v2.8`
+  from `v2.7` (same bundle); the running image tag was **not** confirmed (no server access from
+  this machine). GitHub private vulnerability reporting enabled the same day. No migration and no bundle change, so rollback to `v2.7` is clean and
   `SW_VERSION` stays `2026-10-15.1`. Audit (2026-10-18):
   the repo has been public since slice 16; a full-history secret scan found only placeholders; one
   author identity. Changes: README rewritten (animated `docs/assets/hero.svg`, then title,
