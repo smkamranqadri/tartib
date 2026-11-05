@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-labelledby="t">
+  <title id="t">Tartib: type anything into one box, and it is filed into your own spaces</title>
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "JetBrains Mono", monospace; }
+    .fg { fill: #dfe2e6; }
+    .muted { fill: #888b8f; }
+    .accent { fill: #d3a45a; }
+    .card { fill: #181a1d; stroke: #2f3134; stroke-width: 2; }
+    .box { fill: #121417; stroke: #b98a44; stroke-width: 2; }
+    .pill { fill: none; stroke: #b98a44; stroke-width: 1.6; }
+    .chip { fill: #222427; stroke: #2f3134; stroke-width: 1.2; }
+    .flow { stroke: #b98a44; stroke-width: 2.6; fill: none; stroke-dasharray: 9 9; }
+  </style>
+  <defs>
+    <radialGradient id="glow" cx="0.15" cy="0.1" r="0.9">
+      <stop offset="0" stop-color="#2a2114"/>
+      <stop offset="0.6" stop-color="#0d0f12"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#glow)"/>
+
+  <!-- Title block -->
+  <text class="mono fg" x="80" y="150" font-size="84" font-weight="700" letter-spacing="2">tartib</text>
+  <text class="accent" x="420" y="148" font-size="62" font-family="'Noto Naskh Arabic', 'Geeza Pro', serif">ترتیب</text>
+  <text class="mono fg" x="82" y="214" font-size="28">Type anything into one box.</text>
+  <text class="mono fg" x="82" y="256" font-size="28">It gets filed into your own spaces.</text>
+  <text class="mono muted" x="82" y="306" font-size="21">Your words are never rewritten; the AI only</text>
+  <text class="mono muted" x="82" y="336" font-size="21">proposes the fields around them.</text>
+
+  <!-- One box -->
+  <rect class="box" x="80" y="392" width="470" height="168" rx="16"/>
+  <text class="mono fg" x="108" y="440" font-size="23">call the dentist tomorrow,</text>
+  <text class="mono fg" x="108" y="474" font-size="23">book the boiler service, and</text>
+  <text class="mono fg" x="108" y="508" font-size="23">save that line from</text>
+  <text class="mono fg" x="108" y="542" font-size="23">The Patient Gardener</text>
+  <rect x="404" y="524" width="12" height="24" fill="#b98a44"/>
+
+  <path class="flow" d="M550 476 C 740 476, 700 200, 760 200"/>
+  <path class="flow" d="M550 476 C 720 476, 680 320, 760 320"/>
+  <path class="flow" d="M550 476 C 640 476, 670 451, 760 451"/>
+
+  <!-- Filed -->
+  <text class="mono muted" x="762" y="124" font-size="18" letter-spacing="3">FILED INTO YOUR SPACES</text>
+  <g>
+    <rect class="card" x="760" y="150" width="440" height="100" rx="16"/>
+    <rect class="pill" x="784" y="168" width="96" height="28" rx="14"/>
+    <text class="mono accent" x="832" y="188" font-size="15" font-weight="600" letter-spacing="2" text-anchor="middle">HEALTH</text>
+    <rect class="chip" x="892" y="168" width="58" height="28" rx="8"/>
+    <text class="mono" fill="#c9ccd0" x="921" y="188" font-size="15" text-anchor="middle">task</text>
+    <rect class="chip" x="960" y="168" width="128" height="28" rx="8"/>
+    <text class="mono" fill="#c9ccd0" x="1024" y="188" font-size="15" text-anchor="middle">due Mon 19</text>
+    <text class="mono fg" x="786" y="230" font-size="21">"call the dentist tomorrow"</text>
+  </g>
+  <g>
+    <rect class="card" x="760" y="270" width="440" height="100" rx="16"/>
+    <rect class="pill" x="784" y="288" width="76" height="28" rx="14"/>
+    <text class="mono accent" x="822" y="308" font-size="15" font-weight="600" letter-spacing="2" text-anchor="middle">HOME</text>
+    <rect class="chip" x="872" y="288" width="58" height="28" rx="8"/>
+    <text class="mono" fill="#c9ccd0" x="901" y="308" font-size="15" text-anchor="middle">task</text>
+    <text class="mono fg" x="786" y="350" font-size="21">"book the boiler service"</text>
+  </g>
+  <g>
+    <rect class="card" x="760" y="390" width="440" height="122" rx="16"/>
+    <rect class="pill" x="784" y="408" width="108" height="28" rx="14"/>
+    <text class="mono accent" x="838" y="428" font-size="15" font-weight="600" letter-spacing="2" text-anchor="middle">READING</text>
+    <rect class="chip" x="904" y="408" width="58" height="28" rx="8"/>
+    <text class="mono" fill="#c9ccd0" x="933" y="428" font-size="15" text-anchor="middle">note</text>
+    <text class="mono fg" x="786" y="468" font-size="21">"save that line from</text>
+    <text class="mono fg" x="786" y="496" font-size="21"> The Patient Gardener"</text>
+  </g>
+
+  <text class="mono muted" x="1200" y="600" font-size="18" text-anchor="end">self-hosted · single user · MIT · github.com/smkamranqadri/tartib</text>
+</svg>
