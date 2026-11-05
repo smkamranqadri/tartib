@@ -62,7 +62,11 @@ Either way the mount is read-write, because the refresh has to go somewhere.
 | `TARTIB_AI_COMMAND` | no | `codex` | Command that runs the Codex CLI. `off` disables classification. |
 | `TARTIB_AI_MODEL` | no | | Passed as `codex --model`. Unset uses Codex's default. |
 | `TARTIB_AI_TIMEOUT` | no | `120` | Seconds allowed per classification. |
+| `TARTIB_AI_REASONING` | no | | Codex reasoning effort, sent as a `-c` override. Unset uses Codex's default. |
 | `TARTIB_AUTOFILE_CONFIDENCE` | no | `0.85` | Proposals at or above this are filed without asking. |
+| `TARTIB_DUPLICATE_PARK` | no | off | Hold a capture the classifier calls a duplicate in Needs Attention instead of filing it. |
+| `TARTIB_LINK_PROPOSALS` | no | off | Let the classifier propose `[[links]]` between items. |
+| `TARTIB_MCP_TOKEN` | no | | Turns on `/mcp` for coding agents. At least 32 characters; only this token opens it. |
 | `TARTIB_VAPID_PUBLIC` | no | | Web Push key pair. Without both keys the reminder loop does not run. |
 | `TARTIB_VAPID_PRIVATE` | no | | Generate with `cd backend && uv run python -m tartib.vapid`. |
 | `TARTIB_VAPID_EMAIL` | no | `mailto:tartib@localhost` | A contact the push service can reach. |
