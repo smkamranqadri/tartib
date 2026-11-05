@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img" aria-labelledby="t d">
+  <title id="t">Tartib: type anything into one box, and it is filed into your spaces</title>
+  <desc id="d">One capture holding three things is typed into a single box. Tartib splits it into three items and files each into its own space: a task in health due tomorrow, a task in home, and a note in reading. Each item keeps the words exactly as typed; only the fields around them, such as the space, shape and due date, are proposed.</desc>
+  <style>
+    .bg { fill: #0d0f12; }
+    .card { fill: #181a1d; stroke: #2f3134; stroke-width: 1.5; }
+    .box { fill: #121417; stroke: #b98a44; stroke-width: 1.5; }
+    .head { fill: #dfe2e6; font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 2px; }
+    .text { fill: #dfe2e6; font: 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .quote { fill: #dfe2e6; font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .muted { fill: #888b8f; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .pill { fill: none; stroke: #b98a44; stroke-width: 1.2; }
+    .pilltext { fill: #d3a45a; font: 600 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 1.5px; }
+    .chip { fill: #222427; stroke: #2f3134; stroke-width: 1; }
+    .chiptext { fill: #c9ccd0; font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .core { fill: #b98a44; }
+    .coretext { fill: #0d0f12; font: 700 22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 1px; }
+    .coresub { fill: #0d0f12; font: 18px "Noto Naskh Arabic", "Geeza Pro", "Segoe UI", serif; }
+    .cursor { fill: #b98a44; animation: blink 1s steps(1) infinite; }
+    .flow { stroke: #b98a44; stroke-width: 2.2; fill: none; stroke-dasharray: 7 7; animation: flow 1.2s linear infinite; }
+    .tag { fill: #dfe2e6; font: 600 18px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .tagsub { fill: #888b8f; font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .pulse { animation: pulse 10s ease-in-out infinite; transform-origin: 480px 176px; transform-box: view-box; }
+    .t1 { animation: t1 10s linear infinite; }
+    .t2 { animation: t2 10s linear infinite; }
+    .t3 { animation: t3 10s linear infinite; }
+    .c1 { animation: c1 10s ease-out infinite; }
+    .c2 { animation: c2 10s ease-out infinite; }
+    .c3 { animation: c3 10s ease-out infinite; }
+    .f1 { animation: f1 10s ease-out infinite; }
+    .f2 { animation: f2 10s ease-out infinite; }
+    .f3 { animation: f3 10s ease-out infinite; }
+    @keyframes flow { to { stroke-dashoffset: -28; } }
+    @keyframes blink { 50% { opacity: 0; } }
+    @keyframes pulse { 0%, 24% { transform: scale(1); } 28% { transform: scale(1.08); } 32%, 100% { transform: scale(1); } }
+    @keyframes t1 { 0%, 3% { opacity: 0; } 5%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes t2 { 0%, 10% { opacity: 0; } 12%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes t3 { 0%, 17% { opacity: 0; } 19%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes c1 { 0%, 33% { opacity: 0; } 37%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes c2 { 0%, 41% { opacity: 0; } 45%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes c3 { 0%, 49% { opacity: 0; } 53%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes f1 { 0%, 39% { opacity: 0; } 43%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes f2 { 0%, 47% { opacity: 0; } 51%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes f3 { 0%, 55% { opacity: 0; } 59%, 92% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #f6f4f0; }
+      .card { fill: #ffffff; stroke: #dcd6cc; }
+      .box { fill: #fffdf8; stroke: #8a6223; }
+      .head, .text, .quote, .tag { fill: #1d1f22; }
+      .muted, .tagsub { fill: #62656a; }
+      .pill { stroke: #8a6223; }
+      .pilltext { fill: #7a5418; }
+      .chip { fill: #f1ede6; stroke: #dcd6cc; }
+      .chiptext { fill: #3a3d41; }
+      .core { fill: #9a6c28; }
+      .coretext, .coresub { fill: #ffffff; }
+      .cursor { fill: #8a6223; }
+      .flow { stroke: #9a6c28; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cursor, .flow, .pulse, .t1, .t2, .t3, .c1, .c2, .c3, .f1, .f2, .f3 { animation: none; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="960" height="400" rx="18"/>
+
+  <!-- One box -->
+  <text class="head" x="40" y="58">ONE BOX</text>
+  <rect class="box" x="36" y="76" width="294" height="172" rx="12"/>
+  <text class="text t1" x="56" y="112">call the dentist</text>
+  <text class="text t1" x="56" y="136">tomorrow, book the</text>
+  <text class="text t2" x="56" y="160">boiler service, and</text>
+  <text class="text t2" x="56" y="184">save that line from</text>
+  <text class="text t3" x="56" y="208">The Patient Gardener</text>
+  <g class="t3"><rect class="cursor" x="252" y="194" width="9" height="18"/></g>
+  <text class="muted" x="40" y="276">typed once, kept verbatim</text>
+
+  <!-- into Tartib -->
+  <path class="flow" d="M330 162 C 370 162, 372 176, 412 176"/>
+  <g class="pulse">
+    <rect class="core" x="412" y="124" width="136" height="104" rx="52"/>
+    <text class="coretext" x="480" y="172" text-anchor="middle">tartib</text>
+    <text class="coresub" x="480" y="202" text-anchor="middle">ترتیب</text>
+  </g>
+  <path class="flow" d="M548 176 C 590 176, 598 94, 640 94"/>
+  <path class="flow" d="M548 176 L 640 176"/>
+  <path class="flow" d="M548 176 C 590 176, 598 258, 640 258"/>
+
+  <!-- filed into your spaces -->
+  <text class="head" x="642" y="40">FILED INTO YOUR SPACES</text>
+
+  <g class="c1">
+    <rect class="card" x="640" y="56" width="284" height="76" rx="12"/>
+    <rect class="pill" x="656" y="68" width="68" height="20" rx="10"/>
+    <text class="pilltext" x="690" y="82" text-anchor="middle">HEALTH</text>
+    <text class="quote" x="658" y="114">"call the dentist tomorrow"</text>
+  </g>
+  <g class="f1">
+    <rect class="chip" x="734" y="68" width="40" height="20" rx="6"/>
+    <text class="chiptext" x="754" y="82" text-anchor="middle">task</text>
+    <rect class="chip" x="780" y="68" width="94" height="20" rx="6"/>
+    <text class="chiptext" x="827" y="82" text-anchor="middle">due Mon 19</text>
+  </g>
+
+  <g class="c2">
+    <rect class="card" x="640" y="138" width="284" height="76" rx="12"/>
+    <rect class="pill" x="656" y="150" width="54" height="20" rx="10"/>
+    <text class="pilltext" x="683" y="164" text-anchor="middle">HOME</text>
+    <text class="quote" x="658" y="196">"book the boiler service"</text>
+  </g>
+  <g class="f2">
+    <rect class="chip" x="720" y="150" width="40" height="20" rx="6"/>
+    <text class="chiptext" x="740" y="164" text-anchor="middle">task</text>
+  </g>
+
+  <g class="c3">
+    <rect class="card" x="640" y="220" width="284" height="76" rx="12"/>
+    <rect class="pill" x="656" y="232" width="76" height="20" rx="10"/>
+    <text class="pilltext" x="694" y="246" text-anchor="middle">READING</text>
+    <text class="quote" x="658" y="270">"save that line from</text>
+    <text class="quote" x="658" y="288"> The Patient Gardener"</text>
+  </g>
+  <g class="f3">
+    <rect class="chip" x="742" y="232" width="40" height="20" rx="6"/>
+    <text class="chiptext" x="762" y="246" text-anchor="middle">note</text>
+  </g>
+
+  <text class="tag" x="480" y="346" text-anchor="middle">Type it once. Tartib files it. Your words stay yours.</text>
+  <text class="tagsub" x="480" y="372" text-anchor="middle">the AI proposes the fields around your text, never the text itself</text>
+</svg>
