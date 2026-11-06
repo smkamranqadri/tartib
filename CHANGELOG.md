@@ -3,6 +3,19 @@
 Each release is a Docker image tag, `smkamranqadri/tartib:vX.Y`. The reasoning behind every
 change is in [`kis/intent/`](kis/intent/), one file per slice.
 
+## v2.9 (2026-11-06)
+
+No migration and no frontend change; the service worker stays at `2026-10-15.1`, and rolling
+back to v2.8 is clean.
+
+- **MCP sessions:** `start_session`, `get_session` and `end_session` let an agent run the owner's
+  focus timer. Replies carry `server_time` and `remaining_seconds`; an outcome can be recorded
+  when ending (`done` ticks the task off, as `set_status` does). The end-of-session push is the
+  app's own.
+- **MCP `reminders_due(until, since?)`:** open tasks with a reminder up to a time, across all
+  spaces, including ones already pushed, for a client that keeps its own record of what it acted
+  on. Read-only.
+
 ## v2.8 (2026-11-05)
 
 No migration and no frontend change; the service worker stays at `2026-10-15.1`.

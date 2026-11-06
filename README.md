@@ -122,8 +122,9 @@ It also has:
 
 Set `TARTIB_MCP_TOKEN` (32 characters or more, for example `openssl rand -hex 32`) and Tartib
 serves an MCP endpoint at `/mcp`. Agents can then list spaces, search, read items, add notes and
-tasks, add thoughts, mark tasks done, set due dates and reminders, and make small edits, all
-through the same write paths as the app. There are eighteen tools.
+tasks, add thoughts, mark tasks done, set due dates and reminders, make small edits, start and
+end your focus session, and list the reminders that are due, all through the same write paths as
+the app. There are twenty-two tools.
 
 ```sh
 claude mcp add --transport http tartib https://tartib.example/mcp \
@@ -131,7 +132,9 @@ claude mcp add --transport http tartib https://tartib.example/mcp \
 ```
 
 The server's own instructions tell agents to search before adding, to ask before creating a
-space, and to edit or delete only when you ask.
+space, to edit or delete only when you ask, and to start a session only when you ask. Every
+session reply carries the server's clock and the seconds left, so an agent asks once instead of
+watching a timer; the phone is notified when a session ends, whoever started it.
 
 ## Capture from anywhere
 
