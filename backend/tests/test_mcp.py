@@ -8,6 +8,7 @@ import socket
 import threading
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 
 import httpx
 import httpx2
@@ -40,6 +41,10 @@ TOOLS = {
     "delete_item",
     "edit_thought",
     "delete_thought",  # slice 37
+    "start_session",
+    "get_session",
+    "end_session",
+    "reminders_due",  # slice 39
 }
 
 
@@ -747,3 +752,335 @@ def test_a_hit_found_through_a_thought_shows_the_thought(served):
             assert "zebra" in hit["snippet"]
 
     asyncio.run(go())
+
+
+# --- slice 39: sessions and reminders_due ---
+
+
+def make_task(base, text="Call", space="ideas") -> dict:
+    body = {"shape": "task", "space": space, "text": text}
+    return api(base, "POST", "/api/items", json=body).json()
+
+
+def set_cols(tmp_path, item_id: int, **cols) -> None:
+    c = db.connect(tmp_path / "t.db")
+    sets = ", ".join(f"{k} = ?" for k in cols)
+    c.execute(f"UPDATE items SET {sets} WHERE id = ?", (*cols.values(), item_id))
+    c.commit()
+    c.close()
+
+
+def moment(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def test_the_session_tools_carry_the_server_clock(served):
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "get_session")
+            assert not err and got["state"] is None and got["session"] is None
+            assert got["remaining_seconds"] is None and got["server_time"].endswith("Z")
+
+            err, started = await call(s, "start_session")
+            assert not err and started["state"] == "running"
+            assert 1490 <= started["remaining_seconds"] <= 1500
+            assert moment(started["session"]["ends_at"]) - moment(started["server_time"]) == (
+                timedelta(seconds=started["remaining_seconds"])
+            )
+            assert started["session"]["item_id"] is None and started["item"] is None
+
+            err, text = await call(s, "start_session")
+            assert err and "already running" in text
+            err, text = await call(s, "start_session", item_id=99999)
+            assert err and "already running" in text  # one at a time is checked first
+
+            err, got = await call(s, "get_session")
+            assert got["state"] == "running" and got["session"]["id"] == started["session"]["id"]
+
+            # Stopped without an outcome: it is owed one, and it ended now, not at ends_at.
+            err, ended = await call(s, "end_session")
+            assert not err and ended["state"] == "awaiting"
+            stopped = ended["session"]
+            assert stopped["outcome"] is None and stopped["ended_at"] < stopped["ends_at"]
+            assert moment(ended["server_time"]) - moment(stopped["ended_at"]) < timedelta(seconds=5)
+            assert ended["remaining_seconds"] is None
+
+            err, got = await call(s, "get_session")
+            assert got["state"] == "awaiting" and got["remaining_seconds"] is None
+
+            err, text = await call(s, "end_session")
+            assert err and "pass an outcome" in text
+
+            err, done = await call(s, "end_session", outcome="unfinished")
+            assert not err and done["state"] is None and done["session"]["outcome"] == "unfinished"
+
+            err, got = await call(s, "get_session")
+            assert got["state"] is None
+            # a second outcome has nothing to land on
+            err, text = await call(s, "end_session", outcome="done")
+            assert err and "no session is running" in text
+
+    asyncio.run(go())
+
+
+def test_an_unknown_task_is_refused_when_nothing_is_running(served):
+    async def go():
+        async with session(served) as s:
+            err, text = await call(s, "start_session", item_id=99999)
+            assert err and "item not found" in text
+            err, got = await call(s, "get_session")
+            assert got["state"] is None  # the refusal left no row behind
+
+    asyncio.run(go())
+
+
+def test_an_outcome_done_ticks_the_task_and_the_others_do_not(served):
+    one, two, three = (make_task(served, t) for t in ("One", "Two", "Three"))
+
+    def status(task):
+        return api(served, "GET", f"/api/items/{task['id']}").json()["status"]
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "start_session", item_id=one["id"])
+            assert not err and got["item"]["id"] == one["id"]
+            err, got = await call(s, "end_session", outcome="done")  # stop and answer in one call
+            assert not err and got["session"]["outcome"] == "done"
+            assert status(one) == "done"
+            # it ended now: an outcome on a still-running row would stamp ends_at, 25 minutes on
+            assert got["session"]["ended_at"] <= got["server_time"] < got["session"]["ends_at"]
+
+            await call(s, "start_session", item_id=two["id"])
+            err, got = await call(s, "end_session", outcome="unfinished")
+            assert not err and status(two) == "open"
+
+            await call(s, "start_session", item_id=three["id"])
+            await call(s, "end_session")
+            err, got = await call(s, "end_session", outcome="abandoned")  # answers the waiting one
+            assert not err and got["session"]["outcome"] == "abandoned" and status(three) == "open"
+
+            err, text = await call(s, "end_session", outcome="finished")
+            assert err  # not one of the three words
+
+    asyncio.run(go())
+
+
+@pytest.fixture
+def served_app(tmp_path, monkeypatch):
+    """Like `served`, with push on and the app handed back, to reach the session timers."""
+    from tests.test_reminders import QUIET, VAPID
+
+    for var in FAKE_VARS:
+        monkeypatch.delenv(var, raising=False)
+    settings = make_settings(tmp_path, **{**AI_ENV, **VAPID, **QUIET}, TARTIB_MCP_TOKEN=TOKEN)
+    app = create_app(settings)
+    port = free_port()
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(100):
+        try:
+            if httpx.get(f"{base}/api/health").status_code == 200:
+                break
+        except httpx.HTTPError:
+            time.sleep(0.05)
+    yield base, app
+    server.should_exit = True
+    thread.join(timeout=5)
+
+
+def wait_for(check) -> None:
+    for _ in range(100):
+        if check():
+            return
+        time.sleep(0.05)
+    raise AssertionError("timed out")
+
+
+def test_a_started_session_pushes_once_and_an_early_end_calls_it_off(served_app):
+    from tests.test_reminders import FakeSender
+
+    base, app = served_app
+    clock, sender = app.state.sessions, FakeSender()
+    clock._sender = sender
+    api(
+        base, "POST", "/api/subscriptions",
+        json={"endpoint": "https://push.example/a", "keys": {"p256dh": "k", "auth": "a"}},
+    )
+
+    async def go():
+        async with session(base) as s:
+            err, ran = await call(s, "start_session")
+            sid = ran["session"]["id"]
+            wait_for(lambda: sid in clock._timers)  # armed, as the app's own start arms it
+            # the timer would fire at ends_at; do that now, on the injected clock
+            ends = moment(ran["session"]["ends_at"])
+            assert clock.fire(sid, now=ends) is True
+            assert clock.fire(sid, now=ends) is False  # once
+            assert [p["tag"] for _, p in sender.sent] == [f"session-{sid}"]
+
+            await call(s, "end_session", outcome="abandoned")
+            err, early = await call(s, "start_session")
+            sid2 = early["session"]["id"]
+            wait_for(lambda: sid2 in clock._timers)
+            await call(s, "end_session")
+            wait_for(lambda: sid2 not in clock._timers)  # disarmed
+            assert clock.fire(sid2, now=moment(early["session"]["ends_at"])) is False
+            assert len(sender.sent) == 1
+
+    asyncio.run(go())
+
+
+def due_ids(got):
+    return [i["id"] for i in got["items"]]
+
+
+def test_reminders_due_lists_open_tasks_across_spaces_pushed_ones_included(served, tmp_path):
+    early = make_task(served, "Early", "ideas")
+    pushed = make_task(served, "Pushed", "work")
+    late = make_task(served, "Late", "ideas")
+    set_cols(tmp_path, early["id"], remind_at="2026-01-01T09:00:00Z")
+    set_cols(
+        tmp_path, pushed["id"], remind_at="2026-01-02T09:00:00Z", reminded_at="2026-01-02T09:00:05Z"
+    )
+    set_cols(tmp_path, late["id"], remind_at="2026-01-03T09:00:00Z")
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "reminders_due", until="2026-01-02T09:00:00Z")
+            assert not err
+            assert due_ids(got) == [early["id"], pushed["id"]]  # oldest first, until inclusive
+            by_id = {i["id"]: i for i in got["items"]}
+            assert by_id[pushed["id"]]["reminded_at"] == "2026-01-02T09:00:05Z"
+            assert by_id[early["id"]]["reminded_at"] is None
+            assert {by_id[early["id"]]["space"], by_id[pushed["id"]]["space"]} == {"ideas", "work"}
+            assert by_id[early["id"]]["remind_at"] == "2026-01-01T09:00:00Z"
+            assert by_id[early["id"]]["first_line"] == "Early"
+            assert got["truncated"] is False and got["since"] is None
+            assert got["until"] == "2026-01-02T09:00:00Z" and got["server_time"].endswith("Z")
+
+    asyncio.run(go())
+
+
+def test_reminders_due_leaves_out_what_is_not_an_open_filed_reminder(served, tmp_path):
+    kept = make_task(served, "Kept")
+    done = make_task(served, "Done")
+    bare = make_task(served, "No reminder")
+    note = api(served, "POST", "/api/items", json={"shape": "note", "space": "ideas", "text": "N"})
+    waiting = make_task(served, "Waiting")
+    for task in (kept, done, waiting):
+        set_cols(tmp_path, task["id"], remind_at="2026-01-01T09:00:00Z")
+    set_cols(tmp_path, waiting["id"], stage="attention")  # not filed yet
+
+    async def go():
+        async with session(served) as s:
+            await call(s, "set_status", id=done["id"], status="done")
+            err, got = await call(s, "reminders_due", until="2030-01-01T00:00:00Z")
+            assert not err and due_ids(got) == [kept["id"]]
+            assert bare["id"] not in due_ids(got) and note.json()["id"] not in due_ids(got)
+
+    asyncio.run(go())
+
+
+def test_reminders_due_since_is_exclusive_and_a_poll_repeats_nothing(served, tmp_path):
+    a, b, c = (make_task(served, t) for t in ("A", "B", "C"))
+    for task, at in ((a, "09:00"), (b, "10:00"), (c, "11:00")):
+        set_cols(tmp_path, task["id"], remind_at=f"2026-01-01T{at}:00Z")
+
+    async def go():
+        async with session(served) as s:
+            err, first = await call(s, "reminders_due", until="2026-01-01T10:00:00Z")
+            assert due_ids(first) == [a["id"], b["id"]]
+            err, second = await call(
+                s, "reminders_due", until="2026-01-01T11:00:00Z", since=first["until"]
+            )
+            assert not err and due_ids(second) == [c["id"]]  # b sits exactly on `since`
+            assert second["since"] == "2026-01-01T10:00:00Z"
+            err, third = await call(
+                s, "reminders_due", until="2026-01-01T11:00:00Z", since=second["until"]
+            )
+            assert not err and third["items"] == []
+
+    asyncio.run(go())
+
+
+def test_reminders_due_shows_a_moved_reminder_as_it_is_stored(served, tmp_path):
+    task = make_task(served)
+
+    async def go():
+        async with session(served) as s:
+            err, _ = await call(s, "set_reminder", id=task["id"], remind_at="2099-01-02T18:00")
+            err, got = await call(s, "reminders_due", until="2099-12-31T00:00:00Z")
+            assert due_ids(got) == [task["id"]]
+            assert got["items"][0]["remind_at"] == "2099-01-02T13:00:00Z"  # as stored, in UTC
+            err, _ = await call(s, "set_reminder", id=task["id"], remind_at="2099-01-03T09:00")
+            err, got = await call(s, "reminders_due", until="2099-12-31T00:00:00Z")
+            assert got["items"][0]["remind_at"] == "2099-01-03T04:00:00Z"
+
+    asyncio.run(go())
+
+
+def test_reminders_due_caps_at_the_oldest_hundred(served, tmp_path):
+    ids = []
+    for n in range(101):
+        task = make_task(served, f"T{n}")
+        set_cols(tmp_path, task["id"], remind_at=f"2026-01-01T{n // 60:02d}:{n % 60:02d}:00Z")
+        ids.append(task["id"])
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "reminders_due", until="2026-12-31T00:00:00Z")
+            assert not err and got["truncated"] is True and due_ids(got) == ids[:100]
+            err, got = await call(s, "reminders_due", until="2026-01-01T01:39:00Z")
+            assert got["truncated"] is False and len(got["items"]) == 100
+
+    asyncio.run(go())
+
+
+def test_reminders_due_reads_times_in_the_owners_zone_and_refuses_bad_ones(served, tmp_path):
+    task = make_task(served)
+    set_cols(tmp_path, task["id"], remind_at="2026-01-01T13:00:00Z")  # 18:00 in Karachi
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "reminders_due", until="2026-01-01T18:00")  # Asia/Karachi
+            assert not err and due_ids(got) == [task["id"]]
+            assert got["until"] == "2026-01-01T13:00:00Z"
+            err, got = await call(s, "reminders_due", until="2026-01-01T17:59")
+            assert not err and got["items"] == []
+            err, text = await call(
+                s, "reminders_due", until="2026-01-01T00:00:00Z", since="2026-01-02T00:00:00Z"
+            )
+            assert err and "before since" in text
+            err, text = await call(s, "reminders_due", until="tomorrow")
+            assert err and "ISO 8601" in text
+            err, text = await call(
+                s, "reminders_due", until="2026-01-01T00:00:00Z", since="yesterday"
+            )
+            assert err and "since" in text and "ISO 8601" in text
+
+    asyncio.run(go())
+
+
+def test_reminders_due_writes_nothing(served, tmp_path):
+    task = make_task(served)
+    set_cols(
+        tmp_path, task["id"], remind_at="2026-01-01T09:00:00Z", reminded_at="2026-01-01T09:00:03Z"
+    )
+
+    def snapshot():
+        c = db.connect(tmp_path / "t.db")
+        row = c.execute("SELECT * FROM items WHERE id = ?", (task["id"],)).fetchone()
+        c.close()
+        return dict(row)
+
+    before = snapshot()
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "reminders_due", until="2030-01-01T00:00:00Z")
+            assert not err and due_ids(got) == [task["id"]]
+
+    asyncio.run(go())
+    assert snapshot() == before

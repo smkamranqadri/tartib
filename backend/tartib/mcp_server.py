@@ -28,8 +28,8 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from tartib import db
-from tartib.clock import utcnow, utcnow_iso
+from tartib import db, sessions
+from tartib.clock import as_utc_iso, parse_iso, utcnow, utcnow_iso
 from tartib.config import Settings
 from tartib.queries import fts_query
 from tartib.space_descriptions import DescriptionError, set_space_description, space_description
@@ -50,6 +50,7 @@ from tartib.store import (
 )
 
 LIST_LIMIT = 100
+SESSION_FIELDS = ("id", "item_id", "started_at", "ends_at", "ended_at", "outcome")
 MAX_TEXT = 20_000  # the REST API's own cap on an item's text
 FIRST_LINE_MAX = 120  # a hit's first line, which is what names an item (a note keeps no title)
 SNIPPET_CHARS = 200  # a hit's opening excerpt when there is no query match to window around
@@ -72,7 +73,13 @@ INSTRUCTIONS = """Tartib is one person's notes and tasks, sorted into spaces.
   pass its updated_at: if the item changed since, the edit is refused, so read it again.
 - To change a few words in a long item, use find_replace instead of edit_item: pass expected=1
   and enough surrounding text to match once. It returns only the changed lines.
-- Deleting an item removes it with its thoughts. Deleting a thought cannot be undone."""
+- Deleting an item removes it with its thoughts. Deleting a thought cannot be undone.
+- A session is the owner's timer: call get_session before start_session, and do not start one
+  unasked. Every reply carries server_time and, while it runs, remaining_seconds as of that
+  moment; ask once and wait that long rather than calling again in a loop.
+- reminders_due lists open tasks with a reminder up to a time, including ones already pushed;
+  keep your own record of what you acted on, keyed by id and remind_at, and pass the last
+  `until` you used as `since` so each poll returns only what is new."""
 
 
 def _changed_lines(before: str, after: str) -> list[dict]:
@@ -640,6 +647,168 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
             except HTTPException as e:
                 raise ToolError(str(e.detail)) from e
             return {"name": created, "spaces": list_spaces(c)}
+        finally:
+            c.close()
+
+    def _when(value: str, name: str) -> str:
+        """A time to compare against stored ones: naive is the owner's zone, the past is fine."""
+        try:
+            moment = datetime.fromisoformat(value)
+        except (TypeError, ValueError) as e:
+            raise ToolError(
+                f"{name} is ISO 8601 like 2026-09-28T18:00, not {value!r}"
+            ) from e
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=settings.zone)
+        return as_utc_iso(moment)
+
+    def _clock():
+        return getattr(app.state, "sessions", None)
+
+    def _session_reply(
+        c: sqlite3.Connection, state: str | None, row: sqlite3.Row | None, now: datetime
+    ) -> dict:
+        """A session as an agent needs it, with the server's own clock beside it."""
+        now = now.replace(microsecond=0)  # server_time and remaining_seconds read one instant
+        item = None
+        if row is not None and row["item_id"] is not None:
+            found = c.execute("SELECT * FROM items WHERE id = ?", (row["item_id"],)).fetchone()
+            item = _item(found) if found else None
+        remaining = None
+        if state == "running" and row is not None:
+            remaining = max(0, int((parse_iso(row["ends_at"]) - now).total_seconds()))
+        return {
+            "state": state,
+            "session": {k: row[k] for k in SESSION_FIELDS} if row is not None else None,
+            "item": item,
+            "server_time": as_utc_iso(now),
+            "remaining_seconds": remaining,
+        }
+
+    @server.tool(
+        name="start_session",
+        description=(
+            "Start the owner's timer, optionally on a task (item_id). One runs at a time. The "
+            "reply has started_at, ends_at, server_time and remaining_seconds (a snapshot); the "
+            "phone is notified when it ends, as for a session started in the app. Start one "
+            "only when asked."
+        ),
+    )
+    def start_session(item_id: int | None = None) -> dict:
+        c = conn()
+        try:
+            now = utcnow()
+            try:
+                row = sessions.start(c, settings, item_id, now)
+            except HTTPException as e:
+                raise ToolError(str(e.detail)) from e
+            clock = _clock()
+            if clock is not None:
+                clock.arm(row["id"], row["ends_at"])
+            return _session_reply(c, "running", row, now)
+        finally:
+            c.close()
+
+    @server.tool(
+        name="get_session",
+        description=(
+            "The timer now: running (with remaining_seconds), awaiting an outcome after it "
+            "ended, or none. server_time is the server's clock. Call it once, not in a loop."
+        ),
+    )
+    def get_session() -> dict:
+        c = conn()
+        try:
+            now = utcnow()
+            state, row = sessions.current_state(c, now)
+            return _session_reply(c, state, row, now)
+        finally:
+            c.close()
+
+    @server.tool(
+        name="end_session",
+        description=(
+            "Stop the running session now and call off its notification. With outcome "
+            "(done|unfinished|abandoned) it also records it; done ticks the task off, as "
+            "set_status does. Without a running session, outcome answers the one that ended "
+            "and is still waiting. Without outcome the owner is asked in the app."
+        ),
+    )
+    def end_session(outcome: Literal["done", "unfinished", "abandoned"] | None = None) -> dict:
+        c = conn()
+        try:
+            now = utcnow()
+            try:
+                live = sessions.running(c, now)
+                if live is not None:
+                    # Stop first: an outcome on a running session would stamp its end in the
+                    # future and leave the timer armed.
+                    row = sessions.stop(c, live["id"], now)
+                    clock = _clock()
+                    if clock is not None:
+                        clock.disarm(live["id"])
+                else:
+                    _, row = sessions.current_state(c, now)
+                    if row is None:
+                        raise ToolError("no session is running or waiting for an outcome")
+                    if outcome is None:
+                        raise ToolError(
+                            f"session {row['id']} has ended; pass an outcome to answer it"
+                        )
+                if outcome is not None:
+                    row = sessions.set_outcome(c, row["id"], outcome)
+            except HTTPException as e:
+                raise ToolError(str(e.detail)) from e
+            return _session_reply(c, None if outcome else "awaiting", row, now)
+        finally:
+            c.close()
+
+    @server.tool(
+        name="reminders_due",
+        description=(
+            "Open tasks with a reminder at or before `until`, across all spaces, oldest first "
+            "(at most 100; truncated says there are more). It includes tasks Tartib already "
+            "pushed (reminded_at is set) and writes nothing. Times are ISO 8601; a time with "
+            f"no offset is read in {settings.tz}. `since`, if given, excludes reminders at or "
+            "before it, so pass your last `until` to get only what is new. Key what you have "
+            "acted on by id and remind_at: moving a reminder changes remind_at."
+        ),
+    )
+    def reminders_due(until: str, since: str | None = None) -> dict:
+        end = _when(until, "until")
+        start = _when(since, "since") if since else None
+        if start is not None and end < start:
+            raise ToolError("until is before since")
+        where, params = [
+            "stage = 'filed'", "status = 'open'", "remind_at IS NOT NULL", "remind_at <= ?"
+        ], [end]
+        if start is not None:
+            where.append("remind_at > ?")
+            params.append(start)
+        c = conn()
+        try:
+            rows = c.execute(
+                f"SELECT * FROM items WHERE {' AND '.join(where)} ORDER BY remind_at, id LIMIT ?",
+                (*params, LIST_LIMIT + 1),
+            ).fetchall()
+            return {
+                "server_time": utcnow_iso(),
+                "until": end,
+                "since": start,
+                "items": [
+                    {
+                        "id": r["id"],
+                        "space": r["space"],
+                        "first_line": (title_of(r["raw_text"]) or "")[:FIRST_LINE_MAX],
+                        "remind_at": r["remind_at"],
+                        "reminded_at": r["reminded_at"],
+                        "due": r["due"],
+                        "starred": bool(r["starred"]),
+                    }
+                    for r in rows[:LIST_LIMIT]
+                ],
+                "truncated": len(rows) > LIST_LIMIT,
+            }
         finally:
             c.close()
 

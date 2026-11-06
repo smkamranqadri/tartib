@@ -328,15 +328,24 @@ def current(
     conn: sqlite3.Connection = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict:
     """What the app shows on load: a countdown, an outcome sheet, or neither."""
-    now = utcnow()
+    state, row = current_state(conn, utcnow())
+    if row is None:
+        return {"state": None, "session": None, "item": None}
+    return {"state": state, "session": serialize(row), "item": _item(conn, row)}
+
+
+def current_state(
+    conn: sqlite3.Connection, now: datetime
+) -> tuple[str | None, sqlite3.Row | None]:
+    """`running`, else `awaiting` an outcome, else nothing -- shared by the app and MCP."""
     live = running(conn, now)
     if live is not None:
-        return {"state": "running", "session": serialize(live), "item": _item(conn, live)}
+        return "running", live
     close_finished(conn, now)
     owed = awaiting(conn, now)
     if owed is not None:
-        return {"state": "awaiting", "session": serialize(owed), "item": _item(conn, owed)}
-    return {"state": None, "session": None, "item": None}
+        return "awaiting", owed
+    return None, None
 
 
 def _item(conn: sqlite3.Connection, row: sqlite3.Row) -> dict | None:
