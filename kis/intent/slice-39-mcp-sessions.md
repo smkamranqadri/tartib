@@ -1,6 +1,6 @@
 # Slice 39: sessions and due reminders over MCP
 
-Planned 2026-11-05 with the owner. Standard mode. **Built and verified locally 2026-11-06; not committed or released.**
+Planned 2026-11-05 with the owner. Standard mode. **Built and verified locally 2026-11-06; released as `v2.9` the same day.**
 Lifts "sessions" from slice 35's out of scope (`slice-35-mcp.md`).
 
 ## What was asked
@@ -159,4 +159,4 @@ sync (`SW_VERSION`, test counts, the v2.8 line about vulnerability reporting and
 - [x] mutation checks, real client, self-review
 - [x] KIS sync (Knowledge, State, slice 35 pointer)
 - [x] README, CHANGELOG, `history.md`; committed as `v2.9`
-- [ ] deploy: the owner's `./deploy.sh v2.9` and CapRover; then check `tools/list` shows 22
+- [x] deployed 2026-11-06; live `tools/list` shows 22 (State, Live)

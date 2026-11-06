@@ -39,7 +39,7 @@ scope list dropped the ask feature and the Claude fallback, both of which had al
 
 ## Completed slices
 
-- **39 · sessions and due reminders over MCP** (2026-11-06, in `v2.9`; the owner deploys it).
+- **39 · sessions and due reminders over MCP** (2026-11-06, deployed as `v2.9`).
   `start_session`, `get_session`, `end_session(outcome?)` and `reminders_due(until, since?)`:
   22 tools, no migration. Server time and seconds left in every session reply, because `/mcp` is
   stateless and cannot stream a countdown. Plan and proof: `slice-39-mcp-sessions.md`. Backend

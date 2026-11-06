@@ -2,23 +2,23 @@
 
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
-- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`. The release
-  commit for slice 39 sits on top of `ffefc03` (GitHub social preview); `git log` has the truth.
-- **Live: `v2.8`** (owner-reported running in CapRover, 2026-11-05; no independent server probe
-  tells it from `v2.7`, they share a bundle). Checked from outside at 2026-11-05T10:52Z: health
-  `{"ok":true,"ai":true}`, `http://` 302 to `https://`, `sw.js` `SW_VERSION = "2026-10-15.1"`,
-  bundle `assets/index-D5v0LKfV.js`, `/mcp` and `/api` 401 without credentials. Image
-  `smkamranqadri/tartib:v2.8`, manifest index
-  `sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`. Rollback to `v2.7`
-  is clean (no migration since). Rollback to `v2.6` is **unproven**: it predates migration 0025 and
-  would run against schema 25. Release records: `../intent/history.md`.
-- **Now: slice 39, MCP session tools and `reminders_due`**, planned 2026-11-05, built and verified
-  locally 2026-11-06 (Standard mode); plan and proof `../intent/slice-39-mcp-sessions.md`. Four
-  tools (`start_session`, `get_session`, `end_session`, `reminders_due`), twenty-two in all; no
-  migration and no bundle change, so rollback to `v2.8` is clean and `SW_VERSION` stays.
-  Release `v2.9` is being prepared: README and CHANGELOG, commit, push. The image
-  (`./deploy.sh v2.9`) and the CapRover deploy are the owner's; then check `/mcp` `tools/list`
-  shows 22 tools.
+- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, in step with
+  it at `878aa3b` (the `v2.9` tag and GitHub release are on that commit); `git log` has the truth.
+- **Live: `v2.9`**, deployed by the owner in CapRover on 2026-11-06 and checked from outside at
+  2026-11-06T04:25Z: health `{"ok":true,"ai":true}`; `http://` 302 to `https://`; `/mcp` and `/api`
+  401 without credentials; `sw.js` `SW_VERSION = "2026-10-15.1"`; bundle `assets/index-D5v0LKfV.js`
+  (unchanged, no frontend change); and an authenticated MCP client read `tools/list` = **22 tools**
+  including the four new ones, with the server instructions naming `get_session` and
+  `reminders_due`, and `reminders_due(until=2000-01-01)` returned an empty list. That last pair is
+  what tells v2.9 from v2.8. Image `smkamranqadri/tartib:v2.9`, manifest index
+  `sha256:4c6c84378512adda36bedbcb441c2f8ac85475d15ce134d8c273b44abe85c043`. **Not checked on
+  live:** a real phone push from an MCP-started session, and `start_session` / `end_session` themselves (they write; proved locally and with a
+  real client against a throwaway server, `../intent/slice-39-mcp-sessions.md`). Rollback to
+  `v2.8` is clean (no migration); to `v2.6` it is unproven (schema 25). Previous release `v2.8`
+  (`sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`); release records
+  in `../intent/history.md`.
+- **Last task: slice 39, MCP session tools and `reminders_due`**, released in `v2.9`; plan and
+  proof `../intent/slice-39-mcp-sessions.md`. Nothing is in progress; pick from Next.
 
 ## Open
 
