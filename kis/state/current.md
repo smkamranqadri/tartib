@@ -2,60 +2,23 @@
 
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
-- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, pushed and
-  in step with it. The `#378` + `#243` + `#228` + `#281` cycle is merged by two merge commits
-  (`ff734b7`, `192f64f`); the owner's later work sits on top, the newest being the search
-  snippets (`41d8c63`) and the KIS anchor 0.10.1 (`90ed6ab`). The owner deployed `v2.7` on
-  2026-10-15; it is live and verified from outside (below).
-- **Live: `v2.7`**, deployed by the owner on 2026-10-15 and verified from outside the same day:
-  public health `{"ok":true,"ai":true}`, `http://` answers 302 to `https://`, the served `sw.js`
-  says `SW_VERSION = "2026-10-15.1"`, and the page serves the bundle the build produced
-  (`assets/index-D5v0LKfV.js`). It carries #378 space descriptions (migration 0025) plus #243,
-  #228 and #281. Previous release: `v2.6` (`b230c3d`, checked 2026-10-07). Rollback is `v2.6`
-  **on schema 25** - the unproven check below: v2.6 predates migration 0025, so a rollback leaves
-  it running against a schema it did not create.
-- Task: #378 space descriptions, released in `v2.7` on 2026-10-15. Owner-written description per
-  space (500 characters, empty clears, stale-write token), migration 0025, app editor,
-  REST, MCP `set_space_description` (eighteen tools), description-aware classification
-  capped at 12,000 characters of space context. Plan and decisions:
-  `../intent/space-descriptions.md`; verification: `../../.orch/legacy/space-descriptions/design-handoff.md`,
-  "Resume verification". Tartib #378 can be closed now that it is released.
-- Release `v2.7`, 2026-10-15: image built and pushed by `./deploy.sh v2.7` as
-  `smkamranqadri/tartib:v2.7` (manifest index
-  `sha256:10957e4373ef61c3d69fd4e40cb0f3d8b2ae2d92548ba001194eada87a233c75`), `SW_VERSION` bumped
-  to `2026-10-15.1`, deployed by the owner the same day. Two checks recorded here as
-  prerequisites were **not** run: proving `v2.6` starts and works on schema 25 (rollback), and the
-  live described-vs-baseline eval (`-m eval`, needs Codex quota). A phone may still take up to
-  four hours to pick this up - Cloudflare rewrites `sw.js`'s `no-cache` to `max-age=14400` (seen
-  at this deploy), which is the open item below.
-- The rest of the cycle -- #243 Home Needs attention, #228 nav Inbox count, #281 session
-  finish sound -- is implemented, merged on main and released in `v2.7`. Verified on the merged tree
-  on 2026-10-09: backend 397 passed / 10 deselected, frontend typecheck and build clean,
-  `npm run ui` 26/26 with three new checks. Details: `../intent/history.md` and
-  `../intent/bug-281-session-ring.md`; orchestrator ledger: `../../.orch/run-legacy/ledger.md`.
-- MCP `search` and `list_items` return id, first line and a snippet, not the whole item
-  (`41d8c63`, merged on main 2026-10-14 and released in `v2.7`; plan `../intent/search-snippets.md`).
-  Verified in a clean checkout at `41d8c63`: backend 399 passed / 10 deselected. Ships with `v2.7`.
-
-- **Release `v2.8`, 2026-11-05: open-source release prep**, merged to main (`e7d5994`),
-  tagged, GitHub release published, CI green on `e7d5994`. Image pushed by `./deploy.sh v2.8` as
-  `smkamranqadri/tartib:v2.8` (manifest index
-  `sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`); the CapRover deploy
-  was done by the owner on 2026-11-05. Checked from outside at 2026-11-05T10:52Z: health
-  `{"ok":true,"ai":true}`, `http://` 302 to `https://`, `sw.js` `2026-10-15.1`, bundle
-  `index-D5v0LKfV.js`, `/mcp` and `/api` 401 without credentials. None of these tells `v2.8`
-  from `v2.7` (same bundle); the owner reported CapRover showing `v2.8` running the same day
-  (owner-reported; no independent server probe from this machine). GitHub private vulnerability reporting enabled the same day. No migration and no bundle change, so rollback to `v2.7` is clean and
-  `SW_VERSION` stays `2026-10-15.1`. Audit (2026-10-18):
-  the repo has been public since slice 16; a full-history secret scan found only placeholders; one
-  author identity. Changes: README rewritten (animated `docs/assets/hero.svg`, then title,
-  description, product shot, how to use, contributing, security), screenshots retaken from a
-  seeded fictional database against the test suite's fake Codex, `SECURITY.md`, `CHANGELOG.md`,
-  `.github/` (CI, issue and PR templates), the four undocumented env keys added to `.env.example`
-  and `docs/deploying.md`, and `pyjwt` 2.15.1 / `multidict` 6.9.1 in `uv.lock` for three
-  advisories (pip-audit clean after). Verified: backend 399 passed / 10 deselected after the bump,
-  `uv sync --locked`, frontend typecheck and build. Not done: `docs/api.md` lacks 14 newer routes;
-  GitHub private vulnerability reporting is off, and `SECURITY.md` links to it.
+- Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`. The release
+  commit for slice 39 sits on top of `ffefc03` (GitHub social preview); `git log` has the truth.
+- **Live: `v2.8`** (owner-reported running in CapRover, 2026-11-05; no independent server probe
+  tells it from `v2.7`, they share a bundle). Checked from outside at 2026-11-05T10:52Z: health
+  `{"ok":true,"ai":true}`, `http://` 302 to `https://`, `sw.js` `SW_VERSION = "2026-10-15.1"`,
+  bundle `assets/index-D5v0LKfV.js`, `/mcp` and `/api` 401 without credentials. Image
+  `smkamranqadri/tartib:v2.8`, manifest index
+  `sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`. Rollback to `v2.7`
+  is clean (no migration since). Rollback to `v2.6` is **unproven**: it predates migration 0025 and
+  would run against schema 25. Release records: `../intent/history.md`.
+- **Now: slice 39, MCP session tools and `reminders_due`**, planned 2026-11-05, built and verified
+  locally 2026-11-06 (Standard mode); plan and proof `../intent/slice-39-mcp-sessions.md`. Four
+  tools (`start_session`, `get_session`, `end_session`, `reminders_due`), twenty-two in all; no
+  migration and no bundle change, so rollback to `v2.8` is clean and `SW_VERSION` stays.
+  Release `v2.9` is being prepared: README and CHANGELOG, commit, push. The image
+  (`./deploy.sh v2.9`) and the CapRover deploy are the owner's; then check `/mcp` `tools/list`
+  shows 22 tools.
 
 ## Open
 
@@ -78,16 +41,16 @@
 2. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
 3. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-4. **Answer the four questions** under Known gaps, on `v2.6`.
+4. **Answer the four questions** under Known gaps, on the live version.
 
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **397 passed, 10 deselected** (the ten are the evals; run pytest from `backend/`, or
-  its `-m 'not eval'` default is skipped and the evals call Codex) and **23/23** from `npm run ui`. Any red is real.
+  Verification commands. Expect **410 passed, 10 deselected** (the ten are the evals; run pytest from `backend/`, or
+  its `-m 'not eval'` default is skipped and the evals call Codex) and **26/26** from `npm run ui` (last run 2026-10-09; not rerun for slice 39, which has no UI). Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName" (version
   numbering: `../knowledge/technical.md`, Deploy). `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
-  it is at `2026-09-27.1`.
+  it is at `2026-10-15.1`.
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
 - Local development: `docker compose up -d --build` against http://localhost:8000.

@@ -39,6 +39,28 @@ scope list dropped the ask feature and the Claude fallback, both of which had al
 
 ## Completed slices
 
+- **39 · sessions and due reminders over MCP** (2026-11-06, in `v2.9`; the owner deploys it).
+  `start_session`, `get_session`, `end_session(outcome?)` and `reminders_due(until, since?)`:
+  22 tools, no migration. Server time and seconds left in every session reply, because `/mcp` is
+  stateless and cannot stream a countdown. Plan and proof: `slice-39-mcp-sessions.md`. Backend
+  410 passed, eight mutation checks, one real Claude Code run.
+- **Release `v2.8`** (2026-11-05, open-source release prep, merged at `e7d5994`; not a slice).
+  The repo has been public since slice 16; an audit on 2026-10-18 ran a full-history secret scan
+  (only placeholders) and found one author identity. Changes: README rewritten (animated
+  `docs/assets/hero.svg`, product shot, how to use, contributing, security), screenshots retaken
+  from a seeded fictional database against the test suite's fake Codex, `SECURITY.md`,
+  `CHANGELOG.md`, `.github/` (CI, issue and PR templates), four undocumented env keys added to
+  `.env.example` and `docs/deploying.md`, `pyjwt` 2.15.1 and `multidict` 6.9.1 in `uv.lock` for
+  three advisories. Verified: backend 399 passed / 10 deselected, `uv sync --locked`, frontend
+  typecheck and build. Afterwards `docs/api.md` was brought to all 44 routes (`8c01f33`) and
+  GitHub private vulnerability reporting was switched on. No migration, no bundle change.
+- **Release `v2.7` record** (2026-10-15): image `smkamranqadri/tartib:v2.7`, manifest index
+  `sha256:10957e4373ef61c3d69fd4e40cb0f3d8b2ae2d92548ba001194eada87a233c75`, `SW_VERSION`
+  `2026-10-15.1`. Two prerequisites were never run: proving `v2.6` starts on schema 25 (rollback),
+  and the live described-vs-baseline eval (`-m eval`). The cycle was verified on the merged tree on
+  2026-10-09: backend 397 passed / 10 deselected, frontend typecheck and build clean, `npm run ui`
+  26/26 with three new checks; the search snippets at `41d8c63`: 399 passed. Ledger:
+  `../../.orch/run-legacy/ledger.md`.
 - **The v2.7 cycle** (merged 2026-10-09 at `ff734b7` and `192f64f`, deployed as `v2.7` on
   2026-10-15; backlog entries, not slices) **#378 space descriptions**: plan and proof in
   `space-descriptions.md`. **#228 Inbox count in the nav**: a badge on the Inbox pill

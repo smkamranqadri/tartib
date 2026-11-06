@@ -366,7 +366,7 @@ inserts the route first, ahead of the SPA catch-all, and runs the SDK's session 
 app's lifespan, which a mounted app would not get. DNS-rebinding protection is off on purpose:
 there is no ambient credential for a rebound page to use.
 
-Eighteen tools in the current checkout: `list_spaces` preserves `spaces` and adds owner-ordered `details`; `list_items(space, shape?, status?)` (open tasks first) adds the space `description`,
+Twenty-two tools in the current checkout (slice 39 added four, below): `list_spaces` preserves `spaces` and adds owner-ordered `details`; `list_items(space, shape?, status?)` (open tasks first) adds the space `description`,
 `search(query, space?)` -- both `list_items` and `search` return, per item, id/space/shape and a short summary instead of the item's text: `first_line` (its first line, which names it since a note keeps no `title`) and `snippet` (a window around the match, or an opening excerpt for a list; `store.search` builds it with FTS5 `snippet()` from the item's text or, for a hit found only through a thought, the matched thought) -- and `get_item(id)`, the whole item with its thoughts (ids and links), `add_note` /
 `add_task(text, space?, due?)`, `add_thought`, `set_status`, `set_due`, `set_star`,
 `set_reminder(id, remind_at?)` (tasks only; since 2026-09-28, an ISO time with no offset is read
@@ -391,6 +391,22 @@ characters. Errors a tool anticipates are raised as `ToolError`, whose message r
 agent; any other exception reaches it only as "Error executing tool". The server's instructions
 tell agents to list spaces first, search before adding, ask before creating a space, and that
 `list_items` and `search` return summaries, so `get_item` is how to read a whole item.
+
+**Sessions and due reminders (slice 39).** `start_session(item_id?)`, `get_session()` and
+`end_session(outcome?)` drive the same rows and the same `Sessions` scheduler as the app
+(`app.state.sessions`, so the end-of-session push is the app's, and an agent-started session is
+the owner's session under rule 4). There is no subscribe tool: `/mcp` is stateless. Every reply is
+`{state, session, item, server_time, remaining_seconds}`; `server_time` and `remaining_seconds`
+are one whole-second instant, so `ends_at - server_time` equals `remaining_seconds`.
+`end_session` stops and disarms a running session **before** recording an outcome (an outcome on a
+running row would stamp `ends_at`, in the future); with nothing running, an outcome answers the one
+awaiting (`sessions.current_state`, shared with `GET /api/sessions/current`). `outcome=done` ticks
+the task as `set_status` does. `reminders_due(until, since?)` is read-only: filed, open tasks with
+`remind_at <= until` (and `> since`), oldest first, 100 at most with `truncated`, **including ones
+already pushed** (`reminded_at` is returned; `reminders.due_items` cannot be reused, it hides
+those). Times are ISO 8601, no offset read in `TARTIB_TZ`, the past allowed. `remind_at` is the
+stored UTC string, so an external client can key its own record on (id, `remind_at`); Tartib keeps
+no record for it.
 
 `captures.client` (migration 0023) names the agent, shown as "via <client>" on the item page:
 `?client=` on the configured URL first, then the MCP handshake's name (a stateless request only

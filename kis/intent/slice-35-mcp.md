@@ -60,7 +60,7 @@ note or thought or task". Three uses named:
 
 ## Out of scope
 
-OAuth and claude.ai connectors; editing text; delete; Ask; sessions; a skill.
+OAuth and claude.ai connectors; editing text; delete; Ask; sessions (since added: slice 39, `slice-39-mcp-sessions.md`); a skill.
 
 ## Acceptance
 
