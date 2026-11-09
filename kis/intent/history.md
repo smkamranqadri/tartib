@@ -39,6 +39,16 @@ scope list dropped the ask feature and the Claude fallback, both of which had al
 
 ## Completed slices
 
+- **41 · `today` and `pick` over MCP** (2026-11-09, deployed as `v2.10`). Two tools for an
+  external client, 24 in all, no migration: `today` (the Today view, at most 20, read-only) and
+  `pick` (Pick for me, through one shared `run_pick`). `today_rows` now orders as `Home.tsx`
+  ranks rows, and a cancelled Codex call kills its child. Plan and proof:
+  `slice-41-desk-tools.md`. Backend 439 passed; a Codex-on-Sol code review found two defects,
+  both fixed. Image digest `sha256:dda390bdd5e80937744ab14739009d2ec9c624238f55f3d1e9f5b20381c91f03`
+  (read on the server 2026-11-09). Slice 40 (routines) is planned, not built.
+- **Release `v2.9`** (2026-11-06) as deployed: image `smkamranqadri/tartib:v2.9`, manifest index
+  `sha256:4c6c84378512adda36bedbcb441c2f8ac85475d15ce134d8c273b44abe85c043`; checked from outside
+  at 2026-11-06T04:25Z with 22 tools including the four new ones.
 - **39 · sessions and due reminders over MCP** (2026-11-06, deployed as `v2.9`).
   `start_session`, `get_session`, `end_session(outcome?)` and `reminders_due(until, since?)`:
   22 tools, no migration. Server time and seconds left in every session reply, because `/mcp` is
@@ -105,3 +115,24 @@ scope list dropped the ask feature and the Claude fallback, both of which had al
 - **5 · UI simplification** (2026-09-17) Cut the app to a capture-first Home, a flat Today, and a one-at-a-time decision queue.
 - **4 · classifier fixes** (2026-09-17) Captures stored once; items became classifier output referencing `capture_id`; one capture can split into many items; `question` shape answers instead of filing; spaces moved to config; the `inbox` space was removed.
 - **2 · retrieval** (2026-09-17) FTS5 search, the item page, and `POST /api/ask` answering only from the user's own items.
+
+## Earlier proof, moved out of State on 2026-11-09
+
+**MCP task flow, 2026-10-07:** owner confirmed ongoing use across multiple
+projects. Open Namazee tasks were independently read through MCP in this session;
+completion and thought writes are owner-reported proof from their existing use.
+
+**Phone check, 2026-10-07:** owner reported "all working" after the v2.6 phone
+checklist (Pick, `[[` picker and links, thought Edit/Delete, link-card actions where
+available, modals, checklists, titles and pills). Owner-reported manual proof; no
+independent device probe or confirmation that link proposals were enabled.
+
+Slice 38's local tests and mutation checks are in `slice-38-find-replace.md`.
+
+**v2.6 live check, 2026-10-07:** running container image confirmed over SSH; public health
+returned ok=true, ai=true. Authenticated MCP lists 17 tools; find_replace description matches
+owner wording, server instruction recommends expected=1, and schema exposes expected and scope.
+A mismatched expected count was refused; get_item before/after was identical. One successful
+replacement ran on production the same day (ai-agents start-here note, expected=1, about 700
+characters returned with only the changed line). Build log records image digest
+`sha256:c8e48ab633c0a61e193a910177b24f9bc5896c500f5156494d04dd37b9a5a358`.

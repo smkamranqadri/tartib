@@ -1,6 +1,6 @@
 # Slice 41: `today` and `pick` over MCP, for the desk agent
 
-Planned 2026-11-09 with the owner. Standard mode. **Built, reviewed and committed 2026-11-09; not released.** Revised the same day
+Planned 2026-11-09 with the owner. Standard mode. **Built, reviewed, committed and deployed as `v2.10` on 2026-11-09.** Revised the same day
 after a plan review by Codex on Sol (eight findings, all taken; see the section near the end).
 Numbered 41 because slice 40 is routines (`slice-40-routines.md`); the classifier-proposes-rules
 slice becomes 42. Builds on slice 39 (`slice-39-mcp-sessions.md`), whose conventions it follows.
@@ -164,7 +164,8 @@ does not run it; `today_rows` and `counts_today` were read and only run `SELECT`
 
 ## Built and proven, 2026-11-09
 
-Steps 1 to 5 done by Claude Sonnet agents, committed on `main`. Backend suite after the last fix: **439
+Steps 1 to 5 done by Claude Sonnet agents, committed on `main`, released as `v2.10`. Checked
+from outside after the deploy: `kis/state/current.md`. Backend suite after the last fix: **439
 passed, 10 deselected**, `ruff check .` clean (re-run by me). The `/mcp` tool count is 24.
 
 - **Disconnect (check 9):** a client that leaves does not cancel the handler, on the REST route

@@ -59,4 +59,4 @@ Decisions (the owner's): `list_items` trims too; the replies that echo one item 
 
 ## Status
 
-Implemented on `search-snippets`, uncommitted. No migration, no frontend change, not deployed.
+Shipped; see `history.md`. No migration, no frontend change.

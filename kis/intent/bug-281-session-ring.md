@@ -63,5 +63,5 @@ the push case). Mutations, each restored by writing the saved original back:
 
 ## Status
 
-Implemented on this branch, uncommitted. No backend change. Not done: a check on real hardware
+Shipped; see `history.md`. No backend change. Not done: a check on real hardware
 for the true occluded/frozen case (this environment cannot produce it); the deploy (owner runs it).

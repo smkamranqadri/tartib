@@ -450,6 +450,13 @@ over published history. Scrub by commit going forward, never by rewrite.
 
 ## Verification commands
 
+**`npm run ui` on the Linux dev machine:** `tools/ui/check.mjs` launches real Google Chrome
+(`channel: "chrome"`), which is not installed here. Run a throwaway copy of the script pointed at
+`/usr/bin/chromium` (`executablePath`), outside the repo or deleted afterwards, against a server
+started with `TARTIB_SPACES` set (without it 15 of 26 checks fail). Check S33 "a link opens its
+target" is flaky: its locator `.text-body a.md-link` sometimes matches two elements, and it failed
+once on a clean `HEAD` (2026-11-09). Rerun before treating it as red.
+
 ```sh
 cd backend && uv run pytest -q && uv run ruff check .
 cd backend && uv run pytest -m eval        # 10 evals. One alone: -k heading

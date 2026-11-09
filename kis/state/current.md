@@ -3,35 +3,24 @@
 - Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
   `kis/state/private.md`, gitignored and never published. This file points there.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, in step with
-  it at `878aa3b` (the `v2.9` tag and GitHub release are on that commit); `git log` has the truth.
-- **Live: `v2.9`**, deployed by the owner in CapRover on 2026-11-06 and checked from outside at
-  2026-11-06T04:25Z: health `{"ok":true,"ai":true}`; `http://` 302 to `https://`; `/mcp` and `/api`
-  401 without credentials; `sw.js` `SW_VERSION = "2026-10-15.1"`; bundle `assets/index-D5v0LKfV.js`
-  (unchanged, no frontend change); and an authenticated MCP client read `tools/list` = **22 tools**
-  including the four new ones, with the server instructions naming `get_session` and
-  `reminders_due`, and `reminders_due(until=2000-01-01)` returned an empty list. That last pair is
-  what tells v2.9 from v2.8. Image `smkamranqadri/tartib:v2.9`, manifest index
-  `sha256:4c6c84378512adda36bedbcb441c2f8ac85475d15ce134d8c273b44abe85c043`. **Not checked on
-  live:** a real phone push from an MCP-started session, and `start_session` / `end_session` themselves (they write; proved locally and with a
-  real client against a throwaway server, `../intent/slice-39-mcp-sessions.md`). Rollback to
-  `v2.8` is clean (no migration); to `v2.6` it is unproven (schema 25). Previous release `v2.8`
-  (`sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`); release records
-  in `../intent/history.md`.
-- **Last task: slice 39, MCP session tools and `reminders_due`**, released in `v2.9`; plan and
-  proof `../intent/slice-39-mcp-sessions.md`.
-- **Built, proven and committed on `main`, not released: slice 41 (`today` and `pick` over MCP for the desk
-  agent), all five steps** (2026-11-09; plan and proof `../intent/slice-41-desk-tools.md`). Gate
-  re-run by me after the last fix: **439 passed, 10 deselected**, `ruff check .` clean. A Codex-on-Sol
-  code review found two defects (a cancel after the child had exited raised `ProcessLookupError`
-  over `CancelledError`; the cancellation test passed without `proc.kill()`), both fixed and
-  mutation-checked. The builder's mutation checks (20 cap, `truncated`, no-write, star-nothing-on-
-  failure, stale-choice filter) each failed the named test. A real MCP client (Claude Code
-  headless against a throwaway server with the fake Codex) read one reply of each tool. No frontend
-  file changed, so the UI suite was not rerun after step 1 (26/26 then; S33 is flaky). **Docs
-  written 2026-11-09:** CHANGELOG `v2.10 (2026-11-09)` (change the date if it ships later), README,
-  `technical.md` (MCP section, Pick), SPEC (Today order). **Not done:** the
-  `history.md` release record, which is written once it is deployed. The owner deploys; after a deploy I check from outside (24 tools, one `today` call;
-  `pick` writes, so not without the owner's say). No agent is running.
+  it at `d4214a8` when this was written (the `v2.10` tag and GitHub release are on that commit);
+  `git log` has the truth.
+- **Live: `v2.10`**, deployed by the owner in CapRover on 2026-11-09, `main` and the `v2.10` tag
+  pushed at `d4214a8`, GitHub release created. Checked from outside at 2026-11-09T12:55Z against the
+  public domain (`private.md`): health `{"ok":true,"ai":true}`; `http://` 302 to `https://`;
+  `/mcp` (GET and POST) and `/api/today` 401 without credentials; `sw.js` `SW_VERSION =
+  "2026-10-15.1"`; bundle `assets/index-D5v0LKfV.js` (both unchanged, no frontend change). On the
+  server the running container's image is `smkamranqadri/tartib:v2.10`, digest
+  `sha256:dda390bdd5e80937744ab14739009d2ec9c624238f55f3d1e9f5b20381c91f03`. **Not yet checked on
+  live:** `tools/list` = 24 tools and one `today` reply (they need the MCP token), and `pick`
+  (it writes, so not without the owner's say). Rollback to `v2.9` is clean (no migration). Release
+  records, `v2.9` included, in `../intent/history.md`.
+- **Last task: slice 41, `today` and `pick` over MCP**, released in `v2.10`; plan and proof
+  `../intent/slice-41-desk-tools.md`.
+- **Slice 41 proof, as built:** backend **439 passed, 10 deselected** and `ruff check .` clean (re-run
+  by me); a Codex-on-Sol code review found two defects, both fixed and mutation-checked; a real MCP
+  client read one reply of each tool against a throwaway server. The CHANGELOG, README,
+  `technical.md` and SPEC are written. Nothing is in progress.
 
 ## Open
 
@@ -49,9 +38,10 @@
 
 ## Next
 
-1. **Commit and release slice 41** (built, reviewed and documented, see above): the owner's commit and deploy as `v2.10` (`./deploy.sh v2.10`); the owner passes the desk agent its handover (not kept in the repo).
-2. **Slice 40, routines** (planned 2026-11-09, Phase mode, five steps; not built): `../intent/slice-40-routines.md`.
-   Revised after a Sol plan review; decisions 7 and 8 confirmed by the owner.
+1. **Check `v2.10` with the MCP token** (24 tools, one `today` reply); the owner decides whether
+   `pick` is called on live.
+2. **Slice 40, routines** (planned 2026-11-09, Phase mode, five steps, revised after a Sol plan
+   review; not built): `../intent/slice-40-routines.md`. Decisions 7 and 8 are confirmed.
 3. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
    `linked` item, which ignores the link hold (slice 33's plan, Known).
 4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
@@ -63,35 +53,13 @@
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
   Verification commands. Expect **439 passed, 10 deselected** (the ten are the evals; run pytest from `backend/`, or
-  its `-m 'not eval'` default is skipped and the evals call Codex) and **26/26** from `npm run ui` (last run 2026-10-09; not rerun for slice 39, which has no UI). Any red is real.
+  its `-m 'not eval'` default is skipped and the evals call Codex) and **26/26** from `npm run ui` (last run 2026-11-09; see Verification commands for running it on this Linux machine). Any red is real, except S33, which is flaky.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName" (version
   numbering: `../knowledge/technical.md`, Deploy). `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
   it is at `2026-10-15.1`.
 - Push keys: `cd backend && uv run python -m tartib.vapid`. Regenerating invalidates every
   subscription; Settings re-mints on the next open.
 - Local development: `docker compose up -d --build` against http://localhost:8000.
-
-## Proof
-
-**MCP task flow, 2026-10-07:** owner confirmed ongoing use across multiple
-projects. Open Namazee tasks were independently read through MCP in this session;
-completion and thought writes are owner-reported proof from their existing use.
-
-**Phone check, 2026-10-07:** owner reported "all working" after the v2.6 phone
-checklist (Pick, `[[` picker and links, thought Edit/Delete, link-card actions where
-available, modals, checklists, titles and pills). Owner-reported manual proof; no
-independent device probe or confirmation that link proposals were enabled.
-
-Slice 38's local tests and mutation checks are in `../intent/slice-38-find-replace.md`;
-older releases and checks are in `../intent/history.md`.
-
-**v2.6 live check, 2026-10-07:** running container image confirmed over SSH; public health
-returned ok=true, ai=true. Authenticated MCP lists 17 tools; find_replace description matches
-owner wording, server instruction recommends expected=1, and schema exposes expected and scope.
-A mismatched expected count was refused; get_item before/after was identical. One successful
-replacement ran on production the same day (ai-agents start-here note, expected=1, about 700
-characters returned with only the changed line). Build log records image digest
-`sha256:c8e48ab633c0a61e193a910177b24f9bc5896c500f5156494d04dd37b9a5a358`.
 
 ## Known gaps
 
