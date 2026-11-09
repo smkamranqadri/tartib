@@ -1,7 +1,9 @@
 # Current
 
-- Local detail (the domain, backups, subscribed devices, how this Mac reaches `/mcp`) lives in
-  `kis/state/private.md`, gitignored and never published. This file points there.
+- Local detail (the server, SSH, the domain, where secrets live, the Codex login runbook, how
+  this machine reaches `/mcp`) lives in `kis/state/private.md`, gitignored and never published.
+  This file points there. It is per machine: the Linux workstation's copy was rewritten
+  2026-11-09.
 - Branch: `main`, tracking `origin/main` at `https://github.com/smkamranqadri/tartib`, in step with
   it at `d4214a8` when this was written (the `v2.10` tag and GitHub release are on that commit);
   `git log` has the truth.
@@ -11,10 +13,16 @@
   `/mcp` (GET and POST) and `/api/today` 401 without credentials; `sw.js` `SW_VERSION =
   "2026-10-15.1"`; bundle `assets/index-D5v0LKfV.js` (both unchanged, no frontend change). On the
   server the running container's image is `smkamranqadri/tartib:v2.10`, digest
-  `sha256:dda390bdd5e80937744ab14739009d2ec9c624238f55f3d1e9f5b20381c91f03`. **Not yet checked on
-  live:** `tools/list` = 24 tools and one `today` reply (they need the MCP token), and `pick`
-  (it writes, so not without the owner's say). Rollback to `v2.9` is clean (no migration). Release
+  `sha256:dda390bdd5e80937744ab14739009d2ec9c624238f55f3d1e9f5b20381c91f03`. **MCP checked on
+  live at 2026-11-09T13:13Z** with the token: `initialize` 200, `tools/list` = **24 tools**
+  (`today` and `pick` among them), one `today` call 200, not an error, 7 items,
+  `truncated=false`, item keys `due, first_line, id, remind_at, space, starred`; no token = 401.
+  **Not checked:** `pick` (it writes, so not without the owner's say). Rollback to `v2.9` is clean (no migration). Release
   records, `v2.9` included, in `../intent/history.md`.
+- **Codex login redone on the server, 2026-11-09:** the container had restarted with "Not
+  logged in". `codex login --device-auth` ran inside it; `codex login status` then said "Logged in
+  using ChatGPT", and one `codex exec` with the app's model and flags answered. Not checked: a
+  classify through the app's own API (needs the password).
 - **Last task: slice 41, `today` and `pick` over MCP**, released in `v2.10`; plan and proof
   `../intent/slice-41-desk-tools.md`.
 - **Slice 41 proof, as built:** backend **439 passed, 10 deselected** and `ruff check .` clean (re-run
@@ -38,16 +46,14 @@
 
 ## Next
 
-1. **Check `v2.10` with the MCP token** (24 tools, one `today` reply); the owner decides whether
-   `pick` is called on live.
-2. **Slice 40, routines** (planned 2026-11-09, Phase mode, five steps, revised after a Sol plan
+1. **Slice 40, routines** (planned 2026-11-09, Phase mode, five steps, revised after a Sol plan
    review; not built): `../intent/slice-40-routines.md`. Decisions 7 and 8 are confirmed.
-3. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
+2. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
    `linked` item, which ignores the link hold (slice 33's plan, Known).
-4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
-5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+3. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
+4. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-6. **Answer the four questions** under Known gaps, on the live version.
+5. **Answer the four questions** under Known gaps, on the live version.
 
 ## Commands
 
