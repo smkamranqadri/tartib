@@ -17,7 +17,11 @@
   live at 2026-11-09T13:13Z** with the token: `initialize` 200, `tools/list` = **24 tools**
   (`today` and `pick` among them), one `today` call 200, not an error, 7 items,
   `truncated=false`, item keys `due, first_line, id, remind_at, space, starred`; no token = 401.
-  **Not checked:** `pick` (it writes, so not without the owner's say). Rollback to `v2.9` is clean (no migration). Release
+  **`pick` called on live once, at the owner's request, 2026-11-09T13:24Z:** `isError` false, **6.2 s**,
+  `items` held one task (523, starred), and its `Picked for today:` thought was written (read back
+  with `get_item`). The task already had an earlier pick thought from 13:21Z, not from this check,
+  so reasons accumulate on a re-picked task. Not checked: a pick that returns three tasks, and the
+  failure path on live. Rollback to `v2.9` is clean (no migration). Release
   records, `v2.9` included, in `../intent/history.md`.
 - **Codex login redone on the server, 2026-11-09:** the container had restarted with "Not
   logged in". `codex login --device-auth` ran inside it; `codex login status` then said "Logged in
