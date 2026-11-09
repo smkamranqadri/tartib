@@ -8,6 +8,7 @@ Both classify() and ask() go through here. Nothing in this module touches storag
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import shlex
 import tempfile
@@ -225,6 +226,14 @@ async def _run(args: list[str], workdir: Path, timeout: float) -> tuple[Usage, t
         proc.kill()
         await proc.wait()
         raise CodexError(f"timed out after {timeout:.0f}s") from e
+    except asyncio.CancelledError:
+        # Whoever asked has gone (slice 41). Left running, the child would outlive its caller
+        # with no timeout left to end it. A child that has already exited is fine: the kill finds
+        # nothing to signal, and the wait only reaps it.
+        with contextlib.suppress(ProcessLookupError):
+            proc.kill()
+        await proc.wait()
+        raise
     usage, message, quota = parse_events(stdout)
     if proc.returncode != 0:
         if not message:

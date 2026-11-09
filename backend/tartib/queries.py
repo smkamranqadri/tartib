@@ -69,6 +69,10 @@ def today_rows(
     """Today's tasks and today's session counts. One definition of Today: the screen reads it,
     and Pick for me reads it to know what is already there (slice 32).
 
+    The order is the one Home.tsx `rank` gives: starred, then overdue, then due later, then no
+    due; ties by due date, then id. A missing due date compares as an empty string, as in the
+    browser, so it comes before any real date: among starred tasks, one with no due date is first.
+
     `without_picks` is Today as it will be once the last pick's stars are gone: a task there
     only because Pick starred it is a candidate again, not something already on the list."""
     star = "(starred = 1 AND picked_at IS NULL)" if without_picks else "starred = 1"
@@ -82,9 +86,11 @@ def today_rows(
         SELECT * FROM items
         WHERE stage = 'filed' AND shape = 'task' AND status = 'open'
           AND (due <= ? OR {star} OR remind_at <= ?{worked_clause})
-        ORDER BY due IS NULL, due, remind_at IS NULL, remind_at, starred DESC, created_at DESC
+        ORDER BY
+          CASE WHEN starred = 1 THEN 0 WHEN due < ? THEN 1 WHEN due IS NOT NULL THEN 2 ELSE 3 END,
+          COALESCE(due, ''), id
         """,
-        (day, utcnow_iso(), *worked_on),
+        (day, utcnow_iso(), *worked_on, day),
     ).fetchall()
     return rows, counts
 

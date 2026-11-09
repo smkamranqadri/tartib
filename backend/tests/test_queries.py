@@ -4,9 +4,20 @@ import sqlite3
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
 
-from tartib.queries import fts_query
-from tests.conftest import SPACES, capture, one_item, proposal, set_classify_reply
+from tartib import db
+from tartib.main import create_app
+from tartib.queries import fts_query, today_rows
+from tests.conftest import (
+    PASSWORD,
+    SPACES,
+    capture,
+    make_settings,
+    one_item,
+    proposal,
+    set_classify_reply,
+)
 
 
 def add(auth, text, **fields):
@@ -44,7 +55,75 @@ def test_today_rules(auth, settings):
     assert got == {due_today, overdue, starred, reminded}
     for absent in (later, reminder_later, plain_task, note, done, pending):
         assert absent not in got
-    assert ids(payload)[:2] == [overdue, due_today]  # overdue first
+    # Starred first, then overdue, then due today, then no due (the reminded task).
+    assert ids(payload) == [starred, overdue, due_today, reminded]
+
+
+def test_today_orders_by_rank_then_due_then_id(auth, settings):
+    """The same four ranks as `rank` in Home.tsx, so the server list is already in the order the
+    screen shows. Tasks are made out of order, so only the sort can produce this list."""
+    today = datetime.now(UTC).astimezone(settings.zone).date()
+    day = lambda n: (today + timedelta(days=n)).isoformat()  # noqa: E731
+    past = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+
+    # Not starred and not overdue and not due today: only the passed reminder puts them on Today.
+    no_due_first = add(auth, "a", shape="task", title="a", remind_at=past)
+    later_far = add(auth, "b", shape="task", title="b", due=day(5), remind_at=past)
+    star_no_due = add(auth, "c", shape="task", title="c", starred=True)
+    overdue_new = add(auth, "d", shape="task", title="d", due=day(-1))
+    later_near = add(auth, "e", shape="task", title="e", due=day(2), remind_at=past)
+    star_late = add(auth, "f", shape="task", title="f", due=day(3), starred=True)
+    overdue_old = add(auth, "g", shape="task", title="g", due=day(-4))
+    star_overdue = add(auth, "h", shape="task", title="h", due=day(-9), starred=True)
+    overdue_tie_first = add(auth, "i", shape="task", title="i", due=day(-2))
+    overdue_tie_second = add(auth, "j", shape="task", title="j", due=day(-2))
+    no_due_second = add(auth, "k", shape="task", title="k", remind_at=past)
+    star_early = add(auth, "l", shape="task", title="l", due=day(1), starred=True)
+
+    got = ids(auth.get("/api/today").json())
+    assert got == [
+        star_no_due,  # a missing due date compares as "" in the browser: first among the starred
+        star_overdue,  # starred: by due date, so the oldest first, even though it is overdue
+        star_early,
+        star_late,
+        overdue_old,  # overdue: by due date, ties by id
+        overdue_tie_first,
+        overdue_tie_second,
+        overdue_new,
+        later_near,  # due later
+        later_far,
+        no_due_first,  # no due: by id
+        no_due_second,
+    ]
+
+
+def test_today_starred_without_due_comes_before_starred_with_due(auth, settings):
+    """Home.tsx compares a missing due as "", so a starred task with no due date is first."""
+    today = datetime.now(UTC).astimezone(settings.zone).date()
+    due = (today - timedelta(days=3)).isoformat()
+    with_due = add(auth, "a", shape="task", title="a", due=due, starred=True)
+    no_due = add(auth, "b", shape="task", title="b", starred=True)
+    assert ids(auth.get("/api/today").json()) == [no_due, with_due]
+
+
+def test_today_orders_by_the_server_day_not_the_utc_day(tmp_path):
+    """Ten minutes before midnight UTC it is already the next day in Karachi (UTC+5): a task due
+    on that next day is due today, and one due on the UTC day is overdue."""
+    settings = make_settings(tmp_path, TARTIB_TZ="Asia/Karachi")
+    now = datetime(2026, 11, 9, 23, 50, tzinfo=UTC)  # 2026-11-10 04:50 in Karachi
+    with TestClient(create_app(settings)) as client:
+        client.headers["Authorization"] = f"Bearer {PASSWORD}"
+        due_today = add(client, "a", shape="task", title="a", due="2026-11-10")
+        overdue = add(client, "b", shape="task", title="b", due="2026-11-09")
+        tomorrow = add(client, "c", shape="task", title="c", due="2026-11-11")
+        no_due = add(client, "d", shape="task", title="d", remind_at="2026-01-01T00:00:00Z")
+        conn = db.connect(settings.db_path)
+        try:
+            rows, _ = today_rows(conn, settings, now)
+        finally:
+            conn.close()
+    assert [r["id"] for r in rows] == [overdue, due_today, no_due]
+    assert tomorrow not in [r["id"] for r in rows]
 
 
 def test_today_recent_is_newest_three_and_recent_page_is_fifty(auth):

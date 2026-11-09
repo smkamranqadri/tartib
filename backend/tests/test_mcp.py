@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import socket
+import sqlite3
 import threading
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 import httpx2
@@ -45,6 +48,8 @@ TOOLS = {
     "get_session",
     "end_session",
     "reminders_due",  # slice 39
+    "today",  # slice 41
+    "pick",
 }
 
 
@@ -137,10 +142,14 @@ def test_the_tools(served):
             listed = await s.list_tools()
             names = {t.name for t in listed.tools}
             assert names == TOOLS
+            assert len(listed.tools) == len(TOOLS) == 24
+            pick = next(t for t in listed.tools if t.name == "pick")
+            assert "about 9 seconds" in pick.description and "17.6" in pick.description
             instructions = s.initialize_result.instructions or ""
             assert "list_spaces" in instructions and "asking the person" in instructions
             assert "only when the person asks" in instructions
             assert "find_replace" in instructions and "Read its description" in instructions
+            assert "- today lists" in instructions and "- pick stars" in instructions
 
     asyncio.run(go())
 
@@ -1084,3 +1093,261 @@ def test_reminders_due_writes_nothing(served, tmp_path):
 
     asyncio.run(go())
     assert snapshot() == before
+
+
+# --- slice 41: today ---
+
+KARACHI = ZoneInfo("Asia/Karachi")  # AI_ENV's TARTIB_TZ
+UTC_STAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+PLAIN_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+PAST = "2026-01-01T09:00:00Z"
+TODAY_FIELDS = {"id", "space", "first_line", "due", "starred", "remind_at"}
+
+
+def day(n: int = 0) -> str:
+    """A calendar date n days from today in the app's zone."""
+    return (datetime.now(KARACHI).date() + timedelta(days=n)).isoformat()
+
+
+def today_ids(got):
+    return [i["id"] for i in got["items"]]
+
+
+def test_today_is_in_the_apps_order_and_agrees_with_api_today(served, tmp_path):
+    """Made in the reverse of the expected order, so only the sort can produce it."""
+    no_due = make_task(served, "No due date, reminder passed")
+    later = make_task(served, "Due later, reminder passed")
+    due_today = make_task(served, "Due today")
+    overdue = make_task(served, "Overdue")
+    starred = make_task(served, "Starred and old")
+    set_cols(tmp_path, no_due["id"], remind_at=PAST)
+    set_cols(tmp_path, later["id"], due=day(4), remind_at=PAST)
+    set_cols(tmp_path, due_today["id"], due=day(0))
+    set_cols(tmp_path, overdue["id"], due=day(-2))
+    set_cols(tmp_path, starred["id"], starred=1, due=day(-5))
+    expected = [starred["id"], overdue["id"], due_today["id"], later["id"], no_due["id"]]
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "today")
+            assert not err
+            assert today_ids(got) == expected
+            assert got["truncated"] is False
+
+    asyncio.run(go())
+    rest = api(served, "GET", "/api/today").json()
+    assert [i["id"] for i in rest["items"]] == expected  # the app and the tool share one order
+
+
+def test_today_leaves_out_notes_done_tasks_and_unfiled_ones(served, tmp_path):
+    kept = make_task(served, "Kept")
+    done = make_task(served, "Done")
+    waiting = make_task(served, "Waiting for a decision")
+    not_due = make_task(served, "Not on Today")
+    note = api(served, "POST", "/api/items", json={"shape": "note", "space": "ideas", "text": "N"})
+    set_cols(tmp_path, kept["id"], due=day(-1))
+    set_cols(tmp_path, done["id"], due=day(-1), status="done")
+    set_cols(tmp_path, waiting["id"], due=day(-1), stage="attention")
+    set_cols(tmp_path, note.json()["id"], starred=1)  # even starred, a note is not a task
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "today")
+            assert not err and today_ids(got) == [kept["id"]]
+            assert not_due["id"] not in today_ids(got)
+
+    asyncio.run(go())
+
+
+def test_today_includes_a_task_worked_on_in_a_session_today(served):
+    worked = make_task(served, "Worked on, otherwise nowhere near Today")
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "today")
+            assert not err and got["items"] == []
+            await call(s, "start_session", item_id=worked["id"])
+            await call(s, "end_session")
+            err, got = await call(s, "today")
+            assert not err and got["items"] == [
+                {
+                    "id": worked["id"],
+                    "space": "ideas",
+                    "first_line": "Worked on, otherwise nowhere near Today",
+                    "due": None,
+                    "starred": False,
+                    "remind_at": None,
+                }
+            ]
+
+    asyncio.run(go())
+
+
+def test_an_empty_today_is_an_empty_list_not_an_error(served):
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "today")
+            assert not err
+            assert got["items"] == [] and got["truncated"] is False
+            assert UTC_STAMP.match(got["server_time"])
+            assert set(got) == {"server_time", "items", "truncated"}
+
+    asyncio.run(go())
+
+
+def test_today_returns_twenty_and_says_when_there_were_more(served, tmp_path):
+    """The cut comes after the sort: the 21st task is made last but sorts first, and the task
+    dropped is the one that sorts last."""
+    ids = []
+    for n in range(20):
+        task = make_task(served, f"T{n}")
+        set_cols(tmp_path, task["id"], starred=1, due=day(n))
+        ids.append(task["id"])
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "today")
+            assert not err and today_ids(got) == ids and got["truncated"] is False
+
+            extra = make_task(served, "The 21st")
+            set_cols(tmp_path, extra["id"], starred=1)  # starred with no due date sorts first
+            err, got = await call(s, "today")
+            assert not err and got["truncated"] is True
+            assert today_ids(got) == [extra["id"], *ids[:19]]
+            assert ids[19] not in today_ids(got)
+            # the app's own Today still lists every row
+            assert len(api(served, "GET", "/api/today").json()["items"]) == 21
+
+    asyncio.run(go())
+
+
+def test_today_items_have_exactly_these_fields_in_these_formats(served, tmp_path):
+    full = make_task(served, "x" * 200 + "\nsecond line")
+    plain = make_task(served, "Line one\nLine two")
+    set_cols(tmp_path, full["id"], starred=1, due=day(3), remind_at="2099-01-02T13:00:00Z")
+    set_cols(tmp_path, plain["id"], due=day(-1))
+
+    async def go():
+        async with session(served) as s:
+            err, got = await call(s, "today")
+            assert not err
+            assert set(got) == {"server_time", "items", "truncated"}
+            assert UTC_STAMP.match(got["server_time"])
+            by_id = {i["id"]: i for i in got["items"]}
+            assert set(by_id) == {full["id"], plain["id"]}
+            for item in got["items"]:
+                assert set(item) == TODAY_FIELDS
+                assert type(item["id"]) is int and type(item["starred"]) is bool
+                assert item["space"] == "ideas"
+                assert len(item["first_line"]) <= 120
+            a, b = by_id[full["id"]], by_id[plain["id"]]
+            assert a["first_line"] == "x" * 120 and a["starred"] is True
+            assert PLAIN_DATE.match(a["due"]) and a["due"] == day(3)
+            assert UTC_STAMP.match(a["remind_at"]) and a["remind_at"] == "2099-01-02T13:00:00Z"
+            assert b["first_line"] == "Line one" and b["starred"] is False
+            assert b["due"] == day(-1) and b["remind_at"] is None
+
+    asyncio.run(go())
+
+
+WRITE_PREFIXES = (
+    "INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "DROP", "ALTER", "VACUUM", "BEGIN", "COMMIT",
+)
+
+
+def dump_tables(path) -> dict:
+    """Every row of every table, the FTS shadow tables included (rows sorted, since a table
+    without a rowid has no natural order)."""
+    c = sqlite3.connect(path)
+    try:
+        names = [
+            r[0] for r in c.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+                " ORDER BY name"
+            )
+        ]
+        return {
+            n: sorted((tuple(r) for r in c.execute(f'SELECT * FROM "{n}"')), key=repr)
+            for n in names
+        }
+    finally:
+        c.close()
+
+
+@pytest.fixture
+def served_quiet(tmp_path, monkeypatch):
+    """`served`, with the app handed back and the two things that write on their own proved
+    inert: no push keys means no reminder loop, and a session timer exists only for a session
+    started while the app runs, so a session seeded afterwards has none."""
+    for var in FAKE_VARS:
+        monkeypatch.delenv(var, raising=False)
+    app = create_app(make_settings(tmp_path, **AI_ENV, TARTIB_MCP_TOKEN=TOKEN))
+    port = free_port()
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(100):
+        try:
+            if httpx.get(f"{base}/api/health").status_code == 200:
+                break
+        except httpx.HTTPError:
+            time.sleep(0.05)
+    assert app.state.reminders is None and app.state.sessions._timers == {}
+    yield base, app
+    server.should_exit = True
+    thread.join(timeout=5)
+
+
+def test_today_writes_nothing(served_quiet, tmp_path, monkeypatch):
+    """Every statement on every connection is traced, and every table is compared before and
+    after. What a stray write would touch is seeded: an unreminded item whose reminder has
+    passed, and a session that expired unclosed."""
+    base, app = served_quiet
+    now = datetime.now(UTC).replace(microsecond=0)
+    stamp = lambda moment: moment.isoformat().replace("+00:00", "Z")  # noqa: E731
+    unreminded = make_task(base, "Reminder passed, never pushed")
+    set_cols(tmp_path, unreminded["id"], due=day(-1), remind_at=stamp(now - timedelta(hours=1)))
+    c = db.connect(tmp_path / "t.db")
+    c.execute(
+        "INSERT INTO sessions (item_id, started_at, ends_at, created_at) VALUES (?, ?, ?, ?)",
+        (unreminded["id"], stamp(now - timedelta(minutes=6)), stamp(now - timedelta(minutes=1)),
+         stamp(now)),
+    )
+    c.commit()
+    c.close()
+    assert app.state.sessions._timers == {}
+
+    trace: list[str] = []
+    real_connect = db.connect
+
+    def traced(path):
+        conn = real_connect(path)
+        conn.set_trace_callback(trace.append)
+        return conn
+
+    monkeypatch.setattr(db, "connect", traced)
+
+    def writes():
+        return [s for s in trace if s.lstrip().upper().startswith(WRITE_PREFIXES)]
+
+    watcher = sqlite3.connect(tmp_path / "t.db")  # data_version moves when another one commits
+    version = lambda: watcher.execute("PRAGMA data_version").fetchone()[0]  # noqa: E731
+    before, seen = dump_tables(tmp_path / "t.db"), version()
+
+    async def go():
+        async with session(base) as s:
+            err, got = await call(s, "today")
+            assert not err and today_ids(got) == [unreminded["id"]]
+            assert trace, "the trace saw no statement at all"
+            assert writes() == []
+            assert dump_tables(tmp_path / "t.db") == before and version() == seen
+            # Control: the same trace and comparison do catch a write when a tool makes one.
+            await call(s, "set_star", id=unreminded["id"], starred=True)
+            assert any(w.lstrip().upper().startswith("UPDATE ITEMS") for w in writes())
+            assert dump_tables(tmp_path / "t.db") != before and version() != seen
+
+    try:
+        asyncio.run(go())
+    finally:
+        watcher.close()

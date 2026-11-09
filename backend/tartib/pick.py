@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -142,19 +143,39 @@ def apply(
     return done
 
 
-@router.post("/pick")
-async def pick(
-    body: PickBody,
-    conn: sqlite3.Connection = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> dict:
+class PickError(Exception):
+    """Pick could not run, or its reply was unusable. Nothing was starred or thought.
+
+    `status` and `detail` are what `POST /api/pick` answers with; the MCP tool turns the same
+    error into a `ToolError`."""
+
+    def __init__(self, status: int, detail: str):
+        super().__init__(detail)
+        self.status = status
+        self.detail = detail
+
+
+@dataclass(frozen=True)
+class PickResult:
+    """The tasks starred, read back from the database with the reason each was given. Empty,
+    with a `message`, when there was nothing to pick or the picked tasks changed meanwhile."""
+
+    picks: list[tuple[sqlite3.Row, str]]
+    message: str | None = None
+
+
+async def run_pick(conn: sqlite3.Connection, settings: Settings, steer: str = "") -> PickResult:
+    """Everything Pick for me does, for the route and the MCP tool alike (slice 41).
+
+    Raises `PickError` for AI off (503) and for a failed call or an unusable reply (502). In
+    those cases the only rows written are the call's `ai_calls` record and the quota."""
     if not settings.ai_enabled:
-        raise HTTPException(status_code=503, detail="AI not configured")
+        raise PickError(503, "AI not configured")
     today, _ = today_rows(conn, settings, utcnow(), without_picks=True)
     rows = candidates(conn, {r["id"] for r in today})
     if not rows:
-        return {"picks": [], "message": "Nothing to pick: every open task is already on Today."}
-    prompt = build_prompt(rows, today, (body.steer or "").strip(), settings)
+        return PickResult([], "Nothing to pick: every open task is already on Today.")
+    prompt = build_prompt(rows, today, steer, settings)
     shape = PromptShape(chars=len(prompt), candidates=len(rows))
     started = time.monotonic()
 
@@ -174,21 +195,34 @@ async def pick(
         reply = await run_json(prompt, SCHEMA, settings.codex())
     except CodexError as e:
         record(failure=str(e), quota=e.quota)
-        raise HTTPException(status_code=502, detail=f"pick failed: {e}") from e
+        raise PickError(502, f"pick failed: {e}") from e
     picks = chosen(reply.data, rows)
     if not picks:
         record(reply.usage, "unusable reply: no pick named a candidate", reply.quota)
-        raise HTTPException(status_code=502, detail="pick failed: the reply named no task")
+        raise PickError(502, "pick failed: the reply named no task")
     record(reply.usage, None, reply.quota)
     picks = apply(conn, picks)
     if not picks:
-        return {"picks": [], "message": "The tasks it picked changed meanwhile; pick again."}
+        return PickResult([], "The tasks it picked changed meanwhile; pick again.")
     fresh = {r["id"]: r for r in conn.execute(
         f"SELECT * FROM items WHERE id IN ({', '.join('?' * len(picks))})",
         [row["id"] for row, _ in picks],
     )}
+    return PickResult([(fresh[row["id"]], reason) for row, reason in picks])
+
+
+@router.post("/pick")
+async def pick(
+    body: PickBody,
+    conn: sqlite3.Connection = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    try:
+        result = await run_pick(conn, settings, (body.steer or "").strip())
+    except PickError as e:
+        raise HTTPException(status_code=e.status, detail=e.detail) from e
+    if not result.picks:
+        return {"picks": [], "message": result.message}
     return {
-        "picks": [
-            {"item": serialize_item(fresh[row["id"]]), "reason": reason} for row, reason in picks
-        ]
+        "picks": [{"item": serialize_item(row), "reason": reason} for row, reason in result.picks]
     }

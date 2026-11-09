@@ -31,7 +31,8 @@ from starlette.routing import Route
 from tartib import db, sessions
 from tartib.clock import as_utc_iso, parse_iso, utcnow, utcnow_iso
 from tartib.config import Settings
-from tartib.queries import fts_query
+from tartib.pick import PickError, run_pick
+from tartib.queries import fts_query, today_rows
 from tartib.space_descriptions import DescriptionError, set_space_description, space_description
 from tartib.spaces import add_space
 from tartib.store import (
@@ -52,6 +53,7 @@ from tartib.store import (
 LIST_LIMIT = 100
 SESSION_FIELDS = ("id", "item_id", "started_at", "ends_at", "ended_at", "outcome")
 MAX_TEXT = 20_000  # the REST API's own cap on an item's text
+TODAY_LIMIT = 20  # the `today` tool's cap; the app's own Today has none
 FIRST_LINE_MAX = 120  # a hit's first line, which is what names an item (a note keeps no title)
 SNIPPET_CHARS = 200  # a hit's opening excerpt when there is no query match to window around
 MIN_TOKEN = 32  # /mcp has no throttle of its own; a long random token is what makes that fine
@@ -79,7 +81,12 @@ INSTRUCTIONS = """Tartib is one person's notes and tasks, sorted into spaces.
   moment; ask once and wait that long rather than calling again in a loop.
 - reminders_due lists open tasks with a reminder up to a time, including ones already pushed;
   keep your own record of what you acted on, keyed by id and remind_at, and pass the last
-  `until` you used as `since` so each poll returns only what is new."""
+  `until` you used as `since` so each poll returns only what is new.
+- today lists the open tasks on the owner's Today view (at most 20, in the app's order). It
+  writes nothing; call it once and wait rather than in a loop.
+- pick stars up to three open tasks for today, as Pick for me does in the app, and takes about
+  9 seconds. It writes, and a second pick takes back the first one's stars. If a call times
+  out it may still have finished: call today, not pick again."""
 
 
 def _changed_lines(before: str, after: str) -> list[dict]:
@@ -165,6 +172,19 @@ def _hit(row: sqlite3.Row) -> dict:
         snippet = " ".join((row["raw_text"] or "").split())[:SNIPPET_CHARS]
     out["snippet"] = snippet
     return out
+
+
+def _desk_item(row: sqlite3.Row) -> dict:
+    """One task as `today` and `pick` show it: exactly these six fields. `due` is the stored
+    plain date, `remind_at` the stored UTC string."""
+    return {
+        "id": row["id"],
+        "space": row["space"],
+        "first_line": (title_of(row["raw_text"]) or "")[:FIRST_LINE_MAX],
+        "due": row["due"],
+        "starred": bool(row["starred"]),
+        "remind_at": row["remind_at"],
+    }
 
 
 def build(app, settings: Settings) -> tuple[MCPServer, Route]:
@@ -808,6 +828,57 @@ def build(app, settings: Settings) -> tuple[MCPServer, Route]:
                     for r in rows[:LIST_LIMIT]
                 ],
                 "truncated": len(rows) > LIST_LIMIT,
+            }
+        finally:
+            c.close()
+
+    @server.tool(
+        name="today",
+        description=(
+            "The open tasks on the owner's Today view, across all spaces, in the app's order: "
+            "starred, then overdue, then due later, then no due date. At most 20 (truncated says "
+            "there were more). Tasks only, no notes or done tasks; an empty Today is items: []. "
+            "due is a plain date (YYYY-MM-DD) or null; remind_at and server_time are UTC with a Z. "
+            "Read only. Call it once and wait, not in a loop."
+        ),
+    )
+    def today() -> dict:
+        c = conn()
+        try:
+            now = utcnow()
+            rows, _ = today_rows(c, settings, now)
+            return {
+                "server_time": as_utc_iso(now),
+                "items": [_desk_item(r) for r in rows[:TODAY_LIMIT]],
+                "truncated": len(rows) > TODAY_LIMIT,
+            }
+        finally:
+            c.close()
+
+    @server.tool(
+        name="pick",
+        description=(
+            "Ask Tartib's AI to star up to three open tasks to work on next, as the app's Pick "
+            "for me does: each gets a star and a 'Picked for today: <reason>' thought, and the "
+            "stars of the last pick are taken back. This writes. Typical time: about 9 seconds "
+            "(seven real calls took 7.2 to 17.6). If your call times out it may still finish, so "
+            "call today, not pick again. The reply is shaped like today's; items holds only the "
+            "tasks this call starred. items: [] means nothing was picked (everything open is "
+            "already on Today, or the chosen tasks changed meanwhile) and is not an error. An AI "
+            "failure, an unusable reply, or AI off is an error and stars nothing."
+        ),
+    )
+    async def pick() -> dict:
+        c = conn()
+        try:
+            try:
+                result = await run_pick(c, settings)
+            except PickError as e:
+                raise ToolError(e.detail) from e
+            return {
+                "server_time": as_utc_iso(utcnow()),
+                "items": [_desk_item(row) for row, _ in result.picks],
+                "truncated": False,
             }
         finally:
             c.close()
