@@ -123,8 +123,9 @@ It also has:
 Set `TARTIB_MCP_TOKEN` (32 characters or more, for example `openssl rand -hex 32`) and Tartib
 serves an MCP endpoint at `/mcp`. Agents can then list spaces, search, read items, add notes and
 tasks, add thoughts, mark tasks done, set due dates and reminders, make small edits, start and
-end your focus session, and list the reminders that are due, all through the same write paths as
-the app. There are twenty-two tools.
+end your focus session, list the reminders that are due, read what is on Today, and have the AI
+pick what to work on next, all through the same write paths as the app. There are twenty-four
+tools.
 
 ```sh
 claude mcp add --transport http tartib https://tartib.example/mcp \
@@ -135,6 +136,11 @@ The server's own instructions tell agents to search before adding, to ask before
 space, to edit or delete only when you ask, and to start a session only when you ask. Every
 session reply carries the server's clock and the seconds left, so an agent asks once instead of
 watching a timer; the phone is notified when a session ends, whoever started it.
+
+`today` lists the open tasks on your Today view, at most 20, in the order the app shows them. It
+writes nothing. `pick` does what Pick for me does: it stars up to three tasks and leaves the
+reason as a thought on each. It takes about 9 seconds (7 to 18 in practice), so an agent that
+times out should call `today` next, not `pick` again.
 
 ## Capture from anywhere
 

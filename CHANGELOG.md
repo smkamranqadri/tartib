@@ -3,6 +3,24 @@
 Each release is a Docker image tag, `smkamranqadri/tartib:vX.Y`. The reasoning behind every
 change is in [`kis/intent/`](kis/intent/), one file per slice.
 
+## v2.10 (2026-11-09)
+
+No migration and no frontend change; the service worker stays at `2026-10-15.1`, and rolling
+back to v2.9 is clean.
+
+- **MCP `today`:** the open tasks on the Today view, across all spaces, at most 20 with a
+  `truncated` flag, in the order the app shows them. Each item has `id`, `space`, `first_line`,
+  `due` (a plain date), `starred` and `remind_at`. Read-only; it writes nothing.
+- **MCP `pick`:** does what Pick for me does. It stars up to three open tasks, each with a
+  `Picked for today:` thought, and returns the tasks it starred in the same shape. Nothing to
+  pick is an empty list; an AI failure is a tool error and stars nothing. It takes about nine
+  seconds. There are now 24 tools.
+- **Today is sorted by the server:** starred, then overdue, then due later, then no due date, as
+  the browser already did. The screen looks the same; `/api/today` and Pick's prompt now agree
+  with it.
+- **A cancelled Codex call now stops its child process.** Before, a cancelled call left Codex
+  running with nothing to end it.
+
 ## v2.9 (2026-11-06)
 
 No migration and no frontend change; the service worker stays at `2026-10-15.1`, and rolling

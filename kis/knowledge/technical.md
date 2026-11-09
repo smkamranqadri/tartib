@@ -33,7 +33,7 @@ At startup, after migrations, `store.reconcile_spaces` moves items whose space i
 `subscriptions(id, endpoint UNIQUE, p256dh, auth, created_at, last_seen_at, failures)` (the last column from 0006) and `app_state(key PK, value)` arrived with migration 0005, which also added `items.reminded_at` (UTC ISO, null = not sent) and wrote off every reminder already due, so the first tick after that deploy is silent. 0005 also narrowed `items_touch_update` to skip writes that change `reminded_at`: a fired reminder is not a human touch and must not reset the stale clock. The one write that clears `reminded_at` (`store.update_fields`, when `remind_at` actually changes) sets `updated_at` itself.
 **Links are an index of the text** (slice 33): `[[Title]]` names an item by its first line, keyed by `store.link_title` (`title_of`, a link inside the line read as its words) case-folded; `[[space:name]]` names a space (`space_of`; the prefix wins over any item title; `[[space: name]]` with a space after the colon is the same key). Migration 0020's `item_keys` and `item_links` are written by `store.index_links` from `insert_item` and `update_fields` -- every text write goes through one of the two -- cascade on delete, and are rebuilt whole at startup (`reindex_links`); they sit apart from `items` so the touch trigger never fires for bookkeeping. `store.LINK` is the server's grammar and skips fences and code spans; the client lexes `[[…]]` as its own token in a dedicated `Marked` instance in `markdown.ts`, because `marked.lexer(text, options)` ignores what `marked.use` registered. The two disagree on a few rare shapes (a lone fence mid-line, a code span across a line break, `\[[X]]`, indented code). A first-line change rewrites `[[Old]]` in the items that link to it through `update_fields` (so their `updated_at` moves and an open editor gets the stale-save question), reading each text at the moment it is rewritten, at most three levels of nested retitling deep, and not while another item still has the old key or when `[[New]]` would not key back to the item; a space rename does the same for `[[space:old]]` (`rewrite_space_links`). `GET /api/items/{id}` carries `links`, `space_links` (each as written, to its target or null) and `linked_from`; `/api/links/suggest`, `/api/links/resolve` and `/api/spaces/{name}/linked` are in `links.py`.
 
-**Pick for me marks its own stars** (slice 32): `items.picked_at` (migration 0019) is set only by `POST /api/pick`, and `store.update_fields` clears it whenever `starred` is written, so any star a person sets or clears is theirs. A pick unstars every row with `picked_at` set and stars the new ones in one transaction, after the reply is validated; candidates are open filed tasks not on Today as it would be without pick stars (`queries.today_rows(without_picks=True)`, the one definition of Today), labelled `t1`, `t2`, ... so an invented label resolves to nothing. Its reason is appended as a `Picked for today:` thought. A pick's star moves `updated_at` like any star, so a picked task leaves the stale list. Its `ai_calls` kind is `pick`, with `candidates_n` counted.
+**Pick for me marks its own stars** (slice 32): `items.picked_at` (migration 0019) is set only by `POST /api/pick`, and `store.update_fields` clears it whenever `starred` is written, so any star a person sets or clears is theirs. A pick unstars every row with `picked_at` set and stars the new ones in one transaction, after the reply is validated; candidates are open filed tasks not on Today as it would be without pick stars (`queries.today_rows(without_picks=True)`, the one definition of Today), labelled `t1`, `t2`, ... so an invented label resolves to nothing. Its reason is appended as a `Picked for today:` thought. A pick's star moves `updated_at` like any star, so a picked task leaves the stale list. Its `ai_calls` kind is `pick`, with `candidates_n` counted. The logic lives in `pick.run_pick`, shared with the MCP `pick` tool (slice 41).
 
 `ai_calls(id, created_at, kind, model, capture_id, ok, failure, reason, resets_at, duration_ms, + six token counts, + prompt_chars, candidates_n, examples_n, corrections_n, house_rules)` (migrations 0016 and 0017) is one row per AI call. The second group is **what was in the prompt**, written at the moment of the call because none of it can be worked out afterwards -- the prompt is not kept and the database it was built from moves. It exists because the prompt's *parts* are capped (space context 4000 chars, house rules 2000) while the whole is not: examples are capped at five entries and candidates at eight items, neither by length, so the prompt can grow with the database and nothing would otherwise say so. `capture_id` is null for an Ask and is **not** a foreign key on purpose: deleting a capture must not erase the record that the work was paid for. Rows rather than counters, because rows can answer what a prompt change cost and a counter cannot.
 `items_fts` is an FTS5 external-content table over `raw_text` and `title`, synced by triggers.
@@ -366,7 +366,7 @@ inserts the route first, ahead of the SPA catch-all, and runs the SDK's session 
 app's lifespan, which a mounted app would not get. DNS-rebinding protection is off on purpose:
 there is no ambient credential for a rebound page to use.
 
-Twenty-two tools in the current checkout (slice 39 added four, below): `list_spaces` preserves `spaces` and adds owner-ordered `details`; `list_items(space, shape?, status?)` (open tasks first) adds the space `description`,
+Twenty-four tools in the current checkout (slice 39 added four, slice 41 two, below): `list_spaces` preserves `spaces` and adds owner-ordered `details`; `list_items(space, shape?, status?)` (open tasks first) adds the space `description`,
 `search(query, space?)` -- both `list_items` and `search` return, per item, id/space/shape and a short summary instead of the item's text: `first_line` (its first line, which names it since a note keeps no `title`) and `snippet` (a window around the match, or an opening excerpt for a list; `store.search` builds it with FTS5 `snippet()` from the item's text or, for a hit found only through a thought, the matched thought) -- and `get_item(id)`, the whole item with its thoughts (ids and links), `add_note` /
 `add_task(text, space?, due?)`, `add_thought`, `set_status`, `set_due`, `set_star`,
 `set_reminder(id, remind_at?)` (tasks only; since 2026-09-28, an ISO time with no offset is read
@@ -407,6 +407,28 @@ already pushed** (`reminded_at` is returned; `reminders.due_items` cannot be reu
 those). Times are ISO 8601, no offset read in `TARTIB_TZ`, the past allowed. `remind_at` is the
 stored UTC string, so an external client can key its own record on (id, `remind_at`); Tartib keeps
 no record for it.
+
+**Today and Pick for an external client (slice 41).** `today()` reads `queries.today_rows`, the one
+definition of Today, which now orders rows the way `Home.tsx` ranks them: starred, overdue, due
+later, no due; then `COALESCE(due, '')` (so among starred tasks one with no due date comes first,
+as in the browser), then id. The browser sort stays, for re-sorting after a local change. The tool
+returns `{server_time, items, truncated}` with at most 20 items (`TODAY_LIMIT`; the app's own Today
+has no cap), each exactly `id`, `space`, `first_line` (the title, cut at 120), `due` (the stored
+plain date, **not** a UTC time, as in `reminders_due`), `starred`, `remind_at` (the stored UTC
+string or null). Read-only: it writes nothing and leaves `reminded_at` alone. `pick()` calls
+`pick.run_pick(conn, settings, steer)`, the function `POST /api/pick` also calls; it raises
+`PickError(status, detail)`, which the route maps to 503 (AI off) and 502 (call failed, reply
+unusable or naming no candidate), and the tool maps to `ToolError`. Nothing to pick and "the
+picked tasks changed meanwhile" are not errors: the route answers `{picks: [], message}` and the
+tool `items: []`. On a failure only the `ai_calls` and quota rows are written; every item and
+thought row is as before. The tool's reply has the same shape as `today`, listing only the tasks
+this call starred, read back from the database. Real timing, seven calls on the live database,
+2026-09-23 to -26: 7.2 to 17.6 seconds, median 9.0; the tool description says so, and a timed-out
+client should call `today`, not `pick` again. **A client that disconnects does not cancel the
+handler** (plain JSON replies, no stream): the Codex child runs on, exits by itself, and the pick
+lands. Cancelling the call itself did leak the child, so `codex._run` kills and reaps it on
+`CancelledError` and tolerates one that already exited. The `/mcp` token is still one full-power
+token; a scoped token was asked for and not built (2026-11-09).
 
 `captures.client` (migration 0023) names the agent, shown as "via <client>" on the item page:
 `?client=` on the configured URL first, then the MCP handshake's name (a stateless request only
