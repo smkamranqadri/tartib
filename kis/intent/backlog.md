@@ -54,20 +54,9 @@ Reported by the owner on 2026-09-22, the first day on v2.0, for the next cycle:
   they are in use:** an index note linking to its children may be structure enough, and sections or
   tags inside a space are the option if it is not.
 
-- **Routines: recurring tasks. Asked for 2026-09-22 and not yet planned.** The owner's
-  Routine note, copied from their old notes, has a daily group (check WhatsApp, Slack, email,
-  stocks, server status, ten error-log entries) and monthly groups on rules like "1st Monday of
-  Month" (rotating credentials across named servers), "1st Tuesday" (reviewing WordPress
-  plugins) and "1st Wednesday" (disk cleanup). Tartib has no recurrence at all: no column, and
-  nothing in SPEC; the only mention is that habits "stay undated" (checked 2026-09-22). The
-  smallest shape that fits: a task carries a repeat rule (daily, weekly, the nth weekday of the
-  month), and ticking it done moves `due` to the next occurrence instead of closing it, so it
-  reaches Today on its day and reminders work unchanged. Each group is a checklist, and boxes
-  are tickable since 2026-09-22 (`b420ed3`, `toggleTask` in `markdown.ts`); what is still missing
-  is that ticking the routine done must reset its boxes. Undecided: whether a missed day piles up or skips, and
-  whether the classifier may propose a repeat rule from text like "every 1st Monday".
-  The owner will bring more detail when this is planned; what is here is only what the one note
-  shows.
+- **Routines: planned as slice 40 (2026-11-09), not built.** The plan is `slice-40-routines.md`.
+  **Slice 42, not planned:** the classifier proposes a repeat rule from text like "every 1st
+  Monday", behind a flag that is off by default.
 - **Notes in Pick for me.** Slice 32 picks from open tasks only; on 2026-09-22 the owner left
   notes out, to be thought through separately. Stars are task-only today (SPEC, task fields), so
   including notes means deciding what a picked note is and when it leaves Today.

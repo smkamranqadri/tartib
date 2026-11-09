@@ -18,7 +18,20 @@
   (`sha256:71b12f96a642b01992e5d350100a733e986aa70534be97f6bc77be2c5751097e`); release records
   in `../intent/history.md`.
 - **Last task: slice 39, MCP session tools and `reminders_due`**, released in `v2.9`; plan and
-  proof `../intent/slice-39-mcp-sessions.md`. Nothing is in progress; pick from Next.
+  proof `../intent/slice-39-mcp-sessions.md`.
+- **Built, proven and committed on `main`, not released: slice 41 (`today` and `pick` over MCP for the desk
+  agent), all five steps** (2026-11-09; plan and proof `../intent/slice-41-desk-tools.md`). Gate
+  re-run by me after the last fix: **439 passed, 10 deselected**, `ruff check .` clean. A Codex-on-Sol
+  code review found two defects (a cancel after the child had exited raised `ProcessLookupError`
+  over `CancelledError`; the cancellation test passed without `proc.kill()`), both fixed and
+  mutation-checked. The builder's mutation checks (20 cap, `truncated`, no-write, star-nothing-on-
+  failure, stale-choice filter) each failed the named test. A real MCP client (Claude Code
+  headless against a throwaway server with the fake Codex) read one reply of each tool. No frontend
+  file changed, so the UI suite was not rerun after step 1 (26/26 then; S33 is flaky). **Docs
+  written 2026-11-09:** CHANGELOG `v2.10 (2026-11-09)` (change the date if it ships later), README,
+  `technical.md` (MCP section, Pick), SPEC (Today order). **Not done:** the
+  `history.md` release record, which is written once it is deployed. The owner deploys; after a deploy I check from outside (24 tools, one `today` call;
+  `pick` writes, so not without the owner's say). No agent is running.
 
 ## Open
 
@@ -36,17 +49,20 @@
 
 ## Next
 
-1. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
+1. **Commit and release slice 41** (built, reviewed and documented, see above): the owner's commit and deploy as `v2.10` (`./deploy.sh v2.10`); the owner passes the desk agent its handover (not kept in the repo).
+2. **Slice 40, routines** (planned 2026-11-09, Phase mode, five steps; not built): `../intent/slice-40-routines.md`.
+   Revised after a Sol plan review; decisions 7 and 8 confirmed by the owner.
+3. **Switch `TARTIB_LINK_PROPOSALS` on** once the backlog prerequisites are done -- and first fix "Tell it why" on a
    `linked` item, which ignores the link hold (slice 33's plan, Known).
-2. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
-3. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
+4. **The backlog** (`kis/intent/backlog.md`): nothing in it is ordered yet.
+5. **Judge the duplicate verdicts** once enough real captures carry them, then decide whether to
    switch parking on.
-4. **Answer the four questions** under Known gaps, on the live version.
+6. **Answer the four questions** under Known gaps, on the live version.
 
 ## Commands
 
 - Verify: the full list, and what an eval failure means, is `../knowledge/technical.md`,
-  Verification commands. Expect **410 passed, 10 deselected** (the ten are the evals; run pytest from `backend/`, or
+  Verification commands. Expect **439 passed, 10 deselected** (the ten are the evals; run pytest from `backend/`, or
   its `-m 'not eval'` default is skipped and the evals call Codex) and **26/26** from `npm run ui` (last run 2026-10-09; not rerun for slice 39, which has no UI). Any red is real.
 - Deploy: `./deploy.sh vX.Y`, then CapRover's Deployment tab, "Deploy via ImageName" (version
   numbering: `../knowledge/technical.md`, Deploy). `SW_VERSION` in `sw.js` is bumped by hand on every release that changes the bundle;
